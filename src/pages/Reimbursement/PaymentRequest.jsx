@@ -1,7 +1,9 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { CreditCard, Save, Send } from 'lucide-react';
+
 
 export default function PaymentRequest() {
     const navigate = useNavigate();
@@ -29,29 +31,24 @@ export default function PaymentRequest() {
     };
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem' }}>
+        <div className="reimburse-container">
+            <header className="reimburse-header">
                 <h1 className="heading-lg">Payment Request</h1>
-                <p style={{ color: 'var(--color-text-secondary)' }}>Request payment for a vendor invoice.</p>
+                <p className="reimburse-subtitle">Request payment for a vendor invoice.</p>
             </header>
 
             <div className="card">
-                <div style={{ paddingBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '1.5rem' }}>
+                <div className="section-header">
                     <h2 className="heading-md">Invoice Details</h2>
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }} style={{ display: 'grid', gap: '1.5rem' }}>
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }} className="form-grid">
 
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Select Vendor</label>
+                    <div className="form-group">
+                        <label>Select Vendor</label>
                         <select
                             required
-                            className="input"
-                            style={{
-                                width: '100%', padding: '0.75rem 1rem',
-                                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                                fontSize: '1rem', backgroundColor: 'white'
-                            }}
+                            className="form-input custom-select"
                             value={formData.vendorId}
                             onChange={e => setFormData({ ...formData, vendorId: e.target.value })}
                         >
@@ -67,62 +64,50 @@ export default function PaymentRequest() {
                         )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Invoice Amount</label>
-                            <div style={{ position: 'relative' }}>
-                                <span style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--color-text-muted)', fontWeight: 'bold' }}>$</span>
+                    <div className="two-col-grid">
+                        <div className="form-group">
+                            <label>Invoice Amount</label>
+                            <div className="currency-wrapper">
+                                <span className="currency-symbol">$</span>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="1"
                                     required
-                                    className="input"
-                                    style={{
-                                        width: '100%', padding: '0.75rem 1rem 0.75rem 2rem',
-                                        border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                                        fontSize: '1rem', fontWeight: '600'
-                                    }}
+                                    className="form-input amount-input"
                                     value={formData.amount}
-                                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, amount: parseInt(e.target.value) || '' })}
+                                    onKeyDown={(e) => {
+                                        if (e.key === '.' || e.key === 'e') e.preventDefault();
+                                    }}
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Due Date</label>
+                        <div className="form-group">
+                            <label>Due Date</label>
                             <input
                                 type="date"
                                 required
-                                className="input"
-                                style={{
-                                    width: '100%', padding: '0.75rem 1rem',
-                                    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                                    fontSize: '1rem'
-                                }}
+                                className="form-input"
                                 value={formData.date}
                                 onChange={e => setFormData({ ...formData, date: e.target.value })}
                             />
                         </div>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Description / Invoice #</label>
+                    <div className="form-group">
+                        <label>Description / Invoice #</label>
                         <input
                             type="text"
                             required
-                            className="input"
-                            style={{
-                                width: '100%', padding: '0.75rem 1rem',
-                                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                                fontSize: '1rem'
-                            }}
+                            className="form-input"
                             placeholder="e.g. Invoice #INV-2023-001 - Monthly Service"
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                         />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
+                    <div className="form-actions">
                         <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}>
                             <Save size={18} />
                             Save as Draft
@@ -137,3 +122,4 @@ export default function PaymentRequest() {
         </div>
     );
 }
+

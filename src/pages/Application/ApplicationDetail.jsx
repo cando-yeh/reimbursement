@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import StatusBadge from '../../components/Common/StatusBadge';
 import { ArrowLeft, CheckCircle, CreditCard, Send, Trash2, AlertCircle } from 'lucide-react';
 
+
 export default function ApplicationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -31,18 +32,18 @@ export default function ApplicationDetail() {
     };
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem' }}>
+        <div className="reimburse-container">
+            <header className="reimburse-header">
                 <Link to="/" className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
                     <ArrowLeft size={16} /> Back to Dashboard
                 </Link>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="detail-actions">
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <div className="detail-title-group">
                             <h1 className="heading-lg">Application #{claim.id}</h1>
                             <StatusBadge status={claim.status} />
                         </div>
-                        <p style={{ color: 'var(--color-text-secondary)' }}>Created on {claim.date}</p>
+                        <p className="reimburse-subtitle">Created on {claim.date}</p>
                     </div>
 
                     {/* Action Buttons based on Status */}
@@ -85,53 +86,53 @@ export default function ApplicationDetail() {
             </header>
 
             <div className="card">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem', marginBottom: '2rem' }}>
+                <div className="detail-meta-grid">
                     <div>
-                        <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                        <label className="form-group label">
                             Request Type
                         </label>
-                        <div style={{ fontSize: '1.125rem', fontWeight: '500', textTransform: 'capitalize' }}>
+                        <div className="meta-value-caps">
                             {claim.type === 'employee' ? 'Employee Reimbursement' : 'Vendor Payment'}
                         </div>
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                        <label className="form-group label">
                             Payee
                         </label>
-                        <div style={{ fontSize: '1.125rem', fontWeight: '500' }}>
+                        <div className="meta-value">
                             {claim.payee}
                         </div>
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                        <label className="form-group label">
                             Amount
                         </label>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--color-text-main)' }}>
-                            ${claim.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        <div className="meta-value-lg">
+                            ${claim.amount.toLocaleString()}
                         </div>
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                        <label className="form-group label">
                             Date
                         </label>
-                        <div style={{ fontSize: '1.125rem', fontWeight: '500' }}>
+                        <div className="meta-value">
                             {claim.date}
                         </div>
                     </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
-                    <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                <div className="description-section">
+                    <label className="form-group label">
                         Description / Details
                     </label>
-                    <p style={{ lineHeight: '1.6', color: 'var(--color-text-main)' }}>
+                    <p className="description-text">
                         {claim.description}
                     </p>
                     {claim.notes && (
-                        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-md)' }}>
+                        <div className="notes-box">
                             <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>Notes: </span>
                             <span style={{ fontSize: '0.875rem' }}>{claim.notes}</span>
                         </div>

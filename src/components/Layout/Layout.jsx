@@ -1,5 +1,7 @@
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, CreditCard } from 'lucide-react';
+
 
 const NavItem = ({ to, icon: Icon, label }) => {
     const location = useLocation();
@@ -8,18 +10,7 @@ const NavItem = ({ to, icon: Icon, label }) => {
     return (
         <Link
             to={to}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '0.25rem',
-                color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: isActive ? 'var(--color-background)' : 'transparent',
-                fontWeight: isActive ? 600 : 500,
-                transition: 'all 0.2s',
-            }}
+            className={`nav-item ${isActive ? 'active' : ''}`}
         >
             <Icon size={20} />
             <span>{label}</span>
@@ -28,53 +19,66 @@ const NavItem = ({ to, icon: Icon, label }) => {
 };
 
 export default function Layout({ children }) {
+
+    // Wait, I can't destructure useLocation like that. I need to declare state inside the component.
+    // Converting to proper implementation below.
+    // Using a trick in replace_file_content to rewrite the whole component body is safer.
+
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
+        <LayoutWithState>{children}</LayoutWithState>
+    );
+}
+
+function LayoutWithState({ children }) {
+    const [isProfileOpen, setIsProfileOpen] = React.useState(false); // Using React.useState to avoid importing if not already
+
+    return (
+        <div className="app-container">
             {/* Sidebar */}
-            <aside style={{
-                width: 'var(--sidebar-width)',
-                backgroundColor: 'var(--color-surface)',
-                borderRight: '1px solid var(--color-border)',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'fixed',
-                height: '100vh',
-                zIndex: 10
-            }}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
-                    <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--color-primary)' }}>FinFlow</h1>
+            <aside className="sidebar">
+                <div className="sidebar-header">
+                    <h1 className="brand">FinFlow</h1>
                 </div>
 
-                <nav style={{ padding: '1.5rem 1rem', flex: 1 }}>
-                    <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
-                    <NavItem to="/vendors" icon={Users} label="Vendor Management" />
-                    <NavItem to="/reimburse" icon={FileText} label="My Reimbursement" />
-                    <NavItem to="/payment-request" icon={CreditCard} label="Payment Requests" />
+                <nav className="sidebar-nav">
+                    <NavItem to="/" icon={LayoutDashboard} label="申請單總覽" />
+                    <NavItem to="/vendors" icon={Users} label="廠商管理" />
+                    <NavItem to="/reimburse" icon={FileText} label="報銷申請" />
+                    <NavItem to="/payment-request" icon={CreditCard} label="請款申請" />
                 </nav>
 
-                <div style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{
-                            width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold'
-                        }}>
+                <div className="sidebar-footer">
+                    <div className="user-profile" onClick={() => setIsProfileOpen(!isProfileOpen)}>
+                        <div className="avatar">
                             JD
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>John Doe</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Employee</div>
+                            <div className="user-info-name">John Doe</div>
+                            <div className="user-info-role">Employee</div>
                         </div>
+
+                        {isProfileOpen && (
+                            <div className="profile-popup" onClick={(e) => e.stopPropagation()}>
+                                <div className="profile-header">
+                                    <div className="profile-name">John Doe</div>
+                                    <div className="profile-role">Senior Developer</div>
+                                </div>
+                                <div className="profile-detail"><strong>ID:</strong> EMP-2024-001</div>
+                                <div className="profile-detail"><strong>Email:</strong> john.doe@company.com</div>
+                                <div className="profile-detail"><strong>Department:</strong> Engineering</div>
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem' }}>
+                                    <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)' }}>
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main style={{
-                flex: 1,
-                marginLeft: 'var(--sidebar-width)',
-                padding: '2rem',
-                maxWidth: '100%'
-            }}>
+            <main className="main-content">
                 {children}
             </main>
         </div>
