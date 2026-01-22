@@ -326,6 +326,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 1rem;
+  justify-content: center;
 }
 
 .stat-icon-wrapper {
@@ -404,6 +405,9 @@ textarea {
 
 .td-amount {
   font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* =========================================
