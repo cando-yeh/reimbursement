@@ -37,7 +37,7 @@ function LayoutWithState({ children }) {
             {/* Sidebar */}
             <aside className="sidebar">
                 <div className="sidebar-header">
-                    <h1 className="brand">FinFlow</h1>
+                    <h1 className="brand">請款報銷系統</h1>
                 </div>
 
                 <nav className="sidebar-nav">
