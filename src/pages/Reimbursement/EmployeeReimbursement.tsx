@@ -1,26 +1,63 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Claim } from '../../types';
-import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, FileText } from 'lucide-react';
+import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image } from 'lucide-react';
 
 interface ExpenseItemWithAttachment {
     id: string;
     date: string;
     amount: number;
     description: string;
+    category?: string;
     noReceipt: boolean;
     receiptFile: File | null;
+    existingReceiptName?: string;
 }
 
-export default function EmployeeReimbursement() {
-    const navigate = useNavigate();
-    const { addClaim } = useApp();
+const EXPENSE_CATEGORIES = [
+    '保險費',
+    '旅費',
+    '廣告費',
+    '交際費',
+    '捐贈',
+    '宜睿票券',
+    '郵電費',
+    '職工福利',
+    '軟體使用費',
+    '雜項購置',
+    '租金支出',
+    '文具用品'
+];
 
-    const [description, setDescription] = useState('');
+export default function EmployeeReimbursement() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { addClaim, updateClaim, claims } = useApp();
+
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
-        { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', noReceipt: false, receiptFile: null }
+        { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', noReceipt: false, receiptFile: null }
     ]);
+
+    // Load existing data
+    useEffect(() => {
+        if (id) {
+            const claim = claims.find(c => c.id === id);
+            if (claim && claim.items) {
+                const loadedItems = claim.items.map(i => ({
+                    id: i.id,
+                    date: i.date,
+                    amount: i.amount,
+                    description: i.description,
+                    category: i.category || '',
+                    noReceipt: i.notes === '無憑證',
+                    receiptFile: null,
+                    existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined
+                }));
+                if (loadedItems.length > 0) setItems(loadedItems);
+            }
+        }
+    }, [id, claims]);
 
     const handleItemChange = (id: string, field: keyof ExpenseItemWithAttachment, value: any) => {
         setItems(prev => prev.map(item => {
@@ -34,7 +71,7 @@ export default function EmployeeReimbursement() {
     const addItem = () => {
         setItems(prev => [
             ...prev,
-            { id: Date.now().toString(), amount: 0, date: new Date().toISOString().split('T')[0], description: '', noReceipt: false, receiptFile: null }
+            { id: Date.now().toString(), amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', noReceipt: false, receiptFile: null }
         ]);
     };
 
@@ -48,12 +85,23 @@ export default function EmployeeReimbursement() {
     };
 
     const handleSubmit = (action: 'submit' | 'draft') => {
-        const status: Claim['status'] = action === 'submit' ? 'pending' : 'draft';
+        // Use pending_finance or pending_approval based on logic, but for simplicity we can default to pending_finance 
+        // or let addClaim handle it if new. For update, we need explicit.
+        // Let's use 'pending_finance' as a safe valid status for submitted items if we don't check approver here.
+        // Or better: don't type it strictly as 'pending' which is wrong.
+        const status: Claim['status'] = action === 'submit' ? 'pending_finance' : 'draft';
 
-        const validItems = items.filter(i => i.amount > 0 && i.description.trim() !== '');
+        const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
 
         if (validItems.length === 0) {
-            alert('請至少新增一筆有效的費用明細（需填寫金額與說明）。');
+            alert('請至少新增一筆有效的費用明細（需填寫費用類別、說明，且金額大於 0）。');
+            return;
+        }
+
+        // Ensure strictly positive amounts
+        const invalidAmountItems = items.filter(i => (Number(i.amount) <= 0 || isNaN(Number(i.amount))));
+        if (invalidAmountItems.length > 0) {
+            alert('金額必須大於 0。');
             return;
         }
 
@@ -66,20 +114,42 @@ export default function EmployeeReimbursement() {
             }
         }
 
-        addClaim({
-            description: description || '個人報銷申請',
-            date: new Date().toISOString().split('T')[0],
-            type: 'employee',
-            payee: 'John Doe (Me)',
-            status: status,
-            items: validItems.map(item => ({
-                id: item.id,
-                date: item.date,
-                amount: item.amount,
-                description: item.description,
-                notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || '')
-            }))
-        });
+        // Auto-generate description mostly based on first item or date
+        const generatedDescription = `${validItems[0].category} 等費用報銷 (${new Date().toISOString().split('T')[0]})`;
+
+        if (id) {
+            // Edit existing
+            updateClaim(id, {
+                description: generatedDescription,
+                date: new Date().toISOString().split('T')[0],
+                type: 'employee',
+                status: status,
+                items: validItems.map(item => ({
+                    id: item.id,
+                    date: item.date,
+                    amount: item.amount,
+                    description: item.description,
+                    category: item.category,
+                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || '')
+                }))
+            });
+        } else {
+            addClaim({
+                description: generatedDescription,
+                date: new Date().toISOString().split('T')[0],
+                type: 'employee',
+                payee: 'John Doe (Me)',
+                status: status,
+                items: validItems.map(item => ({
+                    id: item.id,
+                    date: item.date,
+                    amount: item.amount,
+                    description: item.description,
+                    category: item.category,
+                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || '')
+                }))
+            });
+        }
         navigate('/');
     };
 
@@ -100,32 +170,21 @@ export default function EmployeeReimbursement() {
                     </div>
                 </div>
 
-                {/* Description Field */}
-                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                    <label>申請說明 <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-                    <input
-                        type="text"
-                        required
-                        className="form-input"
-                        placeholder="例如：10月份差旅費報銷"
-                        value={description}
-                        onChange={e => setDescription(e.target.value)}
-                    />
-                </div>
-
-                {/* Items List Header */}
+                {/* Items List Header - Adjusted grid for Category */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '100px 1fr 120px 140px 80px 40px',
+                    gridTemplateColumns: '110px 120px 1fr 100px 120px 70px 40px',
                     gap: '0.5rem',
                     padding: '0.75rem',
                     backgroundColor: 'var(--color-bg)',
                     borderRadius: '8px 8px 0 0',
                     fontWeight: 600,
                     fontSize: '0.85rem',
-                    color: 'var(--color-text-secondary)'
+                    color: 'var(--color-text-secondary)',
+                    whiteSpace: 'nowrap'
                 }}>
                     <div>日期</div>
+                    <div>費用類別</div>
                     <div>費用說明</div>
                     <div>金額</div>
                     <div>憑證</div>
@@ -140,7 +199,7 @@ export default function EmployeeReimbursement() {
                             key={item.id}
                             style={{
                                 display: 'grid',
-                                gridTemplateColumns: '100px 1fr 120px 140px 80px 40px',
+                                gridTemplateColumns: '110px 120px 1fr 100px 120px 70px 40px',
                                 gap: '0.5rem',
                                 padding: '0.75rem',
                                 borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
@@ -154,11 +213,22 @@ export default function EmployeeReimbursement() {
                                 value={item.date}
                                 onChange={e => handleItemChange(item.id, 'date', e.target.value)}
                             />
+                            <select
+                                className="form-input"
+                                style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                                value={item.category || ''}
+                                onChange={e => handleItemChange(item.id, 'category', e.target.value)}
+                            >
+                                <option value="">請選擇</option>
+                                {EXPENSE_CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
                             <input
                                 type="text"
                                 className="form-input"
                                 style={{ padding: '0.4rem', fontSize: '0.85rem' }}
-                                placeholder="費用說明"
+                                placeholder="說明"
                                 value={item.description}
                                 onChange={e => handleItemChange(item.id, 'description', e.target.value)}
                             />
@@ -166,9 +236,11 @@ export default function EmployeeReimbursement() {
                                 <span style={{ marginRight: '0.25rem', color: 'var(--color-text-secondary)' }}>$</span>
                                 <input
                                     type="number"
+                                    min="1"
                                     className="form-input"
                                     style={{ padding: '0.4rem', fontSize: '0.85rem', width: '100%' }}
                                     value={item.amount || ''}
+                                    onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
                                     onChange={e => handleItemChange(item.id, 'amount', parseInt(e.target.value) || 0)}
                                 />
                             </div>
@@ -178,9 +250,19 @@ export default function EmployeeReimbursement() {
                                 ) : item.receiptFile ? (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <Image size={14} style={{ color: 'var(--color-success)' }} />
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
                                             {item.receiptFile.name}
                                         </span>
+                                    </div>
+                                ) : item.existingReceiptName ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <Image size={14} style={{ color: 'var(--color-primary)' }} />
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
+                                            {item.existingReceiptName}
+                                        </span>
+                                        <button onClick={() => document.getElementById(`receipt-${item.id}`)?.click()} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
+                                            <Upload size={12} style={{ color: 'var(--color-text-muted)' }} />
+                                        </button>
                                     </div>
                                 ) : (
                                     <button

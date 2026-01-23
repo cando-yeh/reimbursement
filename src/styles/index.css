@@ -376,6 +376,7 @@ textarea {
   color: var(--color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .activity-table tr {
@@ -470,6 +471,7 @@ textarea {
   color: var(--color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .vendor-table tr {

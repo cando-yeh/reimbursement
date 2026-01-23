@@ -55,7 +55,7 @@ export default function VendorList() {
                             <th style={{ width: '25%' }}>廠商名稱</th>
                             <th style={{ width: '25%' }}>服務內容</th>
                             <th style={{ width: '30%' }}>銀行資訊</th>
-                            <th style={{ width: '20%', textAlign: 'right' }}>操作</th>
+                            <th style={{ width: '20%' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>

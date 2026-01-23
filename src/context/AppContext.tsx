@@ -6,6 +6,7 @@ interface AppContextType {
   claims: Claim[];
   vendorRequests: VendorRequest[];
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Claim;
+  updateClaim: (id: string, data: Partial<Claim>) => void;
   updateClaimStatus: (id: string, newStatus: Claim['status']) => void;
   deleteClaim: (id: string) => void;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => VendorRequest;
@@ -167,6 +168,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return newClaim;
   };
 
+  const updateClaim = (id: string, data: Partial<Claim>) => {
+    setClaims(prev => prev.map(c => {
+      if (c.id === id) {
+        // Recalculate amount if items changed? 
+        // For simplicity, trust the data passed in, or re-calculate if items are present.
+        // But data is Partial.
+        return { ...c, ...data };
+      }
+      return c;
+    }));
+  };
+
   const updateClaimStatus = (id: string, newStatus: Claim['status']) => {
     setClaims(prev => prev.map(c => {
       if (c.id === id) {
@@ -249,6 +262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       claims,
       vendorRequests,
       addClaim,
+      updateClaim,
       updateClaimStatus,
       deleteClaim,
       requestAddVendor,

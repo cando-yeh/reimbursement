@@ -26,8 +26,11 @@ function App() {
             <Route path="/vendors/requests" element={<VendorRequests />} />
             <Route path="/applications/new" element={<ApplicationTypeSelect />} />
             <Route path="/applications/service" element={<ServicePayment />} />
+            <Route path="/applications/service/:id" element={<ServicePayment />} />
             <Route path="/reimburse" element={<EmployeeReimbursement />} />
+            <Route path="/reimburse/:id" element={<EmployeeReimbursement />} />
             <Route path="/payment-request" element={<PaymentRequest />} />
+            <Route path="/payment-request/:id" element={<PaymentRequest />} />
             <Route path="/claims/:id" element={<ApplicationDetail />} />
             <Route path="/approvals" element={<ApprovalCenter />} />
             <Route path="/admin/users" element={<UserManagement />} />

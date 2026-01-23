@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Upload, X, FileText, ChevronDown } from 'lucide-react';
+import { Upload, X, FileText, ChevronDown } from 'lucide-react';
+import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
 
 // ------- Helpers -------
 function formatNumberWithCommas(value: string) {
@@ -32,6 +33,7 @@ function Field({ label, required, hint, children, error }: any) {
     );
 }
 
+
 const PaymentRequest: React.FC = () => {
     const navigate = useNavigate();
     const { vendors, addClaim, currentUser } = useApp();
@@ -40,10 +42,15 @@ const PaymentRequest: React.FC = () => {
     const [vendorId, setVendorId] = useState<string>("");
     const [amountInput, setAmountInput] = useState<string>("");
     const [description, setDescription] = useState<string>(""); // Transaction Content
+    const [expenseCategory, setExpenseCategory] = useState<string>("");
     const [memo, setMemo] = useState<string>(""); // Payer Notes
     const [receiptStatus, setReceiptStatus] = useState<"obtained" | "pending" | "none">("obtained");
     const [invoiceNumber, setInvoiceNumber] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
+
+    // Manual Bank State (for floating accounts)
+    const [manualBankCode, setManualBankCode] = useState("");
+    const [manualBankAccount, setManualBankAccount] = useState("");
 
     // Validation State
     const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -53,7 +60,17 @@ const PaymentRequest: React.FC = () => {
         [vendors, vendorId]
     );
 
-    const bankAccount = selectedVendor ? `${selectedVendor.bankCode} - ${selectedVendor.bankAccount}` : "";
+    // Reset manual fields when vendor changes (optional, but good UX)
+    useEffect(() => {
+        if (selectedVendor && !selectedVendor.isFloatingAccount) {
+            setManualBankCode("");
+            setManualBankAccount("");
+        }
+    }, [selectedVendor]);
+
+    const bankAccountDisplay = selectedVendor
+        ? (selectedVendor.isFloatingAccount ? "需自行填寫" : `${selectedVendor.bankCode} - ${selectedVendor.bankAccount}`)
+        : "";
     const amount = parseAmountToNumber(amountInput);
 
     // Validation Logic
@@ -62,10 +79,17 @@ const PaymentRequest: React.FC = () => {
         if (!vendorId) e.vendorId = "請選擇廠商";
         if (!amount || amount <= 0) e.amount = "請輸入大於 0 的金額";
         if (!description.trim()) e.description = "請填寫交易內容";
+        if (!expenseCategory) e.expenseCategory = "請選擇費用類別";
         if (memo.length > 10) e.memo = "備註不得超過 10 個字";
         if (receiptStatus === "obtained" && !invoiceNumber.trim()) e.invoiceNumber = "已取得發票/收據時，請填寫號碼";
+
+        if (selectedVendor?.isFloatingAccount) {
+            if (!manualBankCode) e.manualBankCode = "請選擇銀行";
+            if (!manualBankAccount) e.manualBankAccount = "請填寫銀行帳號";
+        }
+
         return e;
-    }, [vendorId, amount, description, memo, receiptStatus, invoiceNumber]);
+    }, [vendorId, amount, description, expenseCategory, memo, receiptStatus, invoiceNumber, selectedVendor, manualBankCode, manualBankAccount]);
 
     const isValid = Object.keys(errors).length === 0;
 
@@ -100,8 +124,11 @@ const PaymentRequest: React.FC = () => {
         // Mark all as touched
         setTouched({
             vendorId: true,
+            manualBankCode: true,
+            manualBankAccount: true,
             amount: true,
             description: true,
+            expenseCategory: true,
             memo: true,
             invoiceNumber: true,
         });
@@ -113,6 +140,7 @@ const PaymentRequest: React.FC = () => {
             type: 'payment',
             amount: amount,
             description: description.trim(),
+            expenseCategory,
             payeeId: vendorId,
             payee: selectedVendor?.name || '',
             items: [],
@@ -120,13 +148,11 @@ const PaymentRequest: React.FC = () => {
             paymentDetails: {
                 transactionContent: description.trim(),
                 payerNotes: memo.trim(),
-                invoiceStatus: receiptStatus,
+                invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
                 invoiceNumber: receiptStatus === 'obtained' ? invoiceNumber.trim() : undefined,
-                // In a real app, we would upload files here and get URLs. 
-                // For now we just mock it or store filenames if needed by the type.
-                // The Type definition for paymentDetails.invoiceFile is string currently (single).
-                // We might need to adjust the type later to support multiple or just take the first one name for now.
-                invoiceFile: attachments.length > 0 ? attachments[0].name : undefined
+                invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
+                bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
+                bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
             }
         };
 
@@ -184,16 +210,55 @@ const PaymentRequest: React.FC = () => {
                                 </div>
                             </Field>
 
-                            <Field label="付款帳號" hint={vendorId ? "" : "請先選擇廠商以顯示帳號"}>
-                                <input
-                                    type="text"
-                                    value={bankAccount}
-                                    disabled
-                                    className="form-input"
-                                    style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
-                                    placeholder="請先選擇廠商以顯示帳號"
-                                />
-                            </Field>
+                            {selectedVendor?.isFloatingAccount ? (
+                                <>
+                                    <Field label="收款銀行" required error={showErr("manualBankCode")}>
+                                        <div style={{ position: 'relative' }}>
+                                            <select
+                                                className="form-input"
+                                                value={manualBankCode}
+                                                onChange={e => setManualBankCode(e.target.value)}
+                                                onBlur={() => markTouched("manualBankCode")}
+                                                style={{ appearance: 'none' }}
+                                            >
+                                                <option value="">==請選擇==</option>
+                                                {BANK_LIST.map(bank => (
+                                                    <option key={bank.code} value={bank.code}>
+                                                        {bank.code} {bank.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                                                <ChevronDown size={16} />
+                                            </div>
+                                        </div>
+                                    </Field>
+                                    <Field label="收款帳號" required error={showErr("manualBankAccount")}>
+                                        <input
+                                            type="text"
+                                            value={manualBankAccount}
+                                            onChange={e => {
+                                                if (/^\d*$/.test(e.target.value)) setManualBankAccount(e.target.value);
+                                            }}
+                                            onBlur={() => markTouched("manualBankAccount")}
+                                            className="form-input"
+                                            placeholder="請輸入銀行帳號"
+                                            inputMode="numeric"
+                                        />
+                                    </Field>
+                                </>
+                            ) : (
+                                <Field label="付款帳號" hint={vendorId ? "" : "請先選擇廠商以顯示帳號"}>
+                                    <input
+                                        type="text"
+                                        value={bankAccountDisplay}
+                                        disabled
+                                        className="form-input"
+                                        style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
+                                        placeholder="請先選擇廠商以顯示帳號"
+                                    />
+                                </Field>
+                            )}
                         </div>
                     </div>
 
@@ -205,6 +270,26 @@ const PaymentRequest: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Field label="費用類別" required error={showErr("expenseCategory")}>
+                                <div style={{ position: 'relative' }}>
+                                    <select
+                                        value={expenseCategory}
+                                        onChange={(e) => setExpenseCategory(e.target.value)}
+                                        onBlur={() => markTouched("expenseCategory")}
+                                        className="form-input"
+                                        style={{ appearance: 'none' }}
+                                    >
+                                        <option value="">請選擇費用類別</option>
+                                        {EXPENSE_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                                        <ChevronDown size={16} />
+                                    </div>
+                                </div>
+                            </Field>
+
                             <Field label="請款金額" required hint="單位：新台幣（TWD）" error={showErr("amount")}>
                                 <div style={{ position: 'relative' }}>
                                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>NT$</span>

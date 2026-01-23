@@ -1,55 +1,14 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Claim } from '../../types';
 import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image } from 'lucide-react';
-
-const BANK_LIST = [
-    { code: '004', name: '臺灣銀行' },
-    { code: '005', name: '土地銀行' },
-    { code: '006', name: '合作金庫' },
-    { code: '007', name: '第一銀行' },
-    { code: '008', name: '華南銀行' },
-    { code: '009', name: '彰化銀行' },
-    { code: '011', name: '上海銀行' },
-    { code: '012', name: '台北富邦' },
-    { code: '013', name: '國泰世華' },
-    { code: '015', name: '中國輸出' },
-    { code: '016', name: '高雄銀行' },
-    { code: '017', name: '兆豐銀行' },
-    { code: '018', name: '農業金庫' },
-    { code: '021', name: '花旗銀行' },
-    { code: '048', name: '王道銀行' },
-    { code: '050', name: '臺灣企銀' },
-    { code: '052', name: '渣打銀行' },
-    { code: '053', name: '台中銀行' },
-    { code: '054', name: '京城銀行' },
-    { code: '081', name: '滙豐銀行' },
-    { code: '101', name: '瑞興銀行' },
-    { code: '102', name: '華泰銀行' },
-    { code: '103', name: '新光銀行' },
-    { code: '108', name: '陽信銀行' },
-    { code: '118', name: '板信銀行' },
-    { code: '147', name: '三信銀行' },
-    { code: '700', name: '中華郵政' },
-    { code: '803', name: '聯邦銀行' },
-    { code: '805', name: '遠東商銀' },
-    { code: '806', name: '元大銀行' },
-    { code: '807', name: '永豐銀行' },
-    { code: '808', name: '玉山銀行' },
-    { code: '809', name: '凱基銀行' },
-    { code: '810', name: '星展銀行' },
-    { code: '812', name: '台新銀行' },
-    { code: '816', name: '安泰銀行' },
-    { code: '822', name: '中國信託' },
-    { code: '823', name: '將來銀行' },
-    { code: '824', name: '連線銀行' },
-    { code: '826', name: '樂天銀行' },
-];
+import { BANK_LIST } from '../../utils/constants';
 
 export default function ServicePayment() {
+    const { id } = useParams();
     const navigate = useNavigate();
-    const { addClaim } = useApp();
+    const { addClaim, updateClaim, claims } = useApp();
     const [formData, setFormData] = useState({
         payeeName: '',
         idNumber: '',
@@ -66,6 +25,34 @@ export default function ServicePayment() {
     const [idFrontFile, setIdFrontFile] = useState<File | null>(null);
     const [idBackFile, setIdBackFile] = useState<File | null>(null);
     const [bankBookFile, setBankBookFile] = useState<File | null>(null);
+
+    // Load existing data
+    useEffect(() => {
+        if (id) {
+            const claim = claims.find(c => c.id === id);
+            if (claim && claim.serviceDetails) {
+                setFormData({
+                    payeeName: claim.payee,
+                    idNumber: claim.serviceDetails.idNumber,
+                    email: claim.serviceDetails.email,
+                    registeredAddress: claim.serviceDetails.registeredAddress,
+                    description: claim.description,
+                    servicePeriodStart: claim.serviceDetails.servicePeriodStart,
+                    servicePeriodEnd: claim.serviceDetails.servicePeriodEnd,
+                    amount: claim.amount,
+                    bankCode: claim.serviceDetails.bankCode,
+                    bankAccount: claim.serviceDetails.bankAccount,
+                });
+                // Note: Files cannot be restored to File objects. 
+                // We should show them as "Existing: filename" and allow replace.
+                // For simplicity in this demo, we won't force re-upload if logic allows, 
+                // but currently validation requires files. 
+                // I'll need to adjust validation or 'mock' the file presence state.
+                // Let's rely on the user to re-upload for now if it's strict, 
+                // OR add `existingFiles` state.
+            }
+        }
+    }, [id, claims]);
 
     const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -84,7 +71,12 @@ export default function ServicePayment() {
                 alert('請填寫所有必填欄位');
                 return;
             }
-            if (!idFrontFile || !idBackFile || !bankBookFile) {
+            // Relaxed file validation for Edit mode if we assume files exist, 
+            // but we don't track them well here. Let's warn if strictly submitting.
+            if ((!idFrontFile || !idBackFile || !bankBookFile) && !id) {
+                // If creating new, must have files. 
+                // If editing, maybe we kept old ones? 
+                // Ideally we should merge `serviceDetails` image paths if new ones are null.
                 alert('請上傳所有必要附件');
                 return;
             }
@@ -92,7 +84,7 @@ export default function ServicePayment() {
 
         const selectedBank = BANK_LIST.find(b => b.code === formData.bankCode);
 
-        addClaim({
+        const claimData = {
             description: formData.description || '勞務報酬申請',
             date: new Date().toISOString().split('T')[0],
             type: 'service',
@@ -113,11 +105,37 @@ export default function ServicePayment() {
                 bankName: selectedBank?.name || '',
                 bankCode: formData.bankCode,
                 bankAccount: formData.bankAccount,
+                // Update images only if new file provided, otherwise need to keep old strings.
+                // Since I can't access old claim easily here without re-fetching or passing it,
+                // simplest is: if id exists, we're assuming files handled or just re-upload.
+                // Better: pass existing image names if not updating.
+                // For this quick fix, I will use new names if exist.
                 idFrontImage: idFrontFile?.name,
                 idBackImage: idBackFile?.name,
                 bankBookImage: bankBookFile?.name
             }
-        });
+        };
+
+        if (id) {
+            // We need to preserve old image paths if not replacing.
+            // Fetch current to merge?
+            const currentClaim = claims.find(c => c.id === id);
+            const currentDetails = currentClaim?.serviceDetails;
+
+            const mergedDetails = {
+                ...claimData.serviceDetails,
+                idFrontImage: idFrontFile?.name || currentDetails?.idFrontImage,
+                idBackImage: idBackFile?.name || currentDetails?.idBackImage,
+                bankBookImage: bankBookFile?.name || currentDetails?.bankBookImage,
+            };
+
+            updateClaim(id, {
+                ...claimData,
+                serviceDetails: mergedDetails
+            });
+        } else {
+            addClaim(claimData);
+        }
         navigate('/');
     };
 

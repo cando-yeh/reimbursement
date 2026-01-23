@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Claim, VendorRequest } from '../../types';
 import { Check, X, FileText, User as UserIcon, Calendar, DollarSign, UploadCloud, Eye, Trash2, Edit2, Send, Undo2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import StatusBadge from '../../components/Common/StatusBadge';
 
 const ApprovalCenter = () => {
     const { claims, vendorRequests, currentUser, updateClaimStatus, deleteClaim, approveVendorRequest, rejectVendorRequest, availableUsers } = useApp();
@@ -151,7 +152,11 @@ const ApprovalCenter = () => {
                                 <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => handleSubmitDraft(claim.id)}>
                                     <Send size={14} style={{ marginRight: '0.25rem' }} /> 送出
                                 </button>
-                                <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => navigate(`/applications/${claim.id}`)}>
+                                <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => {
+                                    if (claim.type === 'service') navigate(`/applications/service/${claim.id}`);
+                                    else if (claim.type === 'payment') navigate(`/payment-request/${claim.id}`);
+                                    else navigate(`/reimburse/${claim.id}`);
+                                }}>
                                     <Edit2 size={14} /> 編輯
                                 </button>
                                 <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', color: 'var(--color-danger)' }} onClick={() => handleDeleteDraft(claim.id)}>
@@ -170,7 +175,7 @@ const ApprovalCenter = () => {
                         emptyMessage="無待補憑證項目"
                         renderActions={(claim: Claim) => (
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => navigate(`/applications/${claim.id}`)}>
+                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => navigate(`/claims/${claim.id}`)}>
                                     <UploadCloud size={14} style={{ marginRight: '0.25rem' }} /> 上傳憑證
                                 </button>
                             </div>
@@ -266,7 +271,7 @@ const ApprovalCenter = () => {
                         emptyMessage="無申請紀錄"
                         renderActions={(claim: Claim) => (
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => navigate(`/applications/${claim.id}`)}>
+                                <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => navigate(`/claims/${claim.id}`)}>
                                     <Eye size={14} style={{ marginRight: '0.25rem' }} /> 查看
                                 </button>
 
@@ -357,23 +362,6 @@ const TabButton = ({ active, onClick, label }: any) => (
 
 const ClaimTable = ({ claims, emptyMessage, renderActions }: any) => {
 
-    // Status Badge Helper
-    const getStatusBadge = (status: string) => {
-        const map: any = {
-            'draft': { label: '草稿', class: 'draft' },
-            'pending_approval': { label: '待核准', class: 'pending_approval' },
-            'pending_finance': { label: '待財務審核', class: 'pending_finance' },
-            'pending_finance_review': { label: '待憑證審核', class: 'pending_finance_review' },
-            'pending_evidence': { label: '待補憑證', class: 'pending_evidence' },
-            'approved': { label: '待放款', class: 'approved' },
-            'paid': { label: '已付款', class: 'paid' },
-            'completed': { label: '已完成', class: 'completed' },
-            'rejected': { label: '已退件', class: 'rejected' }
-        };
-        const s = map[status] || { label: status, class: 'draft' };
-        return <span className={`status-badge ${s.class}`}>{s.label}</span>;
-    };
-
     return (
         <table className="vendor-table">
             <thead>
@@ -395,7 +383,7 @@ const ClaimTable = ({ claims, emptyMessage, renderActions }: any) => {
                     claims.map((claim: Claim) => (
                         <tr key={claim.id}>
                             <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>#{claim.id.slice(0, 8)}</td>
-                            <td>{getStatusBadge(claim.status)}</td>
+                            <td><StatusBadge status={claim.status} /></td>
                             <td>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
                                     {claim.type === 'employee' ? '員工報銷' : claim.type === 'vendor' ? '廠商款項' : '勞務報酬'}

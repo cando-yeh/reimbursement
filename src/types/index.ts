@@ -4,6 +4,7 @@ export interface Vendor {
     serviceContent?: string;
     bankCode?: string;
     bankAccount?: string;
+    isFloatingAccount?: boolean;
 }
 
 export interface ExpenseItem {
@@ -11,6 +12,7 @@ export interface ExpenseItem {
     date: string; // Expense date
     amount: number;
     description: string;
+    category?: string; // Expense Category
     notes?: string;
 }
 
@@ -32,6 +34,9 @@ export interface Claim {
         invoiceStatus: 'obtained' | 'not_yet' | 'unable';
         invoiceNumber?: string;
         invoiceFile?: string;
+        // For non-fixed vendor accounts
+        bankCode?: string;
+        bankAccount?: string;
     };
 
     // Items

@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import StatusBadge from '../../components/Common/StatusBadge';
-import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle, Edit2 } from 'lucide-react';
 
 
 export default function ApplicationDetail() {
@@ -54,6 +54,13 @@ export default function ApplicationDetail() {
                                 <button onClick={handleDelete} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger-bg)', backgroundColor: 'var(--color-danger-bg)' }}>
                                     <Trash2 size={18} /> 刪除
                                 </button>
+                                <button onClick={() => {
+                                    if (claim.type === 'service') navigate(`/applications/service/${claim.id}`);
+                                    else if (claim.type === 'payment') navigate(`/payment-request/${claim.id}`);
+                                    else navigate(`/reimburse/${claim.id}`);
+                                }} className="btn btn-secondary">
+                                    <Edit2 size={18} /> 編輯
+                                </button>
                                 <button onClick={() => handleStatusChange('pending_approval')} className="btn btn-primary">
                                     <Send size={18} /> 提交申請
                                 </button>
@@ -92,6 +99,7 @@ export default function ApplicationDetail() {
                             {claim.type === 'employee' ? '個人報銷' : claim.type === 'service' ? '勞務付款' : '廠商付款'}
                         </div>
                     </div>
+
 
                     <div>
                         <label className="form-group label">
@@ -198,6 +206,7 @@ export default function ApplicationDetail() {
                         <thead>
                             <tr>
                                 <th>日期</th>
+                                <th>類別</th>
                                 <th>項目/說明</th>
                                 <th>備註</th>
                                 <th style={{ textAlign: 'right' }}>金額</th>
@@ -208,6 +217,9 @@ export default function ApplicationDetail() {
                                 claim.items.map((item, idx) => (
                                     <tr key={item.id || idx}>
                                         <td>{item.date}</td>
+                                        <td>
+                                            {item.category && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{item.category}</span>}
+                                        </td>
                                         <td style={{ fontWeight: 500 }}>{item.description}</td>
                                         <td style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>{item.notes || '-'}</td>
                                         <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${item.amount.toLocaleString()}</td>
@@ -215,13 +227,13 @@ export default function ApplicationDetail() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>無明細資料 (舊資料或格式問題)</td>
+                                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>無明細資料 (舊資料或格式問題)</td>
                                 </tr>
                             )}
                         </tbody>
                         <tfoot>
                             <tr style={{ backgroundColor: 'var(--color-bg)' }}>
-                                <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>總計</td>
+                                <td colSpan={4} style={{ textAlign: 'right', fontWeight: 'bold' }}>總計</td>
                                 <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-primary)' }}>
                                     ${claim.amount.toLocaleString()}
                                 </td>

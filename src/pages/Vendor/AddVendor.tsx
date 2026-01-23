@@ -2,50 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { ArrowLeft, Building } from 'lucide-react';
-
-
-const BANK_LIST = [
-    { code: '004', name: '臺灣銀行' },
-    { code: '005', name: '土地銀行' },
-    { code: '006', name: '合作金庫' },
-    { code: '007', name: '第一銀行' },
-    { code: '008', name: '華南銀行' },
-    { code: '009', name: '彰化銀行' },
-    { code: '011', name: '上海銀行' },
-    { code: '012', name: '台北富邦' },
-    { code: '013', name: '國泰世華' },
-    { code: '015', name: '中國輸出' },
-    { code: '016', name: '高雄銀行' },
-    { code: '017', name: '兆豐銀行' },
-    { code: '018', name: '農業金庫' },
-    { code: '021', name: '花旗銀行' },
-    { code: '048', name: '王道銀行' },
-    { code: '050', name: '臺灣企銀' },
-    { code: '052', name: '渣打銀行' },
-    { code: '053', name: '台中銀行' },
-    { code: '054', name: '京城銀行' },
-    { code: '081', name: '滙豐銀行' },
-    { code: '101', name: '瑞興銀行' },
-    { code: '102', name: '華泰銀行' },
-    { code: '103', name: '新光銀行' },
-    { code: '108', name: '陽信銀行' },
-    { code: '118', name: '板信銀行' },
-    { code: '147', name: '三信銀行' },
-    { code: '700', name: '中華郵政' },
-    { code: '803', name: '聯邦銀行' },
-    { code: '805', name: '遠東商銀' },
-    { code: '806', name: '元大銀行' },
-    { code: '807', name: '永豐銀行' },
-    { code: '808', name: '玉山銀行' },
-    { code: '809', name: '凱基銀行' },
-    { code: '810', name: '星展銀行' },
-    { code: '812', name: '台新銀行' },
-    { code: '816', name: '安泰銀行' },
-    { code: '822', name: '中國信託' },
-    { code: '823', name: '將來銀行' },
-    { code: '824', name: '連線銀行' },
-    { code: '826', name: '樂天銀行' },
-];
+import { BANK_LIST } from '../../utils/constants';
 
 export default function AddVendor() {
     const navigate = useNavigate();
@@ -55,7 +12,8 @@ export default function AddVendor() {
         name: '',
         serviceContent: '',
         bankCode: '',
-        bankAccount: ''
+        bankAccount: '',
+        isFloatingAccount: false
     });
 
     const isEditMode = Boolean(id);
@@ -68,7 +26,8 @@ export default function AddVendor() {
                     name: vendor.name,
                     serviceContent: vendor.serviceContent || '',
                     bankCode: vendor.bankCode || '',
-                    bankAccount: vendor.bankAccount || ''
+                    bankAccount: vendor.bankAccount || '',
+                    isFloatingAccount: vendor.isFloatingAccount || false
                 });
             }
         }
@@ -83,14 +42,19 @@ export default function AddVendor() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Validation: All fields required
-        if (!formData.name || !formData.serviceContent || !formData.bankCode || !formData.bankAccount) {
-            alert('請填寫所有欄位。');
+        // Validation: Name/Service required. Bank info required only if NOT floating.
+        if (!formData.name || !formData.serviceContent) {
+            alert('請填寫廠商名稱與服務內容。');
+            return;
+        }
+
+        if (!formData.isFloatingAccount && (!formData.bankCode || !formData.bankAccount)) {
+            alert('固定帳號廠商需填寫銀行資訊。');
             return;
         }
 
         if (isEditMode) {
-            requestUpdateVendor(id, formData);
+            requestUpdateVendor(id!, formData);
             alert('更新申請已提交審核。');
         } else {
             requestAddVendor(formData);
@@ -140,11 +104,32 @@ export default function AddVendor() {
                         />
                     </div>
 
-                    <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={formData.isFloatingAccount}
+                                onChange={e => {
+                                    const checked = e.target.checked;
+                                    setFormData({
+                                        ...formData,
+                                        isFloatingAccount: checked,
+                                        bankCode: checked ? '' : formData.bankCode,
+                                        bankAccount: checked ? '' : formData.bankAccount
+                                    });
+                                }}
+                                style={{ width: '16px', height: '16px' }}
+                            />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>非固定帳號（無需預先填寫銀行資訊）</span>
+                        </label>
+                    </div>
+
+                    <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', opacity: formData.isFloatingAccount ? 0.5 : 1 }}>
                         <div className="form-group">
-                            <label>銀行 <span className="required-star">*</span></label>
+                            <label>銀行 {!formData.isFloatingAccount && <span className="required-star">*</span>}</label>
                             <select
-                                required
+                                required={!formData.isFloatingAccount}
+                                disabled={formData.isFloatingAccount}
                                 className="form-input"
                                 value={formData.bankCode}
                                 onChange={e => setFormData({ ...formData, bankCode: e.target.value })}
@@ -159,10 +144,11 @@ export default function AddVendor() {
                         </div>
 
                         <div className="form-group">
-                            <label>銀行帳號 <span className="required-star">*</span> <span className="input-hint">(僅限數字)</span></label>
+                            <label>銀行帳號 {!formData.isFloatingAccount && <span className="required-star">*</span>} <span className="input-hint">(僅限數字)</span></label>
                             <input
                                 type="text"
-                                required
+                                required={!formData.isFloatingAccount}
+                                disabled={formData.isFloatingAccount}
                                 pattern="[0-9]*"
                                 inputMode="numeric"
                                 className="form-input"
