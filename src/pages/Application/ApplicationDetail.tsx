@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import StatusBadge from '../../components/Common/StatusBadge';
-import { ArrowLeft, CheckCircle, CreditCard, Send, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle } from 'lucide-react';
 
 
 export default function ApplicationDetail() {
@@ -21,11 +21,11 @@ export default function ApplicationDetail() {
     }
 
     const handleStatusChange = (newStatus) => {
-        updateClaimStatus(id, newStatus);
+        if (id) updateClaimStatus(id, newStatus);
     };
 
     const handleDelete = () => {
-        if (confirm('您確定要刪除此申請單嗎？')) {
+        if (id && confirm('您確定要刪除此申請單嗎？')) {
             deleteClaim(id);
             navigate('/');
         }
@@ -47,39 +47,36 @@ export default function ApplicationDetail() {
                     </div>
 
                     {/* Action Buttons based on Status */}
+                    {/* Action Buttons based on Status */}
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         {claim.status === 'draft' && (
                             <>
                                 <button onClick={handleDelete} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger-bg)', backgroundColor: 'var(--color-danger-bg)' }}>
                                     <Trash2 size={18} /> 刪除
                                 </button>
-                                <button onClick={() => handleStatusChange('pending')} className="btn btn-primary">
+                                <button onClick={() => handleStatusChange('pending_approval')} className="btn btn-primary">
                                     <Send size={18} /> 提交申請
                                 </button>
                             </>
                         )}
 
-                        {claim.status === 'pending' && (
-                            <>
-                                <button onClick={() => handleStatusChange('draft')} className="btn btn-ghost">
-                                    退回草稿
-                                </button>
-                                <button onClick={() => handleStatusChange('approved')} className="btn" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}>
-                                    <CheckCircle size={18} /> 核准
-                                </button>
-                            </>
-                        )}
-
-                        {claim.status === 'approved' && (
-                            <button onClick={() => handleStatusChange('paid')} className="btn" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
-                                <CreditCard size={18} /> 標記為已付款
-                            </button>
-                        )}
-
-                        {claim.status === 'paid' && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
-                                <CheckCircle size={20} /> 已完成付款
+                        {/* Read Only logic for Applicant mainly. Approvals should happen in ApprovalCenter */}
+                        {['pending_approval', 'pending_finance', 'pending_evidence', 'pending_finance_review'].includes(claim.status) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: '600' }}>
+                                <CheckCircle size={20} /> 審核中
                             </div>
+                        )}
+
+                        {(claim.status === 'approved' || claim.status === 'paid' || claim.status === 'completed') && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
+                                <CheckCircle size={20} /> 已完成 / 待放款
+                            </div>
+                        )}
+
+                        {claim.status === 'pending_evidence' && (
+                            <button onClick={() => alert('此功能尚未實作 (上傳憑證)')} className="btn" style={{ backgroundColor: 'var(--color-warning)', color: 'white' }}>
+                                <AlertCircle size={18} /> 上傳憑證
+                            </button>
                         )}
                     </div>
                 </div>
@@ -158,6 +155,38 @@ export default function ApplicationDetail() {
                                         {claim.serviceDetails.idFrontImage && <span style={{ marginRight: '1rem', fontSize: '0.85rem' }}>📄 {claim.serviceDetails.idFrontImage}</span>}
                                         {claim.serviceDetails.idBackImage && <span style={{ marginRight: '1rem', fontSize: '0.85rem' }}>📄 {claim.serviceDetails.idBackImage}</span>}
                                         {claim.serviceDetails.bankBookImage && <span style={{ fontSize: '0.85rem' }}>📄 {claim.serviceDetails.bankBookImage}</span>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Vendor Payment Specific Details */}
+                    {claim.type === 'payment' && claim.paymentDetails && (
+                        <div className="card" style={{ backgroundColor: 'var(--color-bg)', border: 'none', marginBottom: '1.5rem' }}>
+                            <h4 className="heading-md" style={{ fontSize: '1rem', marginBottom: '1rem' }}>付款申請明細</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <span style={{ color: 'var(--color-text-secondary)' }}>交易內容:</span> {claim.paymentDetails.transactionContent}
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: 'var(--color-text-secondary)' }}>發票狀態:</span>
+                                    <span className={`status-badge status-${claim.paymentDetails.invoiceStatus === 'obtained' ? 'approved' : 'pending'}`}>
+                                        {claim.paymentDetails.invoiceStatus === 'obtained' ? '已取得' :
+                                            claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '無法取得'}
+                                    </span>
+                                </div>
+
+                                {claim.paymentDetails.invoiceNumber && (
+                                    <div>
+                                        <span style={{ color: 'var(--color-text-secondary)' }}>發票號碼:</span> {claim.paymentDetails.invoiceNumber}
+                                    </div>
+                                )}
+
+                                {claim.paymentDetails.payerNotes && (
+                                    <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--color-border)' }}>
+                                        <span style={{ color: 'var(--color-text-secondary)' }}>備註:</span> {claim.paymentDetails.payerNotes}
                                     </div>
                                 )}
                             </div>

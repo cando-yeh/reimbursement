@@ -19,12 +19,20 @@ export interface Claim {
     type: string; // 'employee' | 'vendor' | 'service'
     payee: string; // User Name or Vendor Name
     payeeId?: string; // Optional ID for linking
+    applicantId?: string; // ID of the user who submitted the claim
 
     // Header Info
     date: string; // Submission Date
-    status: 'pending' | 'approved' | 'paid' | 'draft';
+    status: 'draft' | 'pending_approval' | 'pending_finance' | 'approved' | 'paid' | 'pending_evidence' | 'pending_finance_review' | 'completed' | 'rejected';
     description: string; // Main title/summary of the claim
     amount: number; // Total amount
+    paymentDetails?: {
+        transactionContent: string;
+        payerNotes?: string;
+        invoiceStatus: 'obtained' | 'not_yet' | 'unable';
+        invoiceNumber?: string;
+        invoiceFile?: string;
+    };
 
     // Items
     items: ExpenseItem[];
@@ -46,6 +54,7 @@ export interface Claim {
     };
 
     datePaid?: string; // Optional, set when status becomes 'paid'
+    evidenceFiles?: string[]; // Array of file paths/base64 for post-payment evidence
 }
 
 export interface VendorRequest {
@@ -56,4 +65,15 @@ export interface VendorRequest {
     status: 'pending' | 'approved' | 'rejected';
     timestamp: string;
     originalData?: Vendor; // Snapshot of data before change (for audit/comparison)
+}
+
+export type Permission = 'general' | 'finance_audit' | 'user_management';
+
+export interface User {
+    id: string;
+    name: string;
+    roleName: string;
+    permissions: Permission[];
+    email?: string;
+    approverId?: string; // ID of the general approver (manager)
 }

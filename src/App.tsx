@@ -7,9 +7,11 @@ import AddVendor from './pages/Vendor/AddVendor';
 import VendorRequests from './pages/Vendor/VendorRequests';
 import EmployeeReimbursement from './pages/Reimbursement/EmployeeReimbursement';
 import PaymentRequest from './pages/Reimbursement/PaymentRequest';
+import ServicePayment from './pages/Reimbursement/ServicePayment';
 import ApplicationDetail from './pages/Application/ApplicationDetail';
 import ApplicationTypeSelect from './pages/Application/ApplicationTypeSelect';
-import ServicePayment from './pages/Reimbursement/ServicePayment';
+import UserManagement from './pages/Admin/UserManagement';
+import ApprovalCenter from './pages/Approvals/ApprovalCenter';
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
             <Route path="/reimburse" element={<EmployeeReimbursement />} />
             <Route path="/payment-request" element={<PaymentRequest />} />
             <Route path="/claims/:id" element={<ApplicationDetail />} />
+            <Route path="/approvals" element={<ApprovalCenter />} />
+            <Route path="/admin/users" element={<UserManagement />} />
           </Routes>
         </Layout>
       </BrowserRouter>

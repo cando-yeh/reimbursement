@@ -4,11 +4,23 @@ import { Plus, Search, Building } from 'lucide-react';
 
 
 export default function VendorList() {
-    const { vendors, requestDeleteVendor, vendorRequests, userRole } = useApp();
+    const { vendors, requestDeleteVendor, vendorRequests, currentUser } = useApp();
+
+    const canManageVendors = currentUser.permissions.includes('general') || currentUser.permissions.includes('finance_audit');
 
     const getPendingAction = (vendorId: string) => {
-        return vendorRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId || (r.type === 'add' && r.data?.id === vendorId)));
+        return vendorRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId));
     };
+
+    // Filter for pending 'add' requests to display them in the list
+    const pendingAddRequests = vendorRequests.filter(r => r.status === 'pending' && r.type === 'add' && r.data);
+
+    // Combine real vendors and pending-add vendors
+    // using a type assertion or intersection to handle the temporary isPendingAdd flag efficiently
+    const displayVendors = [
+        ...vendors.map(v => ({ ...v, isPendingAdd: false })),
+        ...pendingAddRequests.map(r => ({ ...r.data!, id: r.data!.id!, isPendingAdd: true }))
+    ] as (typeof vendors[0] & { isPendingAdd: boolean })[];
 
     return (
         <div>
@@ -17,7 +29,7 @@ export default function VendorList() {
                     <h1 className="heading-lg">廠商管理</h1>
                     <p className="vendor-subtitle">管理您的付款對象。</p>
                 </div>
-                {userRole === 'applicant' && (
+                {canManageVendors && (
                     <Link to="/vendors/add" className="btn btn-primary">
                         <Plus size={18} />
                         新增廠商
@@ -47,8 +59,10 @@ export default function VendorList() {
                         </tr>
                     </thead>
                     <tbody>
-                        {vendors.map(vendor => {
+                        {displayVendors.map(vendor => {
                             const pendingRequest = getPendingAction(vendor.id);
+                            // If it's a pending add, we show the badge directly. 
+                            // If it's an existing vendor, we check pendingRequest (update/delete).
 
                             return (
                                 <tr key={vendor.id}>
@@ -56,7 +70,11 @@ export default function VendorList() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <Building size={16} className="text-secondary" />
                                             {vendor.name}
-                                            {pendingRequest && (
+                                            {vendor.isPendingAdd ? (
+                                                <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)', marginLeft: '0.5rem' }}>
+                                                    待新增
+                                                </span>
+                                            ) : pendingRequest && (
                                                 <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', marginLeft: '0.5rem' }}>
                                                     {pendingRequest.type === 'delete' ? '待刪除' : '待更新'}
                                                 </span>
@@ -79,7 +97,7 @@ export default function VendorList() {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                            {userRole === 'applicant' ? (
+                                            {canManageVendors && !vendor.isPendingAdd ? (
                                                 <>
                                                     <Link
                                                         to={`/vendors/edit/${vendor.id}`}
@@ -101,6 +119,10 @@ export default function VendorList() {
                                                         刪除
                                                     </button>
                                                 </>
+                                            ) : vendor.isPendingAdd ? (
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                                                    審核中
+                                                </span>
                                             ) : (
                                                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                                                     僅供檢視

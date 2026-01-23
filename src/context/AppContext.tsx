@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Vendor, Claim, VendorRequest } from '../types';
+import { Vendor, Claim, VendorRequest, User } from '../types';
 
 interface AppContextType {
   vendors: Vendor[];
   claims: Claim[];
   vendorRequests: VendorRequest[];
-  addClaim: (claim: Omit<Claim, 'id' | 'amount'> & { amount?: number }) => Claim;
+  addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Claim;
   updateClaimStatus: (id: string, newStatus: Claim['status']) => void;
   deleteClaim: (id: string) => void;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => VendorRequest;
@@ -13,9 +13,19 @@ interface AppContextType {
   requestDeleteVendor: (id: string) => void;
   approveVendorRequest: (requestId: string) => void;
   rejectVendorRequest: (requestId: string) => void;
-  userRole: 'applicant' | 'finance';
-  setUserRole: (role: 'applicant' | 'finance') => void;
+  currentUser: User;
+  switchUser: (userId: string) => void;
+  availableUsers: User[];
+  updateUser: (id: string, updates: Partial<User>) => void;
+  deleteUser: (id: string) => void;
 }
+
+export const MOCK_USERS: User[] = [
+  { id: 'u1', name: 'User A', roleName: '員工 (一般權限)', permissions: ['general'], email: 'user.a@company.com', approverId: 'u2' }, // User A reports to User B
+  { id: 'u2', name: 'User B', roleName: '員工 (一般權限)', permissions: ['general'], email: 'user.b@company.com' }, // User B is manager, reports to Finance? or self-approve? Let's assume reports to Finance implicitly if no approver.
+  { id: 'u3', name: 'User C', roleName: '財務 (一般+財務)', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com' },
+  { id: 'u4', name: 'User D', roleName: '管理者 (管理)', permissions: ['user_management'], email: 'admin.d@company.com' },
+];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -34,7 +44,7 @@ const INITIAL_CLAIMS: Claim[] = [
     description: '10月份差旅費報銷',
     amount: 120.50,
     date: '2023-10-25',
-    status: 'pending',
+    status: 'pending_finance', // Migrated from 'pending'
     items: [
       { id: 'i1', date: '2023-10-24', amount: 120.50, description: 'Client A 訪問交通費' }
     ]
@@ -58,7 +68,7 @@ const INITIAL_CLAIMS: Claim[] = [
     description: '團隊聚餐',
     amount: 45.00,
     date: '2023-10-27',
-    status: 'pending',
+    status: 'pending_approval', // Example pending General Approval
     items: [
       { id: 'i1', date: '2023-10-27', amount: 45.00, description: '迎新午餐' }
     ]
@@ -75,10 +85,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
   const [claims, setClaims] = useState<Claim[]>(() => {
+    // Basic migration for old status 'pending' -> 'pending_finance' if reloading old data
     const saved = localStorage.getItem('claims');
-    return saved ? JSON.parse(saved) : INITIAL_CLAIMS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((c: any) => ({
+        ...c,
+        status: c.status === 'pending' ? 'pending_finance' : c.status
+      }));
+    }
+    return INITIAL_CLAIMS;
   });
-  const [userRole, setUserRole] = useState<'applicant' | 'finance'>('applicant');
+  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>(MOCK_USERS);
+
+  const switchUser = (userId: string) => {
+    const user = availableUsers.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+    }
+  };
+
+  const updateUser = (id: string, updates: Partial<User>) => {
+    setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    // If updating current user, update that state too
+    if (currentUser.id === id) {
+      setCurrentUser(prev => ({ ...prev, ...updates }));
+    }
+  };
+
+  const deleteUser = (id: string) => {
+    setAvailableUsers(prev => prev.filter(u => u.id !== id));
+    if (currentUser.id === id) {
+      alert('You deleted your current user session.');
+      window.location.reload();
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('vendors', JSON.stringify(vendors));
@@ -92,15 +134,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('claims', JSON.stringify(claims));
   }, [claims]);
 
-  const addClaim = (claimData: Omit<Claim, 'id' | 'amount'> & { amount?: number }) => {
+  // Persist users too for better DX during reload
+  useEffect(() => {
+    const savedUsers = localStorage.getItem('users');
+    if (savedUsers) {
+      setAvailableUsers(JSON.parse(savedUsers));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(availableUsers));
+  }, [availableUsers]);
+
+
+  const addClaim = (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
     // Calculate total from items if not provided
     const calculatedAmount = claimData.items.reduce((sum, item) => sum + item.amount, 0);
+
+    // Determine initial status: if user has approver -> pending_approval, else -> pending_finance
+    // Note: In real app, we check if current user IS the applicant. If not, logic might differ.
+    // For now assume current user creates claim for themselves.
+    const initialStatus = currentUser.approverId ? 'pending_approval' : 'pending_finance';
 
     const newClaim: Claim = {
       ...claimData,
       id: `c${Date.now()}`,
       amount: calculatedAmount,
-      status: claimData.status || 'pending',
+      status: claimData.status || initialStatus, // Allow overriding if specific flow demands
       date: claimData.date || new Date().toISOString().split('T')[0]
     };
     setClaims(prev => [newClaim, ...prev]);
@@ -196,8 +256,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       requestDeleteVendor,
       approveVendorRequest,
       rejectVendorRequest,
-      userRole,
-      setUserRole
+      currentUser,
+      switchUser,
+      availableUsers,
+      updateUser,
+      deleteUser
     }}>
       {children}
     </AppContext.Provider>

@@ -691,3 +691,29 @@ textarea {
   background-color: var(--color-border);
   color: var(--color-text-secondary);
 }
+
+.status-badge.pending_approval {
+  background-color: hsl(200, 90%, 95%);
+  color: hsl(200, 90%, 45%);
+}
+
+.status-badge.pending_finance {
+  background-color: hsl(280, 70%, 95%);
+  color: hsl(280, 70%, 45%);
+}
+
+.status-badge.pending_finance_review,
+.status-badge.pending_evidence {
+  background-color: hsl(30, 90%, 95%);
+  color: hsl(30, 90%, 45%);
+}
+
+.status-badge.completed {
+  background-color: hsl(142, 70%, 45%);
+  color: white;
+}
+
+.status-badge.rejected {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
