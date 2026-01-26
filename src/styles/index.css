@@ -557,7 +557,7 @@ textarea {
    ========================================= */
 
 .reimburse-container {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -718,4 +718,16 @@ textarea {
 .status-badge.rejected {
   background-color: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+/* Utility to hide scrollbar but keep functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

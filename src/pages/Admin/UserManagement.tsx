@@ -6,62 +6,58 @@ import { Edit2, Trash2, X, Check } from 'lucide-react';
 const UserManagement = () => {
     const { availableUsers, currentUser, updateUser, deleteUser } = useApp();
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<{ role: 'general' | 'finance' | 'admin'; approverId?: string }>({ role: 'general' });
-
-    // Helper to map permissions to the 3 roles
-    const getRoleFromPermissions = (permissions: Permission[]): 'general' | 'finance' | 'admin' => {
-        if (permissions.includes('user_management')) return 'admin';
-        if (permissions.includes('finance_audit')) return 'finance';
-        return 'general';
-    };
-
-    const getRoleLabel = (role: 'general' | 'finance' | 'admin') => {
-        switch (role) {
-            case 'general': return '一般';
-            case 'finance': return '財務';
-            case 'admin': return '管理者';
-        }
-    };
+    const [editRole, setEditRole] = useState<'general' | 'finance'>('general');
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [editApproverId, setEditApproverId] = useState<string | undefined>(undefined);
 
     const startEdit = (user: User) => {
         setEditingId(user.id);
-        setEditForm({
-            role: getRoleFromPermissions(user.permissions),
-            approverId: user.approverId
-        });
+        const isFinance = user.permissions.includes('finance_audit');
+        const isAdminUser = user.permissions.includes('user_management');
+        setEditRole(isFinance ? 'finance' : 'general');
+        setIsAdmin(isAdminUser);
+        setEditApproverId(user.approverId);
     };
 
     const cancelEdit = () => {
         setEditingId(null);
-        setEditForm({ role: 'general' });
+        setEditRole('general');
+        setIsAdmin(false);
+        setEditApproverId(undefined);
     };
 
+
+
     const saveEdit = (userId: string) => {
-        let newPermissions: Permission[] = ['general'];
-        if (editForm.role === 'finance') {
-            newPermissions = ['general', 'finance_audit'];
-        } else if (editForm.role === 'admin') {
-            newPermissions = ['user_management'];
+        // Validation: At least one admin must exist
+        if (userId === currentUser.id && currentUser.permissions.includes('user_management') && !isAdmin) {
+            // Check if anyone else is admin
+            const otherAdmins = availableUsers.filter(u => u.id !== userId && u.permissions.includes('user_management'));
+            if (otherAdmins.length === 0) {
+                alert('系統必須保留至少一名管理者。');
+                return;
+            }
         }
 
-        // Update display RoleName as well to match
-        const roleNameMap = {
-            'general': '員工 (一般權限)',
-            'finance': '財務 (一般+財務)',
-            'admin': '管理者 (管理)'
-        };
+        // Validation: Approver is mandatory
+        if (!editApproverId) {
+            alert('核准人為必選項目。');
+            return;
+        }
+
+        const newPermissions: Permission[] = ['general'];
+        if (editRole === 'finance') newPermissions.push('finance_audit');
+        if (isAdmin) newPermissions.push('user_management');
+
+        // Construct display role name
+        let roleNameStr = editRole === 'finance' ? '財務' : '一般員工';
+        if (isAdmin) roleNameStr += ' (管理員)';
 
         const updateData: Partial<User> = {
             permissions: newPermissions,
-            roleName: roleNameMap[editForm.role]
+            roleName: roleNameStr,
+            approverId: editApproverId
         };
-
-        // Only update approverId if role is general or finance
-        if (editForm.role === 'general' || editForm.role === 'finance') {
-            updateData.approverId = editForm.approverId || undefined; // If empty string, set to undefined to clear it
-        } else {
-            updateData.approverId = undefined; // Admins generally don't have this approver field in this context
-        }
 
         updateUser(userId, updateData);
         setEditingId(null);
@@ -87,7 +83,8 @@ const UserManagement = () => {
                     <thead>
                         <tr>
                             <th>姓名</th>
-                            <th>權限</th>
+                            <th>角色</th>
+                            <th>管理者</th>
                             <th>核准人</th>
                             <th>Email</th>
                             <th style={{ textAlign: 'right' }}>操作</th>
@@ -96,8 +93,9 @@ const UserManagement = () => {
                     <tbody>
                         {availableUsers.map((user) => {
                             const isEditing = editingId === user.id;
-                            const currentRole = getRoleFromPermissions(user.permissions);
                             const approver = availableUsers.find(u => u.id === user.approverId);
+                            const isFinance = user.permissions.includes('finance_audit');
+                            const isUserAdmin = user.permissions.includes('user_management');
 
                             return (
                                 <tr key={user.id} style={user.id === currentUser.id ? { backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)' } : {}}>
@@ -114,44 +112,55 @@ const UserManagement = () => {
                                             <select
                                                 className="form-input"
                                                 style={{ padding: '0.25rem', width: 'auto' }}
-                                                value={editForm.role}
-                                                onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value as any }))}
+                                                value={editRole}
+                                                onChange={(e) => setEditRole(e.target.value as 'general' | 'finance')}
                                             >
                                                 <option value="general">一般</option>
                                                 <option value="finance">財務</option>
-                                                <option value="admin">管理者</option>
                                             </select>
                                         ) : (
-                                            <span className={`status-badge ${currentRole === 'admin' ? 'paid' : currentRole === 'finance' ? 'approved' : 'draft'}`}>
-                                                {getRoleLabel(currentRole)}
+                                            <span className={`status-badge ${isFinance ? 'approved' : 'draft'}`}>
+                                                {isFinance ? '財務' : '一般'}
                                             </span>
                                         )}
                                     </td>
+                                    <td>
+                                        {isEditing ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAdmin}
+                                                    onChange={(e) => setIsAdmin(e.target.checked)}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            isUserAdmin ? <Check size={16} color="var(--color-primary)" /> : <span style={{ color: '#ccc' }}>-</span>
+                                        )}
+                                    </td>
                                     <td style={{ color: 'var(--color-text-secondary)' }}>
-                                        {isEditing && (editForm.role === 'general' || editForm.role === 'finance') ? (
+                                        {isEditing ? (
                                             <select
                                                 className="form-input"
                                                 style={{ padding: '0.25rem', width: 'auto' }}
-                                                value={editForm.approverId || ''}
-                                                onChange={(e) => setEditForm(prev => ({ ...prev, approverId: e.target.value }))}
+                                                value={editApproverId || ''}
+                                                onChange={(e) => setEditApproverId(e.target.value || undefined)}
                                             >
-                                                <option value="">選擇核准人...</option>
+                                                <option value="" disabled>請選擇核准人</option>
                                                 {availableUsers
-                                                    .filter(u => u.id !== user.id && (u.permissions.includes('general') || u.permissions.includes('finance_audit')))
+                                                    .filter(u => u.id !== user.id) // Can pick anyone else
                                                     .map(u => (
                                                         <option key={u.id} value={u.id}>
-                                                            {u.name} ({getRoleLabel(getRoleFromPermissions(u.permissions))})
+                                                            {u.name}
                                                         </option>
                                                     ))}
                                             </select>
                                         ) : (
-                                            (currentRole === 'general' || currentRole === 'finance') ? (
-                                                approver ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <span style={{ fontSize: '0.9rem' }}>{approver.name}</span>
-                                                    </div>
-                                                ) : <span style={{ color: '#ccc', fontStyle: 'italic' }}>未設定</span>
-                                            ) : <span style={{ color: '#ccc' }}>-</span>
+                                            approver ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ fontSize: '0.9rem' }}>{approver.name}</span>
+                                                </div>
+                                            ) : <span style={{ color: '#ccc', fontStyle: 'italic' }}>-</span>
                                         )}
                                     </td>
                                     <td style={{ color: 'var(--color-text-secondary)' }}>

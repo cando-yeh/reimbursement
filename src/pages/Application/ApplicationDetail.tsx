@@ -1,15 +1,73 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import StatusBadge from '../../components/Common/StatusBadge';
-import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle, Edit2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle, Edit2, Undo2, Check, X } from 'lucide-react';
 
 
 export default function ApplicationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { claims, updateClaimStatus, deleteClaim } = useApp();
+    const { claims, updateClaimStatus, deleteClaim, currentUser, availableUsers } = useApp();
 
     const claim = claims.find(c => c.id === id);
+
+    // Check if current user can approve this claim
+    const canApprove = (() => {
+        if (!claim) return false;
+
+        // Manager approval for pending_approval status
+        if (claim.status === 'pending_approval') {
+            const applicant = availableUsers.find(u => u.id === claim.applicantId);
+            // Current user is the approver for this applicant
+            if (applicant?.approverId === currentUser.id) return true;
+        }
+
+        // Finance approval for pending_finance or pending_finance_review status
+        if (claim.status === 'pending_finance' || claim.status === 'pending_finance_review') {
+            if (currentUser.permissions.includes('finance_audit')) return true;
+        }
+
+        return false;
+    })();
+
+    // Handle approval
+    const handleApprove = () => {
+        if (!claim || !id) return;
+
+        const confirmMsg = claim.status === 'pending_finance_review'
+            ? '確定要確認此憑證嗎？'
+            : '確定要核准此申請單嗎？';
+
+        if (confirm(confirmMsg)) {
+            if (claim.status === 'pending_approval') {
+                updateClaimStatus(id, 'pending_finance');
+            } else if (claim.status === 'pending_finance') {
+                updateClaimStatus(id, 'approved');
+            } else if (claim.status === 'pending_finance_review') {
+                updateClaimStatus(id, 'completed');
+            }
+            navigate('/?tab=claim_approvals');
+        }
+    };
+
+    // Handle rejection
+    const handleReject = () => {
+        if (!claim || !id) return;
+
+        const confirmMsg = claim.status === 'pending_finance_review'
+            ? '確定要駁回此憑證嗎？(將退回至待補件狀態)'
+            : '確定要退回此申請單嗎？';
+
+        if (confirm(confirmMsg)) {
+            if (claim.status === 'pending_finance_review') {
+                updateClaimStatus(id, 'pending_evidence');
+            } else {
+                updateClaimStatus(id, 'rejected');
+            }
+            navigate('/?tab=claim_approvals');
+        }
+    };
+
 
     if (!claim) {
         return (
@@ -20,7 +78,7 @@ export default function ApplicationDetail() {
         );
     }
 
-    const handleStatusChange = (newStatus) => {
+    const handleStatusChange = (newStatus: any) => {
         if (id) updateClaimStatus(id, newStatus);
     };
 
@@ -34,9 +92,9 @@ export default function ApplicationDetail() {
     return (
         <div className="reimburse-container">
             <header className="reimburse-header">
-                <Link to="/" className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                    <ArrowLeft size={16} /> 回首頁
-                </Link>
+                <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
+                    <ArrowLeft size={16} /> 回上一頁
+                </button>
                 <div className="detail-actions">
                     <div>
                         <div className="detail-title-group">
@@ -46,7 +104,6 @@ export default function ApplicationDetail() {
                         <p className="reimburse-subtitle">建立日期 {claim.date}</p>
                     </div>
 
-                    {/* Action Buttons based on Status */}
                     {/* Action Buttons based on Status */}
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         {claim.status === 'draft' && (
@@ -67,8 +124,33 @@ export default function ApplicationDetail() {
                             </>
                         )}
 
-                        {/* Read Only logic for Applicant mainly. Approvals should happen in ApprovalCenter */}
-                        {['pending_approval', 'pending_finance', 'pending_evidence', 'pending_finance_review'].includes(claim.status) && (
+                        {/* Withdraw to Draft */}
+                        {(claim.status === 'pending_approval' || claim.status === 'pending_finance') && (
+                            <button onClick={() => {
+                                handleStatusChange('draft');
+                                // Navigate to edit page after withdrawing
+                                if (claim.type === 'service') navigate(`/applications/service/${claim.id}`);
+                                else if (claim.type === 'payment') navigate(`/payment-request/${claim.id}`);
+                                else navigate(`/reimburse/${claim.id}`);
+                            }} className="btn btn-ghost" style={{ color: 'var(--color-warning)', border: '1px solid var(--color-warning)', backgroundColor: 'transparent' }}>
+                                <Undo2 size={18} /> 撤回至草稿
+                            </button>
+                        )}
+
+                        {/* Approval/Rejection buttons for approvers */}
+                        {canApprove && (
+                            <>
+                                <button onClick={handleApprove} className="btn btn-primary">
+                                    <Check size={18} /> {claim.status === 'pending_finance_review' ? '確認憑證' : '核准'}
+                                </button>
+                                <button onClick={handleReject} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger)', backgroundColor: 'transparent' }}>
+                                    <X size={18} /> {claim.status === 'pending_finance_review' ? '退回補件' : '退回'}
+                                </button>
+                            </>
+                        )}
+
+                        {/* Read Only logic for Applicant mainly */}
+                        {!canApprove && ['pending_approval', 'pending_finance', 'pending_evidence', 'pending_finance_review'].includes(claim.status) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: '600' }}>
                                 <CheckCircle size={20} /> 審核中
                             </div>
@@ -76,7 +158,7 @@ export default function ApplicationDetail() {
 
                         {(claim.status === 'approved' || claim.status === 'paid' || claim.status === 'completed') && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
-                                <CheckCircle size={20} /> 已完成 / 待放款
+                                <CheckCircle size={20} /> 已完成 / 待付款
                             </div>
                         )}
 
@@ -127,6 +209,7 @@ export default function ApplicationDetail() {
                             {claim.date}
                         </div>
                     </div>
+
                 </div>
 
                 <div style={{ marginTop: '2rem' }}>

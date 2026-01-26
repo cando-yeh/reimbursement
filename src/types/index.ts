@@ -82,3 +82,11 @@ export interface User {
     email?: string;
     approverId?: string; // ID of the general approver (manager)
 }
+
+export interface Payment {
+    id: string;           // 付款編號
+    payee: string;        // 付款對象
+    paymentDate: string;  // 付款日期
+    amount: number;       // 付款金額
+    claimIds: string[];   // 關聯的申請單 ID 列表
+}

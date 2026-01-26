@@ -1,14 +1,17 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Vendor, Claim, VendorRequest, User } from '../types';
+import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 
 interface AppContextType {
   vendors: Vendor[];
   claims: Claim[];
   vendorRequests: VendorRequest[];
+  payments: Payment[];
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Claim;
   updateClaim: (id: string, data: Partial<Claim>) => void;
   updateClaimStatus: (id: string, newStatus: Claim['status']) => void;
   deleteClaim: (id: string) => void;
+  addPayment: (payee: string, claimIds: string[], paymentDate: string) => Payment;
+  cancelPayment: (paymentId: string) => void;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => VendorRequest;
   requestUpdateVendor: (id: string, data: Partial<Vendor>) => void;
   requestDeleteVendor: (id: string) => void;
@@ -22,10 +25,10 @@ interface AppContextType {
 }
 
 export const MOCK_USERS: User[] = [
-  { id: 'u1', name: 'User A', roleName: '員工 (一般權限)', permissions: ['general'], email: 'user.a@company.com', approverId: 'u2' }, // User A reports to User B
-  { id: 'u2', name: 'User B', roleName: '員工 (一般權限)', permissions: ['general'], email: 'user.b@company.com' }, // User B is manager, reports to Finance? or self-approve? Let's assume reports to Finance implicitly if no approver.
-  { id: 'u3', name: 'User C', roleName: '財務 (一般+財務)', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com' },
-  { id: 'u4', name: 'User D', roleName: '管理者 (管理)', permissions: ['user_management'], email: 'admin.d@company.com' },
+  { id: 'u1', name: 'User A', roleName: '一般員工', permissions: ['general'], email: 'user.a@company.com', approverId: 'u2' }, // User A reports to User B
+  { id: 'u2', name: 'User B', roleName: '一般員工', permissions: ['general'], email: 'user.b@company.com' }, // User B is manager
+  { id: 'u3', name: 'User C', roleName: '財務', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com' },
+  { id: 'u4', name: '管理者', roleName: '一般員工 (管理員)', permissions: ['general', 'user_management'], email: 'admin.d@company.com' },
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,6 +79,23 @@ const INITIAL_CLAIMS: Claim[] = [
   },
 ];
 
+const INITIAL_PAYMENTS: Payment[] = [
+  {
+    id: 'p1',
+    payee: 'John Doe',
+    paymentDate: '2023-11-01',
+    amount: 120.50,
+    claimIds: ['c1']
+  },
+  {
+    id: 'p2',
+    payee: 'TechSolutions Inc.',
+    paymentDate: '2023-11-05',
+    amount: 5000.00,
+    claimIds: ['c2']
+  }
+];
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [vendors, setVendors] = useState<Vendor[]>(() => {
     const saved = localStorage.getItem('vendors');
@@ -99,6 +119,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]);
   const [availableUsers, setAvailableUsers] = useState<User[]>(MOCK_USERS);
+  const [payments, setPayments] = useState<Payment[]>(() => {
+    const saved = localStorage.getItem('payments');
+    return saved ? JSON.parse(saved) : INITIAL_PAYMENTS;
+  });
 
   const switchUser = (userId: string) => {
     const user = availableUsers.find(u => u.id === userId);
@@ -147,6 +171,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('users', JSON.stringify(availableUsers));
   }, [availableUsers]);
 
+  useEffect(() => {
+    localStorage.setItem('payments', JSON.stringify(payments));
+  }, [payments]);
+
 
   const addClaim = (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
     // Calculate total from items if not provided
@@ -160,6 +188,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newClaim: Claim = {
       ...claimData,
       id: `c${Date.now()}`,
+      applicantId: currentUser.id, // Enforce ownership
       amount: calculatedAmount,
       status: claimData.status || initialStatus, // Allow overriding if specific flow demands
       date: claimData.date || new Date().toISOString().split('T')[0]
@@ -195,6 +224,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteClaim = (id: string) => {
     setClaims(prev => prev.filter(c => c.id !== id));
+  };
+
+  const addPayment = (payee: string, claimIds: string[], paymentDate: string): Payment => {
+    // Calculate total amount from selected claims
+    const totalAmount = claims
+      .filter(c => claimIds.includes(c.id))
+      .reduce((sum, c) => sum + c.amount, 0);
+
+    const newPayment: Payment = {
+      id: `p${Date.now()}`,
+      payee,
+      paymentDate: paymentDate,
+      amount: totalAmount,
+      claimIds
+    };
+
+    // Update claim statuses to 'completed'
+    setClaims(prev => prev.map(c =>
+      claimIds.includes(c.id) ? { ...c, status: 'completed' as const, datePaid: newPayment.paymentDate } : c
+    ));
+
+    setPayments(prev => [newPayment, ...prev]);
+    return newPayment;
+  };
+
+  const cancelPayment = (paymentId: string) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    // Set claims back to approved
+    setClaims(prev => prev.map(c =>
+      payment.claimIds.includes(c.id) ? { ...c, status: 'approved' as const, datePaid: undefined } : c
+    ));
+
+    // Remove payment record
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
   };
 
   const requestAddVendor = (vendor: Omit<Vendor, 'id'>) => {
@@ -261,10 +326,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vendors,
       claims,
       vendorRequests,
+      payments,
       addClaim,
       updateClaim,
       updateClaimStatus,
       deleteClaim,
+      addPayment,
+      cancelPayment,
       requestAddVendor,
       requestUpdateVendor,
       requestDeleteVendor,

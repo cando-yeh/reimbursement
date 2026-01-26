@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Claim } from '../../types';
-import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image } from 'lucide-react';
+import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X } from 'lucide-react';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -33,7 +33,7 @@ const EXPENSE_CATEGORIES = [
 export default function EmployeeReimbursement() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { addClaim, updateClaim, claims } = useApp();
+    const { addClaim, updateClaim, claims, currentUser } = useApp();
 
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
         { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', noReceipt: false, receiptFile: null }
@@ -85,11 +85,9 @@ export default function EmployeeReimbursement() {
     };
 
     const handleSubmit = (action: 'submit' | 'draft') => {
-        // Use pending_finance or pending_approval based on logic, but for simplicity we can default to pending_finance 
-        // or let addClaim handle it if new. For update, we need explicit.
-        // Let's use 'pending_finance' as a safe valid status for submitted items if we don't check approver here.
-        // Or better: don't type it strictly as 'pending' which is wrong.
-        const status: Claim['status'] = action === 'submit' ? 'pending_finance' : 'draft';
+        // For draft, set status explicitly. For submit, let addClaim handle the logic 
+        // based on whether the user has an approverId (pending_approval) or not (pending_finance).
+        const status: Claim['status'] | undefined = action === 'draft' ? 'draft' : undefined;
 
         const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
 
@@ -115,15 +113,20 @@ export default function EmployeeReimbursement() {
         }
 
         // Auto-generate description mostly based on first item or date
-        const generatedDescription = `${validItems[0].category} 等費用報銷 (${new Date().toISOString().split('T')[0]})`;
+        const generatedDescription = `${validItems[0].category} 等費用報銷`;
 
         if (id) {
-            // Edit existing
+            // Edit existing - determine status based on action and approver
+            const updateStatus: Claim['status'] = action === 'draft'
+                ? 'draft'
+                : (currentUser.approverId ? 'pending_approval' : 'pending_finance');
+
             updateClaim(id, {
                 description: generatedDescription,
                 date: new Date().toISOString().split('T')[0],
                 type: 'employee',
-                status: status,
+                payee: currentUser.name,
+                status: updateStatus,
                 items: validItems.map(item => ({
                     id: item.id,
                     date: item.date,
@@ -138,7 +141,7 @@ export default function EmployeeReimbursement() {
                 description: generatedDescription,
                 date: new Date().toISOString().split('T')[0],
                 type: 'employee',
-                payee: 'John Doe (Me)',
+                payee: currentUser.name,
                 status: status,
                 items: validItems.map(item => ({
                     id: item.id,
@@ -156,9 +159,9 @@ export default function EmployeeReimbursement() {
     return (
         <div className="reimburse-container">
             <header className="reimburse-header">
-                <Link to="/applications/new" className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                    <ArrowLeft size={16} /> 返回選擇頁面
-                </Link>
+                <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
+                    <ArrowLeft size={16} /> 回上一頁
+                </button>
                 <h1 className="heading-lg">個人報銷申請</h1>
             </header>
 
@@ -171,143 +174,166 @@ export default function EmployeeReimbursement() {
                 </div>
 
                 {/* Items List Header - Adjusted grid for Category */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '110px 120px 1fr 100px 120px 70px 40px',
-                    gap: '0.5rem',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--color-bg)',
-                    borderRadius: '8px 8px 0 0',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    color: 'var(--color-text-secondary)',
-                    whiteSpace: 'nowrap'
-                }}>
-                    <div>日期</div>
-                    <div>費用類別</div>
-                    <div>費用說明</div>
-                    <div>金額</div>
-                    <div>憑證</div>
-                    <div>無憑證</div>
-                    <div></div>
-                </div>
+                <div style={{ overflowX: 'auto' }} className="no-scrollbar">
+                    <div style={{
+                        minWidth: '700px',
+                        display: 'grid',
+                        gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 80px 50px 10px',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--color-bg)',
+                        borderRadius: '8px 8px 0 0',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        color: 'var(--color-text-secondary)',
+                        whiteSpace: 'nowrap',
+                        textAlign: 'center'
+                    }}>
+                        <div>日期</div>
+                        <div>費用類別</div>
+                        <div>費用說明</div>
+                        <div>金額</div>
+                        <div>憑證</div>
+                        <div>無憑證</div>
+                        <div></div>
+                    </div>
 
-                {/* Items List */}
-                <div style={{ border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
-                    {items.map((item, index) => (
-                        <div
-                            key={item.id}
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '110px 120px 1fr 100px 120px 70px 40px',
-                                gap: '0.5rem',
-                                padding: '0.75rem',
-                                borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <input
-                                type="date"
-                                className="form-input"
-                                style={{ padding: '0.4rem', fontSize: '0.85rem' }}
-                                value={item.date}
-                                onChange={e => handleItemChange(item.id, 'date', e.target.value)}
-                            />
-                            <select
-                                className="form-input"
-                                style={{ padding: '0.4rem', fontSize: '0.85rem' }}
-                                value={item.category || ''}
-                                onChange={e => handleItemChange(item.id, 'category', e.target.value)}
+                    {/* Items List */}
+                    <div style={{ border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+                        {items.map((item, index) => (
+                            <div
+                                key={item.id}
+                                style={{
+                                    minWidth: '700px',
+                                    display: 'grid',
+                                    gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 80px 50px 10px',
+                                    gap: '0.75rem',
+                                    padding: '0.75rem',
+                                    borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
+                                    alignItems: 'center'
+                                }}
                             >
-                                <option value="">請選擇</option>
-                                {EXPENSE_CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                            <input
-                                type="text"
-                                className="form-input"
-                                style={{ padding: '0.4rem', fontSize: '0.85rem' }}
-                                placeholder="說明"
-                                value={item.description}
-                                onChange={e => handleItemChange(item.id, 'description', e.target.value)}
-                            />
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ marginRight: '0.25rem', color: 'var(--color-text-secondary)' }}>$</span>
                                 <input
-                                    type="number"
-                                    min="1"
+                                    type="date"
                                     className="form-input"
-                                    style={{ padding: '0.4rem', fontSize: '0.85rem', width: '100%' }}
-                                    value={item.amount || ''}
-                                    onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
-                                    onChange={e => handleItemChange(item.id, 'amount', parseInt(e.target.value) || 0)}
+                                    style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                                    value={item.date}
+                                    onChange={e => handleItemChange(item.id, 'date', e.target.value)}
                                 />
-                            </div>
-                            <div>
-                                {item.noReceipt ? (
-                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>-</span>
-                                ) : item.receiptFile ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <Image size={14} style={{ color: 'var(--color-success)' }} />
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
-                                            {item.receiptFile.name}
-                                        </span>
-                                    </div>
-                                ) : item.existingReceiptName ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <Image size={14} style={{ color: 'var(--color-primary)' }} />
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
-                                            {item.existingReceiptName}
-                                        </span>
-                                        <button onClick={() => document.getElementById(`receipt-${item.id}`)?.click()} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-                                            <Upload size={12} style={{ color: 'var(--color-text-muted)' }} />
+                                <select
+                                    className="form-input"
+                                    style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                                    value={item.category || ''}
+                                    onChange={e => handleItemChange(item.id, 'category', e.target.value)}
+                                >
+                                    <option value="">請選擇</option>
+                                    {EXPENSE_CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    style={{ padding: '0.4rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                                    placeholder="說明"
+                                    value={item.description}
+                                    onChange={e => handleItemChange(item.id, 'description', e.target.value)}
+                                />
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ marginRight: '0.25rem', color: 'var(--color-text-secondary)' }}>$</span>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '0.4rem', fontSize: '0.85rem', width: '100%', textAlign: 'right' }}
+                                        value={item.amount ? Number(item.amount).toLocaleString() : ''}
+                                        onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/,/g, '');
+                                            if (!/^\d*$/.test(val)) return;
+                                            handleItemChange(item.id, 'amount', parseInt(val) || 0);
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    {item.noReceipt ? (
+                                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>-</span>
+                                    ) : item.receiptFile ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                            <a
+                                                href={URL.createObjectURL(item.receiptFile)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                title={item.receiptFile.name}
+                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            >
+                                                <Image size={24} style={{ color: 'var(--color-primary)', cursor: 'pointer' }} />
+                                            </a>
+                                            <button
+                                                onClick={() => handleItemChange(item.id, 'receiptFile', null)}
+                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px' }}
+                                                title="移除憑證"
+                                            >
+                                                <X size={10} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    ) : item.existingReceiptName ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                            <div title={item.existingReceiptName} style={{ cursor: 'pointer' }}>
+                                                <Image size={24} style={{ color: 'var(--color-primary)' }} />
+                                            </div>
+                                            <button
+                                                onClick={() => handleItemChange(item.id, 'existingReceiptName', undefined)}
+                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px' }}
+                                                title="移除憑證"
+                                            >
+                                                <X size={10} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost"
+                                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px dashed var(--color-border)' }}
+                                            onClick={() => document.getElementById(`receipt-${item.id}`)?.click()}
+                                        >
+                                            <Upload size={14} /> 上傳
                                         </button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="btn btn-ghost"
-                                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px dashed var(--color-border)' }}
-                                        onClick={() => document.getElementById(`receipt-${item.id}`)?.click()}
-                                    >
-                                        <Upload size={14} /> 上傳
-                                    </button>
-                                )}
-                                <input
-                                    type="file"
-                                    id={`receipt-${item.id}`}
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                        if (e.target.files && e.target.files[0]) {
-                                            handleItemChange(item.id, 'receiptFile', e.target.files[0]);
-                                        }
-                                    }}
-                                />
+                                    )}
+                                    <input
+                                        type="file"
+                                        id={`receipt-${item.id}`}
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                handleItemChange(item.id, 'receiptFile', e.target.files[0]);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={item.noReceipt}
+                                        onChange={e => handleItemChange(item.id, 'noReceipt', e.target.checked)}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    {items.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeItem(item.id)}
+                                            className="btn btn-ghost"
+                                            style={{ padding: '0.25rem', color: 'var(--color-danger)' }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={item.noReceipt}
-                                    onChange={e => handleItemChange(item.id, 'noReceipt', e.target.checked)}
-                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                />
-                            </div>
-                            <div>
-                                {items.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeItem(item.id)}
-                                        className="btn btn-ghost"
-                                        style={{ padding: '0.25rem', color: 'var(--color-danger)' }}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
 
                 <button
@@ -319,12 +345,20 @@ export default function EmployeeReimbursement() {
                     <Plus size={18} /> 新增一筆費用
                 </button>
 
-                <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
-                    <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}>
+                <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem' }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/')}
+                        className="btn btn-ghost"
+                        style={{ marginRight: 'auto', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}
+                    >
+                        取消
+                    </button>
+                    <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                         <Save size={18} />
                         儲存草稿
                     </button>
-                    <button type="button" onClick={() => handleSubmit('submit')} className="btn btn-primary">
+                    <button type="button" onClick={() => handleSubmit('submit')} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                         <Send size={18} />
                         提交申請
                     </button>

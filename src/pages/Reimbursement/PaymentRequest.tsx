@@ -1,7 +1,35 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Upload, X, FileText, ChevronDown } from 'lucide-react';
+import { Upload, X, FileText, ChevronDown, Save, Send } from 'lucide-react';
+// ... (keep existing imports)
+
+// ... (inside component)
+
+<div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
+    <button
+        type="button"
+        onClick={() => navigate('/dashboard')}
+        className="btn btn-ghost"
+        style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }}
+    >
+        取消
+    </button>
+
+    <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); handleSaveDraft(); }}
+        className="btn btn-ghost"
+        style={{ border: '1px solid var(--color-border)', padding: '0.5rem 1rem' }}
+    >
+        <Save size={18} style={{ marginRight: '0.5rem' }} />
+        儲存草稿
+    </button>
+    <button type="submit" className="btn btn-primary" style={{ minWidth: '120px', padding: '0.5rem 1rem' }}>
+        <Send size={18} style={{ marginRight: '0.5rem' }} />
+        提交申請
+    </button>
+</div>
 import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
 
 // ------- Helpers -------
@@ -117,6 +145,38 @@ const PaymentRequest: React.FC = () => {
     function removeFile(idx: number) {
         setAttachments((prev) => prev.filter((_, i) => i !== idx));
     }
+
+    const handleSaveDraft = () => {
+        const newClaim = {
+            applicantId: currentUser.id,
+            type: 'payment',
+            amount: amount || 0,
+            description: description.trim() || '未命名廠商付款',
+            expenseCategory: expenseCategory || '',
+            payeeId: vendorId || '',
+            payee: selectedVendor?.name || '',
+            items: [],
+            date: new Date().toISOString().split('T')[0],
+            status: 'draft' as const,
+            paymentDetails: {
+                transactionContent: description.trim(),
+                payerNotes: memo.trim(),
+                invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
+                invoiceNumber: receiptStatus === 'obtained' ? invoiceNumber.trim() : undefined,
+                invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
+                bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
+                bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
+            }
+        };
+
+        // Backward compatibility
+        if (receiptStatus === 'obtained') {
+            (newClaim as any).invoiceNumber = invoiceNumber.trim();
+        }
+
+        addClaim(newClaim as any);
+        navigate('/dashboard');
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -345,142 +405,163 @@ const PaymentRequest: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Field label="發票收據狀態" required>
-                                <div style={{ position: 'relative' }}>
-                                    <select
-                                        value={receiptStatus}
-                                        onChange={(e) => {
-                                            const v = e.target.value as "obtained" | "pending" | "none";
-                                            setReceiptStatus(v);
-                                            if (v !== "obtained") setInvoiceNumber("");
-                                        }}
-                                        className="form-input"
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        <option value="obtained">已取得</option>
-                                        <option value="pending">未取得（稍後補）</option>
-                                        <option value="none">不適用</option>
-                                    </select>
-                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
-                                        <ChevronDown size={16} />
+                            {/* Left Column: Invoice Details */}
+                            <div className="space-y-6">
+                                <Field label="發票收據狀態" required>
+                                    <div style={{ position: 'relative' }}>
+                                        <select
+                                            value={receiptStatus}
+                                            onChange={(e) => {
+                                                const v = e.target.value as "obtained" | "pending" | "none";
+                                                setReceiptStatus(v);
+                                                if (v !== "obtained") setInvoiceNumber("");
+                                            }}
+                                            className="form-input"
+                                            style={{ appearance: 'none' }}
+                                        >
+                                            <option value="obtained">已取得</option>
+                                            <option value="pending">未取得（稍後補）</option>
+                                            <option value="none">不適用</option>
+                                        </select>
+                                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                                            <ChevronDown size={16} />
+                                        </div>
                                     </div>
-                                </div>
-                            </Field>
-
-                            {receiptStatus === "obtained" ? (
-                                <Field label="發票號碼" required error={showErr("invoiceNumber")}>
-                                    <input
-                                        type="text"
-                                        value={invoiceNumber}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
-                                            setInvoiceNumber(value);
-                                        }}
-                                        onBlur={() => markTouched("invoiceNumber")}
-                                        className="form-input"
-                                        placeholder="請輸入發票號碼"
-                                    />
                                 </Field>
-                            ) : (
-                                <div style={{
-                                    border: '1px dashed var(--color-border)',
-                                    borderRadius: '0.5rem',
-                                    padding: '1rem',
-                                    backgroundColor: 'var(--color-bg-secondary)',
-                                    color: 'var(--color-text-secondary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    fontSize: '0.9rem',
-                                    height: '100%'
-                                }}>
-                                    {receiptStatus === "pending"
-                                        ? "已選擇「未取得」，可於後續補上發票號碼。"
-                                        : "已選擇「不適用」，本次不需填寫發票號碼。"}
+
+                                {receiptStatus === "obtained" ? (
+                                    <Field label="發票號碼" required error={showErr("invoiceNumber")}>
+                                        <input
+                                            type="text"
+                                            value={invoiceNumber}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                                                setInvoiceNumber(value);
+                                            }}
+                                            onBlur={() => markTouched("invoiceNumber")}
+                                            className="form-input"
+                                            placeholder="請輸入發票號碼"
+                                        />
+                                    </Field>
+                                ) : (
+                                    <div style={{
+                                        border: '1px dashed var(--color-border)',
+                                        borderRadius: '0.5rem',
+                                        padding: '1rem',
+                                        backgroundColor: 'var(--color-bg-secondary)',
+                                        color: 'var(--color-text-secondary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.9rem',
+                                        minHeight: '80px'
+                                    }}>
+                                        {receiptStatus === "pending"
+                                            ? "已選擇「未取得」，可於後續補上發票號碼。"
+                                            : "已選擇「不適用」，本次不需填寫發票號碼。"}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Column: Attachments */}
+                            {receiptStatus === 'obtained' && (
+                                <div>
+                                    <Field label="附件上傳" hint="可上傳發票/收據、報價單、合約等（多檔可選）">
+                                        <div style={{
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: '0.75rem',
+                                            padding: '1rem',
+                                            backgroundColor: 'white',
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>拖曳檔案到此處</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>或點擊按鈕選擇檔案</div>
+                                                </div>
+                                                <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                                    <Upload size={16} style={{ marginRight: '0.5rem' }} />
+                                                    選擇檔案
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        multiple
+                                                        onChange={(e) => handleFiles(e.target.files)}
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            {attachments.length > 0 && (
+                                                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                                                    {attachments.map((f, idx) => (
+                                                        <div
+                                                            key={`${f.name}-${f.size}-${f.lastModified}`}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                padding: '0.5rem 0.75rem',
+                                                                backgroundColor: 'var(--color-bg-secondary)',
+                                                                borderRadius: '0.5rem',
+                                                                border: '1px solid var(--color-border)'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                                                                <FileText size={16} className="text-secondary" />
+                                                                <div style={{ minWidth: 0 }}>
+                                                                    <div style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{(f.size / 1024).toFixed(1)} KB</div>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeFile(idx)}
+                                                                style={{
+                                                                    border: 'none',
+                                                                    background: 'none',
+                                                                    cursor: 'pointer',
+                                                                    padding: '4px',
+                                                                    color: 'var(--color-danger)',
+                                                                    opacity: 0.7
+                                                                }}
+                                                                className="hover:opacity-100"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Field>
                                 </div>
                             )}
                         </div>
-
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <Field label="附件上傳" hint="可上傳發票/收據、報價單、合約等（多檔可選）">
-                                <div style={{
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: '0.75rem',
-                                    padding: '1rem',
-                                    backgroundColor: 'white'
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>拖曳檔案到此處</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>或點擊按鈕選擇檔案</div>
-                                        </div>
-                                        <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                                            <Upload size={16} style={{ marginRight: '0.5rem' }} />
-                                            選擇檔案
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                multiple
-                                                onChange={(e) => handleFiles(e.target.files)}
-                                            />
-                                        </label>
-                                    </div>
-
-                                    {attachments.length > 0 && (
-                                        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            {attachments.map((f, idx) => (
-                                                <div
-                                                    key={`${f.name}-${f.size}-${f.lastModified}`}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        padding: '0.5rem 0.75rem',
-                                                        backgroundColor: 'var(--color-bg-secondary)',
-                                                        borderRadius: '0.5rem',
-                                                        border: '1px solid var(--color-border)'
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-                                                        <FileText size={16} className="text-secondary" />
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <div style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{(f.size / 1024).toFixed(1)} KB</div>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFile(idx)}
-                                                        style={{
-                                                            border: 'none',
-                                                            background: 'none',
-                                                            cursor: 'pointer',
-                                                            padding: '4px',
-                                                            color: 'var(--color-danger)',
-                                                            opacity: 0.7
-                                                        }}
-                                                        className="hover:opacity-100"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </Field>
-                        </div>
                     </div>
 
-                    <div className="flex justify-end gap-4 pt-4 border-t border-gray-100">
+                    <div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
                         <button
                             type="button"
                             onClick={() => navigate('/dashboard')}
-                            className="btn btn-secondary"
+                            className="btn btn-ghost"
+                            style={{ marginRight: 'auto', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}
                         >
                             取消
                         </button>
-                        <button type="submit" className="btn btn-primary" style={{ minWidth: '120px' }}>
-                            送出申請
+
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handleSaveDraft(); }}
+                            className="btn btn-ghost"
+                            style={{ border: '1px solid var(--color-border)', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
+                        >
+                            <Save size={18} style={{ marginRight: '0.5rem' }} />
+                            儲存草稿
+                        </button>
+                        <button type="submit" className="btn btn-primary" style={{ minWidth: '120px', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}>
+                            <Send size={18} style={{ marginRight: '0.5rem' }} />
+                            提交申請
                         </button>
                     </div>
 

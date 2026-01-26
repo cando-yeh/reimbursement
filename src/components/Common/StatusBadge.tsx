@@ -13,7 +13,7 @@ const STATUS_MAP: Record<string, string> = {
     'pending_finance': '待財務審核',
     'pending_finance_review': '待憑證審核',
     'pending_evidence': '待補憑證',
-    'approved': '待放款',
+    'approved': '待付款',
     'paid': '已付款',
     'completed': '已完成',
     'rejected': '已退件'

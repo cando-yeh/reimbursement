@@ -4,14 +4,15 @@ import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
 import VendorList from './pages/Vendor/VendorList';
 import AddVendor from './pages/Vendor/AddVendor';
-import VendorRequests from './pages/Vendor/VendorRequests';
+
 import EmployeeReimbursement from './pages/Reimbursement/EmployeeReimbursement';
 import PaymentRequest from './pages/Reimbursement/PaymentRequest';
 import ServicePayment from './pages/Reimbursement/ServicePayment';
 import ApplicationDetail from './pages/Application/ApplicationDetail';
 import ApplicationTypeSelect from './pages/Application/ApplicationTypeSelect';
 import UserManagement from './pages/Admin/UserManagement';
-import ApprovalCenter from './pages/Approvals/ApprovalCenter';
+import PaymentDetail from './pages/Payment/PaymentDetail';
+
 
 function App() {
   return (
@@ -23,7 +24,7 @@ function App() {
             <Route path="/vendors" element={<VendorList />} />
             <Route path="/vendors/add" element={<AddVendor />} />
             <Route path="/vendors/edit/:id" element={<AddVendor />} />
-            <Route path="/vendors/requests" element={<VendorRequests />} />
+
             <Route path="/applications/new" element={<ApplicationTypeSelect />} />
             <Route path="/applications/service" element={<ServicePayment />} />
             <Route path="/applications/service/:id" element={<ServicePayment />} />
@@ -32,7 +33,8 @@ function App() {
             <Route path="/payment-request" element={<PaymentRequest />} />
             <Route path="/payment-request/:id" element={<PaymentRequest />} />
             <Route path="/claims/:id" element={<ApplicationDetail />} />
-            <Route path="/approvals" element={<ApprovalCenter />} />
+            <Route path="/payments/:id" element={<PaymentDetail />} />
+
             <Route path="/admin/users" element={<UserManagement />} />
           </Routes>
         </Layout>

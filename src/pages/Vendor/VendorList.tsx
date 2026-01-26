@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Plus, Search, Building } from 'lucide-react';
+import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
 
 
 export default function VendorList() {
@@ -30,9 +30,8 @@ export default function VendorList() {
                     <p className="vendor-subtitle">管理您的付款對象。</p>
                 </div>
                 {canManageVendors && (
-                    <Link to="/vendors/add" className="btn btn-primary">
-                        <Plus size={18} />
-                        新增廠商
+                    <Link to="/vendors/add" className="btn btn-primary" title="新增廠商" style={{ padding: '0.5rem', minWidth: 'auto' }}>
+                        <Plus size={20} />
                     </Link>
                 )}
             </header>
@@ -52,10 +51,10 @@ export default function VendorList() {
                 <table className="vendor-table">
                     <thead>
                         <tr>
-                            <th style={{ width: '25%' }}>廠商名稱</th>
-                            <th style={{ width: '25%' }}>服務內容</th>
-                            <th style={{ width: '30%' }}>銀行資訊</th>
-                            <th style={{ width: '20%' }}>操作</th>
+                            <th style={{ width: '25%', minWidth: '300px', textAlign: 'center' }}>廠商名稱</th>
+                            <th style={{ width: '25%', textAlign: 'center' }}>服務內容</th>
+                            <th style={{ width: '30%', textAlign: 'center', whiteSpace: 'nowrap' }}>銀行資訊</th>
+                            <th style={{ width: '20%', textAlign: 'center' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -71,20 +70,20 @@ export default function VendorList() {
                                             <Building size={16} className="text-secondary" />
                                             {vendor.name}
                                             {vendor.isPendingAdd ? (
-                                                <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)', marginLeft: '0.5rem' }}>
+                                                <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}>
                                                     待新增
                                                 </span>
                                             ) : pendingRequest && (
-                                                <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', marginLeft: '0.5rem' }}>
+                                                <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}>
                                                     {pendingRequest.type === 'delete' ? '待刪除' : '待更新'}
                                                 </span>
                                             )}
                                         </div>
                                     </td>
-                                    <td style={{ color: 'var(--color-text-secondary)' }}>
+                                    <td style={{ color: 'var(--color-text-secondary)', textAlign: 'center' }}>
                                         {vendor.serviceContent || '-'}
                                     </td>
-                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         {vendor.bankCode ? (
                                             <>
                                                 <div style={{ fontWeight: 500 }}>
@@ -103,8 +102,9 @@ export default function VendorList() {
                                                         to={`/vendors/edit/${vendor.id}`}
                                                         className="btn btn-ghost"
                                                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                                        title="編輯"
                                                     >
-                                                        編輯
+                                                        <Edit2 size={16} />
                                                     </Link>
                                                     <button
                                                         className="btn btn-ghost"
@@ -115,8 +115,9 @@ export default function VendorList() {
                                                                 alert('刪除申請已提交審核。');
                                                             }
                                                         }}
+                                                        title="刪除"
                                                     >
-                                                        刪除
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </>
                                             ) : vendor.isPendingAdd ? (
@@ -135,7 +136,7 @@ export default function VendorList() {
                         })}
                         {vendors.length === 0 && (
                             <tr>
-                                <td colSpan="5" className="empty-state">
+                                <td colSpan={5} className="empty-state">
                                     找不到廠商。請新增一筆資料。
                                 </td>
                             </tr>
