@@ -58,18 +58,18 @@ const ClaimTable = ({
         <table className="vendor-table">
             <thead>
                 <tr>
-                    {selectable && <th style={{ width: '40px', whiteSpace: 'nowrap' }}></th>}
-                    <th style={{ width: '100px', textAlign: 'center', whiteSpace: 'nowrap' }}>申請編號</th>
-                    <th style={{ width: '130px', textAlign: 'center', whiteSpace: 'nowrap' }}>申請日期</th>
-                    <th style={{ width: '120px', textAlign: 'center', whiteSpace: 'nowrap' }}>狀態</th>
-                    <th style={{ width: '100px', textAlign: 'center', whiteSpace: 'nowrap' }}>類型</th>
-                    <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '100px' }}>申請人</th>
-                    <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '150px' }}>付款對象</th>
-                    {showApprover && <th style={{ width: '120px', textAlign: 'center', whiteSpace: 'nowrap' }}>審核者</th>}
-                    <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>說明</th>
-                    <th style={{ width: '120px', textAlign: 'center', whiteSpace: 'nowrap' }}>金額</th>
-                    {payments && <th style={{ width: '130px', textAlign: 'center', whiteSpace: 'nowrap' }}>付款日期</th>}
-                    {renderActions && <th style={{ width: '60px', textAlign: 'center', whiteSpace: 'nowrap' }}>操作</th>}
+                    {selectable && <th style={{ width: '40px' }}></th>}
+                    <th>申請編號</th>
+                    <th>申請日期</th>
+                    <th>狀態</th>
+                    <th>類型</th>
+                    <th>申請人</th>
+                    <th>付款對象</th>
+                    {showApprover && <th>審核者</th>}
+                    <th>說明</th>
+                    <th>金額</th>
+                    {payments && <th>付款日期</th>}
+                    {renderActions && <th>操作</th>}
                 </tr>
             </thead>
             <tbody>
@@ -92,7 +92,7 @@ const ClaimTable = ({
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                         >
                             {selectable && (
-                                <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+                                <td>
                                     <input
                                         type="checkbox"
                                         checked={selectedIds?.includes(claim.id)}
@@ -100,41 +100,41 @@ const ClaimTable = ({
                                     />
                                 </td>
                             )}
-                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
-                            <td style={{ fontSize: '0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>{claim.date}</td>
-                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
-                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>#{claim.id.slice(0, 8)}</td>
+                            <td style={{ fontSize: '0.9rem' }}>{claim.date}</td>
+                            <td><StatusBadge status={claim.status} /></td>
+                            <td>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
                                     {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商付款' : '勞務報酬'}
                                 </span>
                             </td>
-                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <td>
                                 {getApplicantName(claim)}
                             </td>
-                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <td>
                                 <div>{claim.payee}</div>
                             </td>
                             {showApprover && (
-                                <td style={{ textAlign: 'center', fontWeight: 500 }}>
+                                <td style={{ fontWeight: 500 }}>
                                     {getApproverName(claim)}
                                 </td>
                             )}
-                            <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px', textAlign: 'left', whiteSpace: 'nowrap' }} title={claim.description}>
+                            <td>
                                 {claim.description}
                             </td>
-                            <td style={{ width: '120px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            <td>
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 600, gap: '0.25rem' }}>
                                     <span>$</span>
                                     <span>{claim.amount.toLocaleString()}</span>
                                 </div>
                             </td>
                             {payments && (
-                                <td style={{ textAlign: 'center', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                <td style={{ fontSize: '0.9rem' }}>
                                     {getPaymentDate(claim)}
                                 </td>
                             )}
                             {renderActions && (
-                                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                <td onClick={(e) => e.stopPropagation()}>
                                     {renderActions(claim)}
                                 </td>
                             )}

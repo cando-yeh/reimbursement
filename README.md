@@ -1,16 +1,64 @@
-# React + Vite
+# Reimbursement System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack reimbursement management system migrated to Next.js App Router, using Prisma for database management and Supabase for Authentication.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Auth**: Supabase Auth (@supabase/ssr)
+- **Styling**: Vanilla CSS + Tailwind CSS 4 (PostCSS)
+- **Icons**: Lucide React
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Personal Reimbursement**: Submit claims for travel, meals, and other expenses.
+- **Vendor Payment**: Request payments for registered vendors.
+- **Service Payment**: Submit labor service remuneration requests.
+- **Approval Workflow**: Multi-stage approval (Department Manager -> Finance).
+- **Vendor Management**: Request-based vendor addition and updates.
+- **Admin Tools**: User management with role-based permissions.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL database
+- Supabase project
+
+### Setup
+
+1. **Clone the repository**
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+3. **Configure environment variables**:
+   Copy `.env.example` to `.env` and fill in your database and Supabase credentials.
+4. **Initialize database**:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   npm run prisma:seed # If available in package.json
+   ```
+5. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
+
+## Project Structure
+
+- `src/app`: Next.js App Router (Pages & API Routes)
+- `src/app/actions`: Server Actions for data mutations
+- `src/components`: UI components
+- `src/lib`: Shared library instances (Prisma, etc.)
+- `src/types`: TypeScript definitions
+- `prisma`: Database schema and migrations
+- `legacy-spa`: Older React application (for reference)
+
+## Contributing
+
+Please follow the directory structure and use Server Actions for data mutations. Ensure type safety by running `npx tsc --noEmit` before submitting changes.

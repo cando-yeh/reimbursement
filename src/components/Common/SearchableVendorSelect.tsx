@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Search, Plus, Check, AlertCircle, X } from 'lucide-react';
 import { Vendor, VendorRequest } from '../../types';
 
@@ -22,7 +22,7 @@ export default function SearchableVendorSelect({
     error,
     placeholder = "搜尋廠商..."
 }: SearchableVendorSelectProps) {
-    const navigate = useNavigate();
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
     // Controlled input value
@@ -192,7 +192,7 @@ export default function SearchableVendorSelect({
                 >
                     {/* Add New Vendor Link */}
                     <div
-                        onClick={() => navigate('/vendors/add')}
+                        onClick={() => router.push('/vendors/add')}
                         style={{
                             padding: '0.75rem 1rem',
                             borderBottom: '1px solid var(--color-border)',

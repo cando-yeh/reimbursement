@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 
 interface AppContextType {
@@ -17,7 +19,10 @@ interface AppContextType {
   requestDeleteVendor: (id: string) => void;
   approveVendorRequest: (requestId: string) => void;
   rejectVendorRequest: (requestId: string) => void;
-  currentUser: User;
+  currentUser: User | null;
+  isAuthenticated: boolean;
+  login: (userId: string) => void;
+  logout: () => void;
   switchUser: (userId: string) => void;
   availableUsers: User[];
   updateUser: (id: string, updates: Partial<User>) => void;
@@ -117,33 +122,129 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return INITIAL_CLAIMS;
   });
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>(MOCK_USERS);
+  const [availableUsers, setAvailableUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('users');
+    return saved ? JSON.parse(saved) : MOCK_USERS;
+  });
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Try to recover from localStorage first (for Mock users)
+    const savedId = localStorage.getItem('currentUserId');
+    if (savedId) {
+      const user = availableUsers.find(u => u.id === savedId);
+      return user || null;
+    }
+    return null;
+  });
+
+  // Supabase Auth Integration
+  useEffect(() => {
+    const handleAuthChange = async (sessionUser: any) => {
+      if (sessionUser) {
+        // 1. Try to find matching mock user by email
+        const matchedUser = availableUsers.find(u => u.email === sessionUser.email);
+        if (matchedUser) {
+          setCurrentUser(matchedUser);
+          localStorage.setItem('currentUserId', matchedUser.id);
+        } else {
+          // 2. If no match, create a transient "Guest/New" user session
+          // In a real app, you would fetch this profile from your 'users' table in DB
+          const newUser: User = {
+            id: sessionUser.id,
+            name: sessionUser.user_metadata.full_name || sessionUser.email?.split('@')[0] || 'Google User',
+            email: sessionUser.email || '',
+            roleName: '新進員工 (Google Auth)',
+            permissions: ['general'],
+            approverId: undefined
+          };
+          setCurrentUser(newUser);
+          // We don't save ephemeral Google users to localStorage 'currentUserId' to avoid mock logic conflicts,
+          // or we could save it if we added them to availableUsers. 
+          // For now, relies on Supabase session persistence.
+        }
+      } else {
+        // If Supabase says no user...
+        // We only clear if we are NOT using a locked-in Mock user (check logic?)
+        // Actually, if we want to support hybird, we might leave this alone?
+        // But for "Testing Google Auth", we usually want Supabase to be source of truth.
+        // Let's rely on manual logout for Mock users for now.
+      }
+    };
+
+    // Check initial session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) handleAuthChange(user);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        handleAuthChange(session.user);
+        router.refresh(); // Refresh Server Components
+        router.push('/');
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        localStorage.removeItem('currentUserId');
+        router.refresh();
+        router.push('/login');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [availableUsers, router, supabase]);
+
   const [payments, setPayments] = useState<Payment[]>(() => {
     const saved = localStorage.getItem('payments');
     return saved ? JSON.parse(saved) : INITIAL_PAYMENTS;
   });
 
+  const isAuthenticated = !!currentUser;
+
+  const login = (userId: string) => {
+    const user = availableUsers.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem('currentUserId', userId);
+    }
+  };
+
+  const logout = async () => {
+    // Check if it's a Supabase session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase.auth.signOut();
+    }
+    setCurrentUser(null);
+    localStorage.removeItem('currentUserId');
+    router.push('/login');
+  };
+
   const switchUser = (userId: string) => {
     const user = availableUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUser(user);
+      localStorage.setItem('currentUserId', userId);
     }
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
     setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
     // If updating current user, update that state too
-    if (currentUser.id === id) {
-      setCurrentUser(prev => ({ ...prev, ...updates }));
+    if (currentUser?.id === id) {
+      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     }
   };
 
   const deleteUser = (id: string) => {
     setAvailableUsers(prev => prev.filter(u => u.id !== id));
-    if (currentUser.id === id) {
+    if (currentUser?.id === id) {
       alert('You deleted your current user session.');
-      window.location.reload();
+      logout();
     }
   };
 
@@ -160,13 +261,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [claims]);
 
   // Persist users too for better DX during reload
-  useEffect(() => {
-    const savedUsers = localStorage.getItem('users');
-    if (savedUsers) {
-      setAvailableUsers(JSON.parse(savedUsers));
-    }
-  }, []);
-
   useEffect(() => {
     localStorage.setItem('users', JSON.stringify(availableUsers));
   }, [availableUsers]);
@@ -185,19 +279,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Determine initial status: if user has approver -> pending_approval, else -> pending_finance
     // Note: In real app, we check if current user IS the applicant. If not, logic might differ.
     // For now assume current user creates claim for themselves.
-    const initialStatus = currentUser.approverId ? 'pending_approval' : 'pending_finance';
+    const initialStatus = currentUser?.approverId ? 'pending_approval' : 'pending_finance';
 
     const newClaim: Claim = {
       ...claimData,
       id: `c${Date.now()}`,
-      applicantId: currentUser.id, // Enforce ownership
+      applicantId: currentUser?.id || 'unknown', // Enforce ownership
       amount: calculatedAmount,
       status: claimData.status || initialStatus, // Allow overriding if specific flow demands
       date: claimData.date || new Date().toISOString().split('T')[0],
       history: [{
         timestamp: new Date().toISOString(),
-        actorId: currentUser.id,
-        actorName: currentUser.name,
+        actorId: currentUser?.id || 'unknown',
+        actorName: currentUser?.name || 'Unknown',
         action: (claimData.status === 'draft') ? 'draft' : 'submitted',
         note: undefined
       }]
@@ -216,8 +310,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...newHistory,
             {
               timestamp: new Date().toISOString(),
-              actorId: currentUser.id,
-              actorName: currentUser.name,
+              actorId: currentUser?.id || 'system',
+              actorName: currentUser?.name || 'System',
               action: data.status === 'pending_approval' || data.status === 'pending_finance'
                 ? 'submitted'
                 : `status_change_to_${data.status}`,
@@ -237,8 +331,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (c.id === id) {
         const historyItem = {
           timestamp: new Date().toISOString(),
-          actorId: currentUser.id,
-          actorName: currentUser.name,
+          actorId: currentUser?.id || 'system',
+          actorName: currentUser?.name || 'System',
           action: `status_change_to_${newStatus}`,
           note: note
         };
@@ -281,8 +375,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const historyItem = {
           timestamp: new Date().toISOString(),
-          actorId: currentUser.id,
-          actorName: currentUser.name,
+          actorId: currentUser?.id || 'system',
+          actorName: currentUser?.name || 'System',
           action: 'paid',
           note: undefined
         };
@@ -320,7 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: 'pending',
       data: { ...vendor, id: `v${Date.now()}` },
       timestamp: new Date().toISOString().split('T')[0],
-      applicantName: currentUser.name
+      applicantName: currentUser?.name || 'Unknown'
     };
     setVendorRequests(prev => [request, ...prev]);
     return request;
@@ -336,7 +430,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       data: data,
       originalData: existingVendor,
       timestamp: new Date().toISOString().split('T')[0],
-      applicantName: currentUser.name
+      applicantName: currentUser?.name || 'Unknown'
     };
     setVendorRequests(prev => [request, ...prev]);
   };
@@ -350,7 +444,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vendorId: id,
       originalData: vendor, // Snapshot for display
       timestamp: new Date().toISOString().split('T')[0],
-      applicantName: currentUser.name
+      applicantName: currentUser?.name || 'Unknown'
     };
     setVendorRequests(prev => [request, ...prev]);
   };
@@ -395,6 +489,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       approveVendorRequest,
       rejectVendorRequest,
       currentUser,
+      isAuthenticated,
+      login,
+      logout,
       switchUser,
       availableUsers,
       updateUser,

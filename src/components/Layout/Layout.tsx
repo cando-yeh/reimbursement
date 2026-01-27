@@ -1,8 +1,10 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
-import { LayoutDashboard, Users } from 'lucide-react';
+'use client';
 
+import React from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useApp } from '@/context/AppContext';
+import { LayoutDashboard, Users } from 'lucide-react';
 
 interface NavItemProps {
     to: string;
@@ -12,12 +14,12 @@ interface NavItemProps {
 }
 
 const NavItem = ({ to, icon: Icon, label, badge }: NavItemProps) => {
-    const location = useLocation();
-    const isActive = location.pathname === to;
+    const pathname = usePathname();
+    const isActive = pathname === to;
 
     return (
         <Link
-            to={to}
+            href={to}
             className={`nav-item ${isActive ? 'active' : ''}`}
             style={{ position: 'relative' }}
         >
@@ -46,20 +48,31 @@ const NavItem = ({ to, icon: Icon, label, badge }: NavItemProps) => {
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    return (
-        <LayoutWithState>{children}</LayoutWithState>
-    );
-}
-
-function LayoutWithState({ children }: { children: React.ReactNode }) {
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
     const [isEditingName, setIsEditingName] = React.useState(false);
     const [tempName, setTempName] = React.useState('');
-    const { currentUser, switchUser, availableUsers, claims, vendorRequests, updateUser } = useApp();
+    const { currentUser, switchUser, logout, isAuthenticated, availableUsers, claims, vendorRequests, updateUser } = useApp();
+    const router = useRouter();
+    const pathname = usePathname();
 
     React.useEffect(() => {
-        setTempName(currentUser.name);
+        if (!isAuthenticated && pathname !== '/login') {
+            router.push('/login');
+        }
+    }, [isAuthenticated, router, pathname]);
+
+    React.useEffect(() => {
+        if (currentUser) {
+            setTempName(currentUser.name);
+        }
     }, [currentUser]);
+
+    // Don't show layout on login page
+    if (pathname === '/login') {
+        return <>{children}</>;
+    }
+
+    if (!currentUser) return null;
 
     const handleSaveName = () => {
         if (tempName.trim()) {
@@ -72,17 +85,12 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
         return currentUser.permissions.includes(permission as any);
     };
 
-    // Calculate pending items count
     const isFinance = currentUser.permissions.includes('finance_audit');
     const isManager = availableUsers.some(u => u.approverId === currentUser.id);
 
-    // 待補件 (自己的)
     const pendingEvidenceCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'pending_evidence').length;
-
-    // 已退回 (自己的)
     const returnedCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'rejected').length;
 
-    // 請款審核 (審核者可見)
     const claimApprovalsCount = claims.filter(c => {
         if (c.status === 'pending_approval' && isManager) {
             const applicant = availableUsers.find(u => u.id === c.applicantId);
@@ -94,19 +102,14 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
         return false;
     }).length;
 
-    // 待付款 (財務可見)
     const pendingPaymentCount = isFinance ? claims.filter(c => c.status === 'approved').length : 0;
-
-    // 廠商異動審核 (財務可見)
     const vendorApprovalsCount = isFinance ? vendorRequests.filter(r => r.status === 'pending').length : 0;
 
-    // Total pending count
     const myPendingCount = pendingEvidenceCount + returnedCount;
     const reviewPendingCount = claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
 
     return (
         <div className="app-container">
-            {/* Sidebar */}
             <aside className="sidebar">
                 <div className="sidebar-header">
                     <h1 className="brand">請款報銷系統</h1>
@@ -148,7 +151,7 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginBottom: '0.5rem' }}>
                                             <input
                                                 type="text"
-                                                className="input-field"
+                                                className="form-input"
                                                 value={tempName}
                                                 onChange={(e) => setTempName(e.target.value)}
                                                 autoFocus
@@ -199,7 +202,14 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
                                     </div>
                                 </div>
                                 <div style={{ marginTop: '0.5rem' }}>
-                                    <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)' }}>
+                                    <button
+                                        className="btn btn-ghost"
+                                        style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)' }}
+                                        onClick={() => {
+                                            logout();
+                                            setIsProfileOpen(false);
+                                        }}
+                                    >
                                         登出
                                     </button>
                                 </div>
@@ -209,7 +219,6 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
                 </div>
             </aside>
 
-            {/* Main Content */}
             <main className="main-content">
                 {children}
             </main>

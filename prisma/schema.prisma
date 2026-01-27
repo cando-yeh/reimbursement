@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String?   @unique
+  roleName      String    // '一般員工', '財務', etc.
+  permissions   String[]  // ['general', 'finance_audit', etc.]
+  approverId    String?
+  approver      User?     @relation("Approver", fields: [approverId], references: [id])
+  subordinates  User[]    @relation("Approver")
+  claims        Claim[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Vendor {
+  id                String    @id @default(uuid())
+  name              String
+  serviceContent    String?
+  bankCode          String?
+  bankAccount       String?
+  isFloatingAccount Boolean   @default(false)
+  status            String    @default("active") // 'active', 'pending_add', 'pending_update', 'pending_delete'
+  isBlacklisted     Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+enum ClaimStatus {
+  draft
+  pending_approval
+  pending_finance
+  approved
+  paid
+  pending_evidence
+  pending_finance_review
+  completed
+  rejected
+}
+
+enum ClaimType {
+  employee
+  vendor
+  service
+}
+
+model Claim {
+  id              String      @id @default(uuid())
+  type            ClaimType   // changed from String
+  payee           String
+  payeeId         String?
+  applicantId     String
+  applicant       User        @relation(fields: [applicantId], references: [id])
+  date            DateTime    @default(now())
+  status          ClaimStatus // changed from String
+  description     String
+  amount          Float
+  paymentDetails  Json?       // transactionContent, payerNotes, invoiceStatus, etc.
+  items           Json        // ExpenseItem[]
+  serviceDetails  Json?       // idNumber, email, bankName, etc.
+  datePaid        DateTime?
+  evidenceFiles   String[]
+  noReceiptReason String?
+  history         Json        // ClaimHistory[]
+  paymentId       String?
+  payment         Payment?    @relation(fields: [paymentId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model VendorRequest {
+  id            String    @id @default(uuid())
+  type          String    // 'add', 'update', 'delete'
+  vendorId      String?
+  data          Json?     // Partial<Vendor>
+  status        String    @default("pending") // 'pending', 'approved', 'rejected'
+  timestamp     DateTime  @default(now())
+  applicantName String?
+  originalData  Json?     // Snapshot
+}
+
+model Payment {
+  id          String    @id @default(uuid())
+  payee       String
+  paymentDate DateTime
+  amount      Float
+  claims      Claim[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
