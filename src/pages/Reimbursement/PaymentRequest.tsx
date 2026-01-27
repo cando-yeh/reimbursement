@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
+import SearchableVendorSelect from '../../components/Common/SearchableVendorSelect';
 
 // ------- Helpers -------
 function formatNumberWithCommas(value: string) {
@@ -37,7 +38,7 @@ function Field({ label, required, hint, children, error }: any) {
 const PaymentRequest: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
-    const { vendors, addClaim, updateClaim, claims, currentUser } = useApp();
+    const { vendors, addClaim, updateClaim, claims, currentUser, vendorRequests } = useApp();
 
     const existingClaim = id ? claims.find(c => c.id === id) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
@@ -267,12 +268,22 @@ const PaymentRequest: React.FC = () => {
     const showErr = (key: string) => touched[key] && errors[key];
 
     return (
-        <div className="page-container">
-            <header className="mb-6">
-                <h1 className="page-title">廠商付款申請</h1>
+        <div className="form-container">
+            <header className="vendor-header simple" style={{ marginBottom: '2rem' }}>
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="btn btn-ghost back-link"
+                >
+                    <ChevronDown size={16} style={{ transform: 'rotate(90deg)' }} /> 回前頁
+                </button>
+                <h1 className="heading-lg">廠商付款申請</h1>
+                <p className="vendor-subtitle">
+                    填寫詳細資訊以建立新的付款申請。
+                </p>
             </header>
 
-            <div className="card">
+            <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <form onSubmit={handleSubmit} className="space-y-8">
 
                     {/* Section 1: Vendor */}
@@ -284,24 +295,17 @@ const PaymentRequest: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Field label="廠商名稱" required error={showErr("vendorId")}>
                                 <div style={{ position: 'relative' }}>
-                                    <select
+                                    <SearchableVendorSelect
+                                        vendors={vendors}
+                                        vendorRequests={vendorRequests}
                                         value={vendorId}
-                                        onChange={(e) => {
-                                            setVendorId(e.target.value);
+                                        onChange={(id) => {
+                                            setVendorId(id);
                                             markTouched("vendorId");
                                         }}
                                         onBlur={() => markTouched("vendorId")}
-                                        className="form-input"
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        <option value="">請選擇廠商</option>
-                                        {vendors.map(v => (
-                                            <option key={v.id} value={v.id}>{v.name}</option>
-                                        ))}
-                                    </select>
-                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
-                                        <ChevronDown size={16} />
-                                    </div>
+                                        error={showErr("vendorId")}
+                                    />
                                 </div>
                             </Field>
 

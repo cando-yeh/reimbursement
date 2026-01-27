@@ -26,9 +26,9 @@ interface AppContextType {
 
 export const MOCK_USERS: User[] = [
   { id: 'u1', name: 'User A', roleName: '一般員工', permissions: ['general'], email: 'user.a@company.com', approverId: 'u2' }, // User A reports to User B
-  { id: 'u2', name: 'User B', roleName: '一般員工', permissions: ['general'], email: 'user.b@company.com' }, // User B is manager
-  { id: 'u3', name: 'User C', roleName: '財務', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com' },
-  { id: 'u4', name: '管理者', roleName: '一般員工 (管理員)', permissions: ['general', 'user_management'], email: 'admin.d@company.com' },
+  { id: 'u2', name: 'User B', roleName: '一般員工', permissions: ['general'], email: 'user.b@company.com', approverId: 'u3' }, // User B is manager, reports to Finance (or Director)
+  { id: 'u3', name: 'User C', roleName: '財務', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com', approverId: 'u2' }, // Finance reports to Manager
+  { id: 'u4', name: '管理者', roleName: '一般員工 (管理員)', permissions: ['general', 'user_management'], email: 'admin.d@company.com', approverId: 'u2' }, // Admin reports to Manager
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -319,20 +319,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       type: 'add',
       status: 'pending',
       data: { ...vendor, id: `v${Date.now()}` },
-      timestamp: new Date().toISOString().split('T')[0]
+      timestamp: new Date().toISOString().split('T')[0],
+      applicantName: currentUser.name
     };
     setVendorRequests(prev => [request, ...prev]);
     return request;
   };
 
   const requestUpdateVendor = (id: string, data: Partial<Vendor>) => {
+    const existingVendor = vendors.find(v => v.id === id);
     const request: VendorRequest = {
       id: `req${Date.now()}`,
       type: 'update',
       status: 'pending',
       vendorId: id,
       data: data,
-      timestamp: new Date().toISOString().split('T')[0]
+      originalData: existingVendor,
+      timestamp: new Date().toISOString().split('T')[0],
+      applicantName: currentUser.name
     };
     setVendorRequests(prev => [request, ...prev]);
   };
@@ -345,7 +349,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: 'pending',
       vendorId: id,
       originalData: vendor, // Snapshot for display
-      timestamp: new Date().toISOString().split('T')[0]
+      timestamp: new Date().toISOString().split('T')[0],
+      applicantName: currentUser.name
     };
     setVendorRequests(prev => [request, ...prev]);
   };

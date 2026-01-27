@@ -168,14 +168,14 @@ export default function EmployeeReimbursement() {
         <div className="reimburse-container">
             <header className="reimburse-header">
                 <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                    <ArrowLeft size={16} /> 回上一頁
+                    <ArrowLeft size={16} /> 回前頁
                 </button>
-                <h1 className="heading-lg">個人報銷申請</h1>
+                <h1 className="heading-md">個人報銷申請</h1>
             </header>
 
             <div className="card">
                 <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h2 className="heading-md">申請單資訊</h2>
+                    <h2 className="heading-sm">申請單資訊</h2>
                     <div style={{ fontWeight: 'bold', color: 'var(--color-primary)', fontSize: '1.1rem' }}>
                         總計: ${calculateTotal().toLocaleString()}
                     </div>
@@ -402,7 +402,7 @@ export default function EmployeeReimbursement() {
                     )}
                     <button type="button" onClick={() => handleSubmit('submit')} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                         <Send size={18} />
-                        {isResubmit ? '重新提交申請' : '提交申請'}
+                        {isResubmit ? '重新提交' : '提交申請'}
                     </button>
                 </div>
             </div>

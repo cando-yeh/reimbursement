@@ -16,19 +16,23 @@ export default function AddVendor() {
         isFloatingAccount: false
     });
 
+    const [initialData, setInitialData] = useState<typeof formData | null>(null);
+
     const isEditMode = Boolean(id);
 
     useEffect(() => {
         if (isEditMode && vendors) {
             const vendor = vendors.find(v => v.id === id);
             if (vendor) {
-                setFormData({
+                const data = {
                     name: vendor.name,
                     serviceContent: vendor.serviceContent || '',
                     bankCode: vendor.bankCode || '',
                     bankAccount: vendor.bankAccount || '',
                     isFloatingAccount: vendor.isFloatingAccount || false
-                });
+                };
+                setFormData(data);
+                setInitialData(data);
             }
         }
     }, [id, vendors, isEditMode]);
@@ -39,6 +43,11 @@ export default function AddVendor() {
             setFormData({ ...formData, bankAccount: value });
         }
     };
+
+    // Check for changes (simplified deep compare for this flat object)
+    const hasChanges = isEditMode && initialData
+        ? JSON.stringify(formData) !== JSON.stringify(initialData)
+        : true; // Always true for add mode
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,6 +74,7 @@ export default function AddVendor() {
         }
 
         if (isEditMode) {
+            if (!hasChanges) return;
             requestUpdateVendor(id!, formData);
             alert('更新申請已提交審核。');
         } else {
@@ -78,7 +88,7 @@ export default function AddVendor() {
         <div className="form-container">
             <header className="vendor-header simple">
                 <Link to="/vendors" className="btn btn-ghost back-link">
-                    <ArrowLeft size={16} /> 返回廠商清單
+                    <ArrowLeft size={16} /> 回前頁
                 </Link>
                 <h1 className="heading-lg">{isEditMode ? '編輯廠商' : '新增廠商'}</h1>
                 <p className="vendor-subtitle">
@@ -172,8 +182,13 @@ export default function AddVendor() {
 
                     <div className="form-actions">
                         <Link to="/vendors" className="btn btn-ghost">取消</Link>
-                        <button type="submit" className="btn btn-primary">
-                            {isEditMode ? '提交更新申請' : '提交新增申請'}
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={!hasChanges}
+                            title={isEditMode && !hasChanges ? '請先修改資料' : ''}
+                        >
+                            {isEditMode ? '更新' : '提交新增申請'}
                         </button>
                     </div>
                 </div>

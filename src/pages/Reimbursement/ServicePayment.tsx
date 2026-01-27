@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Claim } from '../../types';
 import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image } from 'lucide-react';
@@ -206,17 +206,22 @@ export default function ServicePayment() {
     const requiredStar = <span style={{ color: 'var(--color-danger)' }}>*</span>;
 
     return (
-        <div className="reimburse-container">
-            <header className="reimburse-header">
-                <Link to="/applications/new" className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                    <ArrowLeft size={16} /> 返回選擇頁面
-                </Link>
+        <div className="form-container">
+            <header className="vendor-header simple" style={{ marginBottom: '2rem' }}>
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="btn btn-ghost back-link"
+                >
+                    <ArrowLeft size={16} /> 回前頁
+                </button>
+                <h1 className="heading-lg">勞務報酬單</h1>
+                <p className="vendor-subtitle">
+                    填寫以下資料以申請勞務報酬。
+                </p>
             </header>
 
-            <div className="card">
-                <div className="section-header" style={{ marginBottom: '1.5rem' }}>
-                    <h1 className="heading-lg">勞務報酬單</h1>
-                </div>
+            <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
 
                 <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }}>
                     <div style={{ display: 'grid', gap: '1rem' }}>

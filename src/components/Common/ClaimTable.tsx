@@ -76,7 +76,7 @@ const ClaimTable = ({
                 {claims.length === 0 ? (
                     <tr>
                         <td
-                            colSpan={selectable ? (renderActions ? (showApprover ? 11 : 10) : (showApprover ? 10 : 9)) + 1 : (renderActions ? (showApprover ? 10 : 9) : (showApprover ? 9 : 8))}
+                            colSpan={8 + (selectable ? 1 : 0) + (showApprover ? 1 : 0) + (payments ? 1 : 0) + (renderActions ? 1 : 0)}
                             className="empty-state"
                         >
                             {emptyMessage}

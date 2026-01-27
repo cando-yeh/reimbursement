@@ -76,7 +76,7 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
     const isFinance = currentUser.permissions.includes('finance_audit');
     const isManager = availableUsers.some(u => u.approverId === currentUser.id);
 
-    // 待補憑證 (自己的)
+    // 待補件 (自己的)
     const pendingEvidenceCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'pending_evidence').length;
 
     // 已退回 (自己的)

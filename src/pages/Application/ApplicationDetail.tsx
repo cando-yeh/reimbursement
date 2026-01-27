@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import StatusBadge from '../../components/Common/StatusBadge';
-import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle } from 'lucide-react';
 
 
 
@@ -174,13 +173,12 @@ export default function ApplicationDetail() {
         <div className="reimburse-container">
             <header className="reimburse-header">
                 <button onClick={handleBack} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                    <ArrowLeft size={16} /> 回上一頁
+                    <ArrowLeft size={16} /> 回前頁
                 </button>
                 <div className="detail-actions">
                     <div>
                         <div className="detail-title-group">
-                            <h1 className="heading-lg">申請單 #{claim.id}</h1>
-                            <StatusBadge status={claim.status} />
+                            <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id}</h1>
                         </div>
                         <p className="reimburse-subtitle">建立日期 {claim.date}</p>
                     </div>
@@ -241,27 +239,47 @@ export default function ApplicationDetail() {
                         )}
 
                         {/* Read Only logic for Applicant mainly */}
-                        {!canApprove && ['pending_approval', 'pending_finance', 'pending_evidence', 'pending_finance_review'].includes(claim.status) && (
+                        {!canApprove && ['pending_approval', 'pending_finance', 'pending_finance_review'].includes(claim.status) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: '600' }}>
                                 <CheckCircle size={20} /> 審核中
                             </div>
                         )}
 
-                        {(claim.status === 'approved' || claim.status === 'paid' || claim.status === 'completed') && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
-                                <CheckCircle size={20} /> 已完成 / 待付款
+
+
+                        {claim.status === 'approved' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <CheckCircle size={20} /> 待付款
+                            </div>
+                        )}
+
+                        {(claim.status === 'paid' || claim.status === 'completed') && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <CheckCircle size={20} /> 已完成
+                            </div>
+                        )}
+
+                        {claim.status === 'rejected' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-danger)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <XCircle size={20} /> 已退回
                             </div>
                         )}
 
                         {/* Post-Payment Evidence Upload (Applicant) */}
                         {claim.status === 'pending_evidence' && currentUser.id === claim.applicantId && (
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => setShowEvidenceModal(true)} className="btn btn-primary">
+                            <div style={{ display: 'flex', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                                <button onClick={() => setShowEvidenceModal(true)} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                                     <UploadCloud size={18} /> 上傳憑證
                                 </button>
-                                <button onClick={() => setShowNoReceiptModal(true)} className="btn" style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}>
+                                <button onClick={() => setShowNoReceiptModal(true)} className="btn" style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', whiteSpace: 'nowrap' }}>
                                     無憑證
                                 </button>
+                            </div>
+                        )}
+
+                        {!canApprove && claim.status === 'pending_evidence' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-warning)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <CheckCircle size={20} /> 待補件
                             </div>
                         )}
                     </div>
@@ -480,9 +498,9 @@ export default function ApplicationDetail() {
                 </div>
 
                 <div style={{ marginTop: '2rem' }}>
-                    <h3 className="heading-md" style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+                    <div style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 500 }}>
                         申請說明：{claim.description}
-                    </h3>
+                    </div>
 
                     {/* Service Payment Specific Details */}
                     {claim.type === 'service' && claim.serviceDetails && (
@@ -540,118 +558,123 @@ export default function ApplicationDetail() {
                         </div>
                     )}
 
-                    <h4 className="heading-md" style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>費用明細</h4>
-                    <table className="vendor-table" style={{ marginTop: '0.5rem' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center', width: '110px', whiteSpace: 'nowrap' }}>日期</th>
-                                <th style={{ textAlign: 'center', width: '90px', whiteSpace: 'nowrap' }}>類別</th>
-                                <th style={{ textAlign: 'center' }}>交易說明</th>
-                                <th style={{ textAlign: 'center', width: '100px', whiteSpace: 'nowrap' }}>金額</th>
-                                <th style={{ textAlign: 'center', width: '80px', whiteSpace: 'nowrap' }}>憑證</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {claim.type === 'payment' && claim.paymentDetails ? (
-                                <tr>
-                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                        {(claim.paymentDetails as any).invoiceDate ||
-                                            (claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '-')}
-                                    </td>
-                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                        {(claim as any).expenseCategory && (
-                                            <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>
-                                                {(claim as any).expenseCategory}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td style={{ fontWeight: 500, textAlign: 'center' }}>{claim.paymentDetails.transactionContent}</td>
-                                    <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span>$</span>
-                                            <span>{claim.amount.toLocaleString()}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                        {(claim.paymentDetails as any).invoiceFile ? (
-                                            <button
-                                                onClick={() => window.open((claim.paymentDetails as any).invoiceUrl || '#', '_blank')}
-                                                style={{
-                                                    padding: '0.25rem 0.5rem',
-                                                    backgroundColor: 'var(--color-bg)',
-                                                    border: '1px solid var(--color-border)',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.75rem',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.25rem'
-                                                }}
-                                            >
-                                                📄 查看
-                                            </button>
-                                        ) : claim.paymentDetails.invoiceStatus === 'not_yet' ? (
-                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
+                    {/* Expense Details - Hidden for Service Payment */
+                        claim.type !== 'service' && (
+                            <>
+                                <h4 className="heading-md" style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>費用明細</h4>
+                                <table className="vendor-table" style={{ marginTop: '0.5rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ textAlign: 'center', width: '110px', whiteSpace: 'nowrap' }}>日期</th>
+                                            <th style={{ textAlign: 'center', width: '90px', whiteSpace: 'nowrap' }}>類別</th>
+                                            <th style={{ textAlign: 'center' }}>交易說明</th>
+                                            <th style={{ textAlign: 'center', width: '100px', whiteSpace: 'nowrap' }}>金額</th>
+                                            <th style={{ textAlign: 'center', width: '80px', whiteSpace: 'nowrap' }}>憑證</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {claim.type === 'payment' && claim.paymentDetails ? (
+                                            <tr>
+                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                    {(claim.paymentDetails as any).invoiceDate ||
+                                                        (claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '-')}
+                                                </td>
+                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                    {(claim as any).expenseCategory && (
+                                                        <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>
+                                                            {(claim as any).expenseCategory}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={{ fontWeight: 500, textAlign: 'center' }}>{claim.paymentDetails.transactionContent}</td>
+                                                <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>$</span>
+                                                        <span>{claim.amount.toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                    {(claim.paymentDetails as any).invoiceFile ? (
+                                                        <button
+                                                            onClick={() => window.open((claim.paymentDetails as any).invoiceUrl || '#', '_blank')}
+                                                            style={{
+                                                                padding: '0.25rem 0.5rem',
+                                                                backgroundColor: 'var(--color-bg)',
+                                                                border: '1px solid var(--color-border)',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.75rem',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.25rem'
+                                                            }}
+                                                        >
+                                                            📄 查看
+                                                        </button>
+                                                    ) : claim.paymentDetails.invoiceStatus === 'not_yet' ? (
+                                                        <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
+                                                    ) : (
+                                                        <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ) : claim.items && claim.items.length > 0 ? (
+                                            claim.items.map((item, idx) => (
+                                                <tr key={item.id || idx}>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{item.date}</td>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        {item.category && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{item.category}</span>}
+                                                    </td>
+                                                    <td style={{ fontWeight: 500, textAlign: 'center' }}>{item.description}</td>
+                                                    <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                            <span>$</span>
+                                                            <span>{item.amount.toLocaleString()}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        {(item as any).receiptFile || (item.notes && item.notes !== '無憑證' && item.notes !== '') ? (
+                                                            <button
+                                                                onClick={() => window.open((item as any).fileUrl || '#', '_blank')}
+                                                                style={{
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    backgroundColor: 'var(--color-bg)',
+                                                                    border: '1px solid var(--color-border)',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.75rem',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.25rem'
+                                                                }}
+                                                            >
+                                                                📄 查看
+                                                            </button>
+                                                        ) : (item as any).noReceipt || item.notes === '無憑證' ? (
+                                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
+                                                        ) : (
+                                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
                                         ) : (
-                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
+                                            <tr>
+                                                <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>無明細資料 (舊資料或格式問題)</td>
+                                            </tr>
                                         )}
-                                    </td>
-                                </tr>
-                            ) : claim.items && claim.items.length > 0 ? (
-                                claim.items.map((item, idx) => (
-                                    <tr key={item.id || idx}>
-                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{item.date}</td>
-                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                            {item.category && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{item.category}</span>}
-                                        </td>
-                                        <td style={{ fontWeight: 500, textAlign: 'center' }}>{item.description}</td>
-                                        <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span>$</span>
-                                                <span>{item.amount.toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                            {(item as any).receiptFile || (item.notes && item.notes !== '無憑證' && item.notes !== '') ? (
-                                                <button
-                                                    onClick={() => window.open((item as any).fileUrl || '#', '_blank')}
-                                                    style={{
-                                                        padding: '0.25rem 0.5rem',
-                                                        backgroundColor: 'var(--color-bg)',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: '4px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.75rem',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.25rem'
-                                                    }}
-                                                >
-                                                    📄 查看
-                                                </button>
-                                            ) : (item as any).noReceipt || item.notes === '無憑證' ? (
-                                                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
-                                            ) : (
-                                                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>無明細資料 (舊資料或格式問題)</td>
-                                </tr>
-                            )}
-                        </tbody>
-                        <tfoot>
-                            <tr style={{ backgroundColor: 'var(--color-bg)' }}>
-                                <td colSpan={4} style={{ textAlign: 'right', fontWeight: 'bold' }}>總計</td>
-                                <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-primary)' }}>
-                                    ${claim.amount.toLocaleString()}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style={{ backgroundColor: 'var(--color-bg)' }}>
+                                            <td colSpan={4} style={{ textAlign: 'right', fontWeight: 'bold' }}>總計</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-primary)' }}>
+                                                ${claim.amount.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </>
+                        )}
 
                     {/* Payer Notes - for vendor payment only */}
                     {claim.type === 'payment' && claim.paymentDetails?.payerNotes && (
@@ -689,7 +712,7 @@ export default function ApplicationDetail() {
             {
                 claim.history && claim.history.length > 0 && (
                     <div className="card" style={{ marginTop: '1.5rem' }}>
-                        <h2 className="heading-md" style={{ marginBottom: '1rem' }}>歷史紀錄</h2>
+                        <div style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 500 }}>歷史紀錄</div>
                         <div className="history-timeline" style={{ position: 'relative', paddingLeft: '1rem' }}>
                             {claim.history.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item, idx) => (
                                 <div key={idx} style={{
@@ -726,7 +749,7 @@ export default function ApplicationDetail() {
                                             <div>
                                                 <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.actorName}</span>
                                                 <span style={{ margin: '0 0.5rem', color: '#9ca3af' }}>•</span>
-                                                <span style={{ fontWeight: 500 }}>
+                                                <span style={{ fontWeight: 400 }}>
                                                     {formatAction(item.action)}
                                                 </span>
                                             </div>

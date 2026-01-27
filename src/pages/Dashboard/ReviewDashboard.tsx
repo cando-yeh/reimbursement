@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Claim, Payment } from '../../types';
+import { Claim, Payment, VendorRequest } from '../../types';
 import { Search, Filter } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Pagination from '../../components/Common/Pagination';
@@ -8,6 +8,8 @@ import ClaimTable from '../../components/Common/ClaimTable';
 import TabButton from '../../components/Common/TabButton';
 import VendorRequestTable from '../../components/Common/VendorRequestTable';
 import PaymentRecordTable from '../../components/Common/PaymentRecordTable';
+import VendorRequestDetailModal from '../../components/Common/VendorRequestDetailModal';
+
 export default function ReviewDashboard() {
     const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = useApp();
     const navigate = useNavigate();
@@ -40,6 +42,10 @@ export default function ReviewDashboard() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectionError, setSelectionError] = useState<string | null>(null);
+
+    // Vendor Request Modal State
+    const [selectedVendorRequest, setSelectedVendorRequest] = useState<VendorRequest | null>(null);
+
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -258,12 +264,18 @@ export default function ReviewDashboard() {
                     />
                     <VendorRequestTable
                         requests={vendorApprovals.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
-                        showActions
-                        onApprove={approveVendorRequest}
-                        onReject={rejectVendorRequest}
+                        onRowClick={(r) => setSelectedVendorRequest(r)}
                     />
                 </div>
             )}
+
+            {/* Vendor Request Detail Modal */}
+            <VendorRequestDetailModal
+                request={selectedVendorRequest}
+                onClose={() => setSelectedVendorRequest(null)}
+                onApprove={approveVendorRequest}
+                onReject={rejectVendorRequest}
+            />
 
             {activeTab === 'payment_records' && isFinance && (
                 <div className="card vendor-table-container">
@@ -280,94 +292,93 @@ export default function ReviewDashboard() {
             )}
 
             {activeTab === 'all_applications' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {/* Filter Bar */}
-                    <div className="card" style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Filter size={18} className="text-muted" />
-                            <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>篩選:</span>
-                        </div>
+                <div className="card vendor-table-container">
+                    {/* Filter + Pagination Bar */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Filter size={18} className="text-muted" />
+                                <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>篩選:</span>
+                            </div>
 
-                        <select
-                            className="form-input"
-                            style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
-                            value={filterApplicant}
-                            onChange={(e) => setFilterApplicant(e.target.value)}
-                        >
-                            <option value="">所有申請人</option>
-                            {availableUsers.map(u => (
-                                <option key={u.id} value={u.id}>{u.name}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            className="form-input"
-                            style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                        >
-                            <option value="">所有狀態</option>
-                            <option value="pending_approval">待主管審核</option>
-                            <option value="pending_finance">待財務審核</option>
-                            <option value="approved">待付款</option>
-                            <option value="paid">已付款</option>
-                            <option value="rejected">已退回</option>
-                            <option value="completed">已完成</option>
-                        </select>
-
-                        <select
-                            className="form-input"
-                            style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                        >
-                            <option value="">所有類型</option>
-                            <option value="employee">員工報銷</option>
-                            <option value="vendor">廠商付款</option>
-                            <option value="service">勞務報酬</option>
-                        </select>
-
-                        <div style={{ position: 'relative' }}>
-                            <Search size={14} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                            <input
-                                type="text"
-                                placeholder="搜尋付款對象..."
+                            <select
                                 className="form-input"
-                                style={{ paddingLeft: '28px', width: '200px', fontSize: '0.9rem', padding: '0.3rem 0.5rem 0.3rem 1.8rem' }}
-                                value={filterPayee}
-                                onChange={(e) => setFilterPayee(e.target.value)}
-                            />
-                        </div>
-
-                        {(filterApplicant || filterStatus || filterType || filterPayee) && (
-                            <button
-                                className="btn btn-ghost"
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', color: 'var(--color-danger)' }}
-                                onClick={() => {
-                                    setFilterApplicant('');
-                                    setFilterStatus('');
-                                    setFilterPayee('');
-                                    setFilterType('');
-                                }}
+                                style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
+                                value={filterApplicant}
+                                onChange={(e) => setFilterApplicant(e.target.value)}
                             >
-                                清除篩選
-                            </button>
-                        )}
-                    </div>
+                                <option value="">所有申請人</option>
+                                {availableUsers.map(u => (
+                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                ))}
+                            </select>
 
-                    <div className="card vendor-table-container">
+                            <select
+                                className="form-input"
+                                style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                            >
+                                <option value="">所有狀態</option>
+                                <option value="pending_approval">待主管審核</option>
+                                <option value="pending_finance">待財務審核</option>
+                                <option value="approved">待付款</option>
+                                <option value="paid">已付款</option>
+                                <option value="rejected">已退回</option>
+                                <option value="completed">已完成</option>
+                            </select>
+
+                            <select
+                                className="form-input"
+                                style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                            >
+                                <option value="">所有類型</option>
+                                <option value="employee">員工報銷</option>
+                                <option value="vendor">廠商付款</option>
+                                <option value="service">勞務報酬</option>
+                            </select>
+
+                            <div style={{ position: 'relative' }}>
+                                <Search size={14} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                                <input
+                                    type="text"
+                                    placeholder="搜尋付款對象..."
+                                    className="form-input"
+                                    style={{ paddingLeft: '28px', width: '160px', fontSize: '0.9rem', padding: '0.3rem 0.5rem 0.3rem 1.8rem' }}
+                                    value={filterPayee}
+                                    onChange={(e) => setFilterPayee(e.target.value)}
+                                />
+                            </div>
+
+                            {(filterApplicant || filterStatus || filterType || filterPayee) && (
+                                <button
+                                    className="btn btn-ghost"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', color: 'var(--color-danger)' }}
+                                    onClick={() => {
+                                        setFilterApplicant('');
+                                        setFilterStatus('');
+                                        setFilterPayee('');
+                                        setFilterType('');
+                                    }}
+                                >
+                                    清除篩選
+                                </button>
+                            )}
+                        </div>
                         <Pagination
                             currentPage={currentPage}
                             totalPages={Math.ceil(allApplications.length / ITEMS_PER_PAGE)}
                             onPageChange={setCurrentPage}
                         />
-                        <ClaimTable
-                            claims={allApplications.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
-                            emptyMessage="無符合條件的申請單"
-                            onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
-                            availableUsers={availableUsers}
-                        />
                     </div>
+                    <ClaimTable
+                        claims={allApplications.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
+                        emptyMessage="無符合條件的申請單"
+                        onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
+                        availableUsers={availableUsers}
+                    />
                 </div>
             )}
 
@@ -411,5 +422,3 @@ export default function ReviewDashboard() {
         </div>
     );
 }
-
-

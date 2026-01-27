@@ -28,7 +28,7 @@ export default function Dashboard() {
     // 1. 草稿
     const drafts = claims.filter(c => c.applicantId === currentUser.id && c.status === 'draft');
 
-    // 2. 待補憑證
+    // 2. 待補件
     const pendingEvidence = claims.filter(c => c.applicantId === currentUser.id && c.status === 'pending_evidence');
 
     // 3. 已退回 (Rejected in workflow)
@@ -62,15 +62,15 @@ export default function Dashboard() {
                     <h1 className="heading-lg">我的請款</h1>
                     <p className="vendor-subtitle">管理您的申請單與待辦事項</p>
                 </div>
-                <Link to="/applications/new" className="btn btn-primary" title="新增請款單" style={{ padding: '0.4rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Plus size={20} />
+                <Link to="/applications/new" className="btn btn-primary" title="新增請款單" style={{ padding: 0, borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Plus size={24} />
                 </Link>
             </div>
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '1px' }}>
                 <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={drafts.length} />
-                <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補憑證" count={pendingEvidence.length} badge={pendingEvidence.length} />
+                <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={pendingEvidence.length} badge={pendingEvidence.length} />
                 <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={returned.length} badge={returned.length} />
                 <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={inReview.length} />
                 <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={pendingPayment.length} />
@@ -112,7 +112,7 @@ export default function Dashboard() {
                 <div className="card vendor-table-container">
                     <ClaimTable
                         claims={pendingEvidence}
-                        emptyMessage="無待補憑證項目"
+                        emptyMessage="無待補件項目"
                         onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
                         payments={payments}
                         availableUsers={availableUsers}

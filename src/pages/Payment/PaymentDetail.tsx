@@ -37,7 +37,7 @@ export default function PaymentDetail() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                     <div>
                         <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                            <ArrowLeft size={16} style={{ marginRight: '0.25rem' }} /> 回上一頁
+                            <ArrowLeft size={16} style={{ marginRight: '0.25rem' }} /> 回前頁
                         </button>
                         <div className="detail-title-group">
                             <h1 className="heading-lg">付款單 #{payment.id}</h1>

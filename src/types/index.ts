@@ -85,6 +85,7 @@ export interface VendorRequest {
     data?: Partial<Vendor>; // The new data (or partial data for updates)
     status: 'pending' | 'approved' | 'rejected';
     timestamp: string;
+    applicantName?: string; // Name of the user who requested the change
     originalData?: Vendor; // Snapshot of data before change (for audit/comparison)
 }
 
