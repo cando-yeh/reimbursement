@@ -1,36 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send } from 'lucide-react';
+import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
 // ... (keep existing imports)
 
 // ... (inside component)
 
-<div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
-    <button
-        type="button"
-        onClick={() => navigate('/dashboard')}
-        className="btn btn-ghost"
-        style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }}
-    >
-        取消
-    </button>
-
-    <button
-        type="button"
-        onClick={(e) => { e.preventDefault(); handleSaveDraft(); }}
-        className="btn btn-ghost"
-        style={{ border: '1px solid var(--color-border)', padding: '0.5rem 1rem' }}
-    >
-        <Save size={18} style={{ marginRight: '0.5rem' }} />
-        儲存草稿
-    </button>
-    <button type="submit" className="btn btn-primary" style={{ minWidth: '120px', padding: '0.5rem 1rem' }}>
-        <Send size={18} style={{ marginRight: '0.5rem' }} />
-        提交申請
-    </button>
-</div>
-import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
 
 // ------- Helpers -------
 function formatNumberWithCommas(value: string) {
@@ -64,7 +40,8 @@ function Field({ label, required, hint, children, error }: any) {
 
 const PaymentRequest: React.FC = () => {
     const navigate = useNavigate();
-    const { vendors, addClaim, currentUser } = useApp();
+    const { id } = useParams();
+    const { vendors, addClaim, updateClaim, claims, currentUser } = useApp();
 
     // Form State
     const [vendorId, setVendorId] = useState<string>("");
@@ -79,6 +56,37 @@ const PaymentRequest: React.FC = () => {
     // Manual Bank State (for floating accounts)
     const [manualBankCode, setManualBankCode] = useState("");
     const [manualBankAccount, setManualBankAccount] = useState("");
+
+    // Load existing claim if editing
+    useEffect(() => {
+        if (id) {
+            const claim = claims.find(c => c.id === id);
+            if (claim && claim.type === 'payment') {
+                setVendorId(claim.payeeId || "");
+                setAmountInput(formatNumberWithCommas(String(claim.amount)));
+                setDescription(claim.paymentDetails?.transactionContent || claim.description || "");
+                setExpenseCategory((claim as any).expenseCategory || "");
+                setMemo(claim.paymentDetails?.payerNotes || "");
+
+                // Map invoiceStatus to receiptStatus
+                const status = claim.paymentDetails?.invoiceStatus;
+                if (status === 'not_yet') setReceiptStatus('pending');
+                else if (status === 'unable') setReceiptStatus('none');
+                else setReceiptStatus('obtained');
+
+                if (status === 'obtained' || status === 'unable') {
+                    setInvoiceNumber(claim.paymentDetails?.invoiceNumber || "");
+                }
+                if (claim.paymentDetails?.bankCode) setManualBankCode(claim.paymentDetails.bankCode);
+                if (claim.paymentDetails?.bankAccount) setManualBankAccount(claim.paymentDetails.bankAccount);
+
+                // Note: File inputs can't be programmatically set for security reasons, 
+                // but we could show existing files if we had a way to represent them.
+                // For now, we just skip populating attachments in this simple version, 
+                // or we would need a separate 'existingAttachments' state.
+            }
+        }
+    }, [id, claims]);
 
     // Validation State
     const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -96,9 +104,14 @@ const PaymentRequest: React.FC = () => {
         }
     }, [selectedVendor]);
 
-    const bankAccountDisplay = selectedVendor
-        ? (selectedVendor.isFloatingAccount ? "需自行填寫" : `${selectedVendor.bankCode} - ${selectedVendor.bankAccount}`)
-        : "";
+    const bankAccountDisplay = useMemo(() => {
+        if (!selectedVendor) return "";
+        if (selectedVendor.isFloatingAccount) return "需自行填寫";
+
+        const bank = BANK_LIST.find(b => b.code === selectedVendor.bankCode);
+        const bankName = bank?.name || "";
+        return `(${selectedVendor.bankCode} ${bankName}) ${selectedVendor.bankAccount}`;
+    }, [selectedVendor]);
     const amount = parseAmountToNumber(amountInput);
 
     // Validation Logic
@@ -110,6 +123,8 @@ const PaymentRequest: React.FC = () => {
         if (!expenseCategory) e.expenseCategory = "請選擇費用類別";
         if (memo.length > 10) e.memo = "備註不得超過 10 個字";
         if (receiptStatus === "obtained" && !invoiceNumber.trim()) e.invoiceNumber = "已取得發票/收據時，請填寫號碼";
+        if (receiptStatus === "none" && !invoiceNumber.trim()) e.invoiceNumber = "請填寫無法取得的原因";
+        if (receiptStatus === "obtained" && attachments.length === 0) e.attachments = "請上傳發票或收據";
 
         if (selectedVendor?.isFloatingAccount) {
             if (!manualBankCode) e.manualBankCode = "請選擇銀行";
@@ -117,7 +132,7 @@ const PaymentRequest: React.FC = () => {
         }
 
         return e;
-    }, [vendorId, amount, description, expenseCategory, memo, receiptStatus, invoiceNumber, selectedVendor, manualBankCode, manualBankAccount]);
+    }, [vendorId, amount, description, expenseCategory, memo, receiptStatus, invoiceNumber, selectedVendor, manualBankCode, manualBankAccount, attachments]);
 
     const isValid = Object.keys(errors).length === 0;
 
@@ -162,7 +177,7 @@ const PaymentRequest: React.FC = () => {
                 transactionContent: description.trim(),
                 payerNotes: memo.trim(),
                 invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
-                invoiceNumber: receiptStatus === 'obtained' ? invoiceNumber.trim() : undefined,
+                invoiceNumber: (receiptStatus === 'obtained' || receiptStatus === 'none') ? invoiceNumber.trim() : undefined,
                 invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
                 bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                 bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
@@ -170,12 +185,16 @@ const PaymentRequest: React.FC = () => {
         };
 
         // Backward compatibility
-        if (receiptStatus === 'obtained') {
+        if (receiptStatus === 'obtained' || receiptStatus === 'none') {
             (newClaim as any).invoiceNumber = invoiceNumber.trim();
         }
 
-        addClaim(newClaim as any);
-        navigate('/dashboard');
+        if (id) {
+            updateClaim(id, newClaim);
+        } else {
+            addClaim(newClaim as any);
+        }
+        navigate('/?tab=drafts');
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -191,6 +210,7 @@ const PaymentRequest: React.FC = () => {
             expenseCategory: true,
             memo: true,
             invoiceNumber: true,
+            attachments: true,
         });
 
         if (!isValid) return;
@@ -205,11 +225,12 @@ const PaymentRequest: React.FC = () => {
             payee: selectedVendor?.name || '',
             items: [],
             date: new Date().toISOString().split('T')[0],
+            status: 'pending_approval' as const,
             paymentDetails: {
                 transactionContent: description.trim(),
                 payerNotes: memo.trim(),
                 invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
-                invoiceNumber: receiptStatus === 'obtained' ? invoiceNumber.trim() : undefined,
+                invoiceNumber: (receiptStatus === 'obtained' || receiptStatus === 'none') ? invoiceNumber.trim() : undefined,
                 invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
                 bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                 bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
@@ -217,12 +238,16 @@ const PaymentRequest: React.FC = () => {
         };
 
         // Backward compatibility
-        if (receiptStatus === 'obtained') {
+        if (receiptStatus === 'obtained' || receiptStatus === 'none') {
             (newClaim as any).invoiceNumber = invoiceNumber.trim();
         }
 
-        addClaim(newClaim);
-        navigate('/dashboard');
+        if (id) {
+            updateClaim(id, newClaim);
+        } else {
+            addClaim(newClaim);
+        }
+        navigate('/?tab=in_review');
     };
 
     const showErr = (key: string) => touched[key] && errors[key];
@@ -231,9 +256,6 @@ const PaymentRequest: React.FC = () => {
         <div className="page-container">
             <header className="mb-6">
                 <h1 className="page-title">廠商付款申請</h1>
-                <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                    請依序填寫付款對象、付款內容與憑證資訊。帶有 <span style={{ color: 'var(--color-danger)' }}>*</span> 為必填。
-                </p>
             </header>
 
             <div className="card">
@@ -243,7 +265,6 @@ const PaymentRequest: React.FC = () => {
                     <div className="form-section">
                         <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>付款對象</h2>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Step 1 / 3</span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -326,48 +347,53 @@ const PaymentRequest: React.FC = () => {
                     <div className="form-section" style={{ marginTop: '2rem' }}>
                         <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>付款內容</h2>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Step 2 / 3</span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Field label="費用類別" required error={showErr("expenseCategory")}>
-                                <div style={{ position: 'relative' }}>
-                                    <select
-                                        value={expenseCategory}
-                                        onChange={(e) => setExpenseCategory(e.target.value)}
-                                        onBlur={() => markTouched("expenseCategory")}
-                                        className="form-input"
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        <option value="">請選擇費用類別</option>
-                                        {EXPENSE_CATEGORIES.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
-                                        <ChevronDown size={16} />
-                                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <Field label="費用類別" required error={showErr("expenseCategory")}>
+                                        <div style={{ position: 'relative' }}>
+                                            <select
+                                                value={expenseCategory}
+                                                onChange={(e) => setExpenseCategory(e.target.value)}
+                                                onBlur={() => markTouched("expenseCategory")}
+                                                className="form-input"
+                                                style={{ appearance: 'none' }}
+                                            >
+                                                <option value="">請選擇費用類別</option>
+                                                {EXPENSE_CATEGORIES.map(cat => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+                                            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                                                <ChevronDown size={16} />
+                                            </div>
+                                        </div>
+                                    </Field>
                                 </div>
-                            </Field>
 
-                            <Field label="請款金額" required hint="單位：新台幣（TWD）" error={showErr("amount")}>
-                                <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>NT$</span>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={amountInput}
-                                        onChange={(e) => handleAmountChange(e.target.value)}
-                                        onBlur={() => markTouched("amount")}
-                                        className="form-input"
-                                        style={{ paddingLeft: '2.5rem', paddingRight: '3rem' }}
-                                        placeholder="0"
-                                    />
-                                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 500 }}>TWD</span>
+                                <div style={{ flex: 1 }}>
+                                    <Field label="請款金額" required error={showErr("amount")}>
+                                        <div style={{ position: 'relative' }}>
+                                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>NT$</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={amountInput}
+                                                onChange={(e) => handleAmountChange(e.target.value)}
+                                                onBlur={() => markTouched("amount")}
+                                                className="form-input"
+                                                style={{ paddingLeft: '2.5rem', paddingRight: '3rem', textAlign: 'right' }}
+                                                placeholder="0"
+                                            />
+                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 500 }}>TWD</span>
+                                        </div>
+                                    </Field>
                                 </div>
-                            </Field>
+                            </div>
 
-                            <Field label="交易內容" required hint="例：伺服器費用 / 顧問費 / 廣告費" error={showErr("description")}>
+                            <Field label="交易內容" required error={showErr("description")}>
                                 <input
                                     type="text"
                                     value={description}
@@ -401,12 +427,12 @@ const PaymentRequest: React.FC = () => {
                     <div className="form-section" style={{ marginTop: '2rem' }}>
                         <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>發票與附件</h2>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Step 3 / 3</span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Left Column: Invoice Details */}
-                            <div className="space-y-6">
+                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+                            {/* Left Column: Status & Number */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 300px', minWidth: '100px' }}>
+                                {/* 1. Invoice Status */}
                                 <Field label="發票收據狀態" required>
                                     <div style={{ position: 'relative' }}>
                                         <select
@@ -421,7 +447,7 @@ const PaymentRequest: React.FC = () => {
                                         >
                                             <option value="obtained">已取得</option>
                                             <option value="pending">未取得（稍後補）</option>
-                                            <option value="none">不適用</option>
+                                            <option value="none">無法取得</option>
                                         </select>
                                         <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
                                             <ChevronDown size={16} />
@@ -429,71 +455,94 @@ const PaymentRequest: React.FC = () => {
                                     </div>
                                 </Field>
 
-                                {receiptStatus === "obtained" ? (
-                                    <Field label="發票號碼" required error={showErr("invoiceNumber")}>
-                                        <input
-                                            type="text"
-                                            value={invoiceNumber}
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
-                                                setInvoiceNumber(value);
-                                            }}
-                                            onBlur={() => markTouched("invoiceNumber")}
-                                            className="form-input"
-                                            placeholder="請輸入發票號碼"
-                                        />
-                                    </Field>
-                                ) : (
-                                    <div style={{
-                                        border: '1px dashed var(--color-border)',
-                                        borderRadius: '0.5rem',
-                                        padding: '1rem',
-                                        backgroundColor: 'var(--color-bg-secondary)',
-                                        color: 'var(--color-text-secondary)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.9rem',
-                                        minHeight: '80px'
-                                    }}>
-                                        {receiptStatus === "pending"
-                                            ? "已選擇「未取得」，可於後續補上發票號碼。"
-                                            : "已選擇「不適用」，本次不需填寫發票號碼。"}
-                                    </div>
-                                )}
+                                {/* 2. Invoice Number or Message */}
+                                <div>
+                                    {receiptStatus === "pending" ? (
+                                        <div style={{
+                                            border: '1px dashed var(--color-border)',
+                                            borderRadius: '0.5rem',
+                                            padding: '1rem',
+                                            backgroundColor: 'var(--color-bg-secondary)',
+                                            color: 'var(--color-text-secondary)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '0.9rem',
+                                            minHeight: '80px'
+                                        }}>
+                                            已選擇「未取得」，可於後續補上發票號碼。
+                                        </div>
+                                    ) : (
+                                        <Field
+                                            label={receiptStatus === "obtained" ? "發票號碼" : "無法取得原因"}
+                                            required
+                                            error={showErr("invoiceNumber")}
+                                        >
+                                            <input
+                                                type="text"
+                                                value={invoiceNumber}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    // Only restrict for 'obtained'
+                                                    if (receiptStatus === 'obtained') {
+                                                        setInvoiceNumber(val.replace(/[^a-zA-Z0-9]/g, ''));
+                                                    } else {
+                                                        setInvoiceNumber(val);
+                                                    }
+                                                }}
+                                                onBlur={() => markTouched("invoiceNumber")}
+                                                className="form-input"
+                                                placeholder={receiptStatus === "obtained" ? "請輸入發票號碼" : "請說明原因"}
+                                            />
+                                        </Field>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Right Column: Attachments */}
-                            {receiptStatus === 'obtained' && (
-                                <div>
-                                    <Field label="附件上傳" hint="可上傳發票/收據、報價單、合約等（多檔可選）">
+                            {/* Right Column: Attachments */}
+                            <div style={{ width: '120px' }}>
+                                {receiptStatus === 'obtained' && (
+                                    <Field label="附件上傳" required error={showErr("attachments")}>
                                         <div style={{
                                             border: '1px solid var(--color-border)',
                                             borderRadius: '0.75rem',
-                                            padding: '1rem',
+                                            padding: '0.5rem',
                                             backgroundColor: 'white',
                                             height: '100%',
                                             display: 'flex',
-                                            flexDirection: 'column'
+                                            flexDirection: 'column',
+                                            minHeight: '120px',
+                                            alignItems: 'center'
                                         }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>拖曳檔案到此處</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>或點擊按鈕選擇檔案</div>
-                                                </div>
-                                                <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                                                    <Upload size={16} style={{ marginRight: '0.5rem' }} />
-                                                    選擇檔案
-                                                    <input
-                                                        type="file"
-                                                        className="hidden"
-                                                        multiple
-                                                        onChange={(e) => handleFiles(e.target.files)}
-                                                    />
-                                                </label>
-                                            </div>
+                                            <label
+                                                title="上傳附件"
+                                                style={{
+                                                    width: '100%',
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    border: '1px dashed var(--color-border)',
+                                                    borderRadius: '0.5rem',
+                                                    margin: '0.5rem 0',
+                                                    backgroundColor: 'var(--color-bg-secondary)',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                                            >
+                                                <Upload size={24} style={{ color: 'var(--color-text-secondary)' }} />
+                                                <input
+                                                    type="file"
+                                                    style={{ display: 'none' }}
+                                                    multiple
+                                                    onChange={(e) => handleFiles(e.target.files)}
+                                                />
+                                            </label>
 
                                             {attachments.length > 0 && (
-                                                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                                                <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                     {attachments.map((f, idx) => (
                                                         <div
                                                             key={`${f.name}-${f.size}-${f.lastModified}`}
@@ -501,10 +550,11 @@ const PaymentRequest: React.FC = () => {
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'space-between',
-                                                                padding: '0.5rem 0.75rem',
+                                                                padding: '0.25rem',
                                                                 backgroundColor: 'var(--color-bg-secondary)',
-                                                                borderRadius: '0.5rem',
-                                                                border: '1px solid var(--color-border)'
+                                                                borderRadius: '0.25rem',
+                                                                border: '1px solid var(--color-border)',
+                                                                fontSize: '0.75rem'
                                                             }}
                                                         >
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
@@ -535,8 +585,8 @@ const PaymentRequest: React.FC = () => {
                                             )}
                                         </div>
                                     </Field>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
 

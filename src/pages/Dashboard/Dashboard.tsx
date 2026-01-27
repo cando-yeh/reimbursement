@@ -224,6 +224,7 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         )}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -244,6 +245,7 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         )}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -254,6 +256,7 @@ export default function Dashboard() {
                         claims={returned}
                         emptyMessage="無已退回項目"
                         onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -264,6 +267,7 @@ export default function Dashboard() {
                         claims={inReview}
                         emptyMessage="無審核中項目"
                         onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -274,6 +278,8 @@ export default function Dashboard() {
                         claims={completed}
                         emptyMessage="無已完成項目"
                         onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
+                        payments={payments}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -290,6 +296,7 @@ export default function Dashboard() {
                         claims={claimApprovals}
                         emptyMessage="無待審核項目"
                         onRowClick={(claim: Claim) => navigate(`/claims/${claim.id}`)}
+                        availableUsers={availableUsers}
                     />
                 </div>
             )}
@@ -408,7 +415,7 @@ const TabButton = ({ active, onClick, label, count, badge }: any) => (
     </button>
 );
 
-const ClaimTable = ({ claims, emptyMessage, renderActions, onRowClick, showApprover, availableUsers, selectable, selectedIds, onSelectChange }: any) => {
+const ClaimTable = ({ claims, emptyMessage, renderActions, onRowClick, showApprover, availableUsers, selectable, selectedIds, onSelectChange, payments }: any) => {
     // Helper to get approver name for a claim
     const getApproverName = (claim: Claim) => {
         if (!availableUsers) return '-';
@@ -424,25 +431,41 @@ const ClaimTable = ({ claims, emptyMessage, renderActions, onRowClick, showAppro
         return '-';
     };
 
+    const getPaymentDate = (claim: Claim) => {
+        if (claim.status !== 'completed' || !payments) return '-';
+        // Find payment containing this claim
+        const payment = payments.find((p: any) => p.claimIds.includes(claim.id));
+        return payment ? payment.paymentDate : '-';
+    }
+
+    const getApplicantName = (claim: Claim) => {
+        if (!availableUsers) return '-';
+        const user = availableUsers.find((u: any) => u.id === claim.applicantId);
+        return user ? user.name : claim.applicantId;
+    };
+
     return (
         <table className="vendor-table">
             <thead>
                 <tr>
                     {selectable && <th style={{ width: '40px' }}></th>}
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>申請編號</th>
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>申請日期</th>
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>狀態</th>
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>類型</th>
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>付款對象</th>
-                    {showApprover && <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>審核者</th>}
+                    <th style={{ width: '100px', textAlign: 'center' }}>申請編號</th>
+                    <th style={{ width: '130px', textAlign: 'center' }}>申請日期</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
+                    <th style={{ width: '90px', textAlign: 'center' }}>類型</th>
+                    {/* New Applicant Column */}
+                    <th style={{ textAlign: 'center' }}>申請人</th>
+                    <th style={{ textAlign: 'center' }}>付款對象</th>
+                    {showApprover && <th style={{ width: '100px', textAlign: 'center' }}>審核者</th>}
                     <th style={{ textAlign: 'center' }}>說明</th>
-                    <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>金額</th>
-                    {renderActions && <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>刪除</th>}
+                    <th style={{ width: '120px', textAlign: 'center' }}>金額</th>
+                    {payments && <th style={{ width: '130px', textAlign: 'center' }}>付款日期</th>}
+                    {renderActions && <th style={{ width: '50px', textAlign: 'center' }}>刪除</th>}
                 </tr>
             </thead>
             <tbody>
                 {claims.length === 0 ? (
-                    <tr><td colSpan={selectable ? (renderActions ? (showApprover ? 9 : 8) : (showApprover ? 8 : 7)) + 1 : (renderActions ? (showApprover ? 8 : 7) : (showApprover ? 7 : 6))} className="empty-state">{emptyMessage}</td></tr>
+                    <tr><td colSpan={selectable ? (renderActions ? (showApprover ? 11 : 10) : (showApprover ? 10 : 9)) + 1 : (renderActions ? (showApprover ? 10 : 9) : (showApprover ? 9 : 8))} className="empty-state">{emptyMessage}</td></tr>
                 ) : (
                     claims.map((claim: Claim) => (
                         <tr
@@ -461,29 +484,42 @@ const ClaimTable = ({ claims, emptyMessage, renderActions, onRowClick, showAppro
                                     />
                                 </td>
                             )}
-                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
-                            <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{claim.date}</td>
-                            <td style={{ whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
+                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>#{claim.id.slice(0, 8)}</td>
+                            <td style={{ fontSize: '0.9rem', textAlign: 'center' }}>{claim.date}</td>
+                            <td style={{ textAlign: 'center' }}><StatusBadge status={claim.status} /></td>
+                            <td style={{ textAlign: 'center' }}>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                                    {claim.type === 'employee' ? '員工報銷' : claim.type === 'vendor' ? '廠商款項' : '勞務報酬'}
+                                    {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商付款' : '勞務報酬'}
                                 </span>
                             </td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
+                            {/* Applicant Data */}
+                            <td style={{ textAlign: 'center' }}>
+                                {getApplicantName(claim)}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
                                 <div>{claim.payee}</div>
-                                {claim.payeeId && <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>ID: {claim.payeeId}</div>}
                             </td>
                             {showApprover && (
-                                <td style={{ whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                <td style={{ textAlign: 'center', fontWeight: 500 }}>
                                     {getApproverName(claim)}
                                 </td>
                             )}
-                            <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }} title={claim.description}>
+                            <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px', textAlign: 'left' }} title={claim.description}>
                                 {claim.description}
                             </td>
-                            <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>${claim.amount.toLocaleString()}</td>
+                            <td style={{}}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
+                                    <span>$</span>
+                                    <span>{claim.amount.toLocaleString()}</span>
+                                </div>
+                            </td>
+                            {payments && (
+                                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+                                    {getPaymentDate(claim)}
+                                </td>
+                            )}
                             {renderActions && (
-                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                     {renderActions(claim)}
                                 </td>
                             )}

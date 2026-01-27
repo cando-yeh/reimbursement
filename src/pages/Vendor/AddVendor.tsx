@@ -53,6 +53,17 @@ export default function AddVendor() {
             return;
         }
 
+        // Check for duplicate name
+        const duplicate = vendors.find(v =>
+            v.name.trim().toLowerCase() === formData.name.trim().toLowerCase() &&
+            v.id !== id
+        );
+
+        if (duplicate) {
+            alert('廠商名稱已存在，請勿重複建立。');
+            return;
+        }
+
         if (isEditMode) {
             requestUpdateVendor(id!, formData);
             alert('更新申請已提交審核。');

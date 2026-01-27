@@ -89,10 +89,38 @@ export default function ApplicationDetail() {
         }
     };
 
+    const handleBack = () => {
+        // Smart navigation based on status
+        if (!claim) return navigate(-1);
+
+        // Applicant views
+        if (currentUser.id === claim.applicantId) {
+            switch (claim.status) {
+                case 'draft': return navigate('/?tab=drafts');
+                case 'pending_evidence': return navigate('/?tab=evidence');
+                case 'rejected': return navigate('/?tab=returned');
+                case 'completed': return navigate('/?tab=completed');
+                case 'pending_approval':
+                case 'pending_finance':
+                case 'pending_finance_review':
+                case 'approved':
+                    return navigate('/?tab=in_review');
+            }
+        }
+
+        // Approver views
+        if (canApprove) {
+            return navigate('/?tab=claim_approvals');
+        }
+
+        // Default fallback
+        navigate(-1);
+    };
+
     return (
         <div className="reimburse-container">
             <header className="reimburse-header">
-                <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
+                <button onClick={handleBack} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
                     <ArrowLeft size={16} /> 回上一頁
                 </button>
                 <div className="detail-actions">
@@ -106,6 +134,7 @@ export default function ApplicationDetail() {
 
                     {/* Action Buttons based on Status */}
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        {/* Draft Actions */}
                         {claim.status === 'draft' && (
                             <>
                                 <button onClick={handleDelete} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger-bg)', backgroundColor: 'var(--color-danger-bg)' }}>
@@ -124,8 +153,19 @@ export default function ApplicationDetail() {
                             </>
                         )}
 
-                        {/* Withdraw to Draft */}
-                        {(claim.status === 'pending_approval' || claim.status === 'pending_finance') && (
+                        {/* Rejected Actions (Edit Only) */}
+                        {claim.status === 'rejected' && currentUser.id === claim.applicantId && (
+                            <button onClick={() => {
+                                if (claim.type === 'service') navigate(`/applications/service/${claim.id}`);
+                                else if (claim.type === 'payment') navigate(`/payment-request/${claim.id}`);
+                                else navigate(`/reimburse/${claim.id}`);
+                            }} className="btn btn-primary">
+                                <Edit2 size={18} /> 重新編輯
+                            </button>
+                        )}
+
+                        {/* Withdraw to Draft (Applicant only) */}
+                        {currentUser.id === claim.applicantId && (claim.status === 'pending_approval' || claim.status === 'pending_finance') && (
                             <button onClick={() => {
                                 handleStatusChange('draft');
                                 // Navigate to edit page after withdrawing

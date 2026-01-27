@@ -153,7 +153,7 @@ export default function EmployeeReimbursement() {
                 }))
             });
         }
-        navigate('/');
+        navigate(action === 'draft' ? '/?tab=drafts' : '/?tab=in_review');
     };
 
     return (

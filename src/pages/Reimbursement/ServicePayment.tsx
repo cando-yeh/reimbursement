@@ -62,7 +62,7 @@ export default function ServicePayment() {
     };
 
     const handleSubmit = (action: 'submit' | 'draft') => {
-        const status: Claim['status'] = action === 'submit' ? 'pending' : 'draft';
+        const status: Claim['status'] = action === 'submit' ? 'pending_approval' : 'draft';
         const amountNum = Number(formData.amount);
 
         if (action === 'submit') {
@@ -134,9 +134,9 @@ export default function ServicePayment() {
                 serviceDetails: mergedDetails
             });
         } else {
-            addClaim(claimData);
+            addClaim(claimData as any);
         }
-        navigate('/');
+        navigate(action === 'draft' ? '/?tab=drafts' : '/?tab=in_review');
     };
 
     const renderFileUpload = (label: string, file: File | null, setFile: (f: File | null) => void, id: string) => (
