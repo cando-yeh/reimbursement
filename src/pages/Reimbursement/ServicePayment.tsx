@@ -9,6 +9,8 @@ export default function ServicePayment() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addClaim, updateClaim, claims } = useApp();
+    const existingClaim = id ? claims.find(c => c.id === id) : null;
+    const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
     const [formData, setFormData] = useState({
         payeeName: '',
         idNumber: '',
@@ -25,6 +27,11 @@ export default function ServicePayment() {
     const [idFrontFile, setIdFrontFile] = useState<File | null>(null);
     const [idBackFile, setIdBackFile] = useState<File | null>(null);
     const [bankBookFile, setBankBookFile] = useState<File | null>(null);
+    const [fileUrls, setFileUrls] = useState({
+        idFront: '',
+        idBack: '',
+        bankBook: ''
+    });
 
     // Load existing data
     useEffect(() => {
@@ -45,11 +52,11 @@ export default function ServicePayment() {
                 });
                 // Note: Files cannot be restored to File objects. 
                 // We should show them as "Existing: filename" and allow replace.
-                // For simplicity in this demo, we won't force re-upload if logic allows, 
-                // but currently validation requires files. 
-                // I'll need to adjust validation or 'mock' the file presence state.
-                // Let's rely on the user to re-upload for now if it's strict, 
-                // OR add `existingFiles` state.
+                setFileUrls({
+                    idFront: claim.serviceDetails.idFrontUrl || '',
+                    idBack: claim.serviceDetails.idBackUrl || '',
+                    bankBook: claim.serviceDetails.bankBookUrl || ''
+                });
             }
         }
     }, [id, claims]);
@@ -112,7 +119,10 @@ export default function ServicePayment() {
                 // For this quick fix, I will use new names if exist.
                 idFrontImage: idFrontFile?.name,
                 idBackImage: idBackFile?.name,
-                bankBookImage: bankBookFile?.name
+                bankBookImage: bankBookFile?.name,
+                idFrontUrl: fileUrls.idFront,
+                idBackUrl: fileUrls.idBack,
+                bankBookUrl: fileUrls.bankBook
             }
         };
 
@@ -127,6 +137,9 @@ export default function ServicePayment() {
                 idFrontImage: idFrontFile?.name || currentDetails?.idFrontImage,
                 idBackImage: idBackFile?.name || currentDetails?.idBackImage,
                 bankBookImage: bankBookFile?.name || currentDetails?.bankBookImage,
+                idFrontUrl: fileUrls.idFront || currentDetails?.idFrontUrl,
+                idBackUrl: fileUrls.idBack || currentDetails?.idBackUrl,
+                bankBookUrl: fileUrls.bankBook || currentDetails?.bankBookUrl,
             };
 
             updateClaim(id, {
@@ -166,7 +179,12 @@ export default function ServicePayment() {
                     style={{ display: 'none' }}
                     onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
-                            setFile(e.target.files[0]);
+                            const file = e.target.files[0];
+                            setFile(file);
+                            const url = URL.createObjectURL(file);
+                            if (id === 'id-front') setFileUrls(prev => ({ ...prev, idFront: url }));
+                            else if (id === 'id-back') setFileUrls(prev => ({ ...prev, idBack: url }));
+                            else if (id === 'bank-book') setFileUrls(prev => ({ ...prev, bankBook: url }));
                         }
                     }}
                 />
@@ -348,13 +366,15 @@ export default function ServicePayment() {
                     </div>
 
                     <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
-                        <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}>
-                            <Save size={18} />
-                            儲存草稿
-                        </button>
+                        {!isResubmit && (
+                            <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}>
+                                <Save size={18} />
+                                儲存草稿
+                            </button>
+                        )}
                         <button type="submit" className="btn btn-primary">
                             <Send size={18} />
-                            提交申請
+                            {isResubmit ? '重新提交申請' : '提交申請'}
                         </button>
                     </div>
                 </form>

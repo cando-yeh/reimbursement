@@ -3,10 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '../../utils/constants';
-// ... (keep existing imports)
-
-// ... (inside component)
-
 
 // ------- Helpers -------
 function formatNumberWithCommas(value: string) {
@@ -43,6 +39,9 @@ const PaymentRequest: React.FC = () => {
     const { id } = useParams();
     const { vendors, addClaim, updateClaim, claims, currentUser } = useApp();
 
+    const existingClaim = id ? claims.find(c => c.id === id) : null;
+    const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
+
     // Form State
     const [vendorId, setVendorId] = useState<string>("");
     const [amountInput, setAmountInput] = useState<string>("");
@@ -51,11 +50,14 @@ const PaymentRequest: React.FC = () => {
     const [memo, setMemo] = useState<string>(""); // Payer Notes
     const [receiptStatus, setReceiptStatus] = useState<"obtained" | "pending" | "none">("obtained");
     const [invoiceNumber, setInvoiceNumber] = useState<string>("");
+    const [invoiceDate, setInvoiceDate] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
 
     // Manual Bank State (for floating accounts)
     const [manualBankCode, setManualBankCode] = useState("");
     const [manualBankAccount, setManualBankAccount] = useState("");
+    const [existingInvoiceFile, setExistingInvoiceFile] = useState<string | undefined>(undefined);
+    const [invoiceUrl, setInvoiceUrl] = useState<string | undefined>(undefined);
 
     // Load existing claim if editing
     useEffect(() => {
@@ -77,8 +79,13 @@ const PaymentRequest: React.FC = () => {
                 if (status === 'obtained' || status === 'unable') {
                     setInvoiceNumber(claim.paymentDetails?.invoiceNumber || "");
                 }
+                if ((claim.paymentDetails as any)?.invoiceDate) {
+                    setInvoiceDate((claim.paymentDetails as any).invoiceDate);
+                }
                 if (claim.paymentDetails?.bankCode) setManualBankCode(claim.paymentDetails.bankCode);
                 if (claim.paymentDetails?.bankAccount) setManualBankAccount(claim.paymentDetails.bankAccount);
+                if (claim.paymentDetails?.invoiceFile) setExistingInvoiceFile(claim.paymentDetails.invoiceFile);
+                if (claim.paymentDetails?.invoiceUrl) setInvoiceUrl(claim.paymentDetails.invoiceUrl);
 
                 // Note: File inputs can't be programmatically set for security reasons, 
                 // but we could show existing files if we had a way to represent them.
@@ -148,6 +155,9 @@ const PaymentRequest: React.FC = () => {
     function handleFiles(files: FileList | null) {
         if (!files) return;
         const next = Array.from(files);
+        if (next.length > 0) {
+            setInvoiceUrl(URL.createObjectURL(next[0]));
+        }
         setAttachments((prev) => {
             const map = new Map<string, File>();
             [...prev, ...next].forEach((f) => {
@@ -178,7 +188,9 @@ const PaymentRequest: React.FC = () => {
                 payerNotes: memo.trim(),
                 invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
                 invoiceNumber: (receiptStatus === 'obtained' || receiptStatus === 'none') ? invoiceNumber.trim() : undefined,
-                invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
+                invoiceDate: receiptStatus === 'obtained' ? invoiceDate : undefined,
+                invoiceFile: attachments.length > 0 ? attachments[0].name : existingInvoiceFile,
+                invoiceUrl: invoiceUrl,
                 bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                 bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
             }
@@ -231,7 +243,9 @@ const PaymentRequest: React.FC = () => {
                 payerNotes: memo.trim(),
                 invoiceStatus: (receiptStatus === 'pending' ? 'not_yet' : receiptStatus === 'none' ? 'unable' : 'obtained') as "obtained" | "not_yet" | "unable",
                 invoiceNumber: (receiptStatus === 'obtained' || receiptStatus === 'none') ? invoiceNumber.trim() : undefined,
-                invoiceFile: attachments.length > 0 ? attachments[0].name : undefined,
+                invoiceDate: receiptStatus === 'obtained' ? invoiceDate : undefined,
+                invoiceFile: attachments.length > 0 ? attachments[0].name : existingInvoiceFile,
+                invoiceUrl: invoiceUrl,
                 bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                 bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
             }
@@ -406,14 +420,14 @@ const PaymentRequest: React.FC = () => {
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <Field label="付款人備註" hint="顯示於對方銀行存摺，不得超過 10 個字" error={showErr("memo")}>
+                            <Field label="付款人備註" error={showErr("memo")}>
                                 <input
                                     type="text"
                                     value={memo}
                                     onChange={(e) => setMemo(e.target.value.slice(0, 10))}
                                     onBlur={() => markTouched("memo")}
                                     className="form-input"
-                                    placeholder="限 10 個字元"
+                                    placeholder="顯示於對方銀行存摺，不得超過 10 個字"
                                     maxLength={10}
                                 />
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
@@ -472,28 +486,40 @@ const PaymentRequest: React.FC = () => {
                                             已選擇「未取得」，可於後續補上發票號碼。
                                         </div>
                                     ) : (
-                                        <Field
-                                            label={receiptStatus === "obtained" ? "發票號碼" : "無法取得原因"}
-                                            required
-                                            error={showErr("invoiceNumber")}
-                                        >
-                                            <input
-                                                type="text"
-                                                value={invoiceNumber}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    // Only restrict for 'obtained'
-                                                    if (receiptStatus === 'obtained') {
-                                                        setInvoiceNumber(val.replace(/[^a-zA-Z0-9]/g, ''));
-                                                    } else {
-                                                        setInvoiceNumber(val);
-                                                    }
-                                                }}
-                                                onBlur={() => markTouched("invoiceNumber")}
-                                                className="form-input"
-                                                placeholder={receiptStatus === "obtained" ? "請輸入發票號碼" : "請說明原因"}
-                                            />
-                                        </Field>
+                                        <>
+                                            <Field
+                                                label={receiptStatus === "obtained" ? "發票號碼" : "無法取得原因"}
+                                                required
+                                                error={showErr("invoiceNumber")}
+                                            >
+                                                <input
+                                                    type="text"
+                                                    value={invoiceNumber}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        // Only restrict for 'obtained'
+                                                        if (receiptStatus === 'obtained') {
+                                                            setInvoiceNumber(val.replace(/[^a-zA-Z0-9]/g, ''));
+                                                        } else {
+                                                            setInvoiceNumber(val);
+                                                        }
+                                                    }}
+                                                    onBlur={() => markTouched("invoiceNumber")}
+                                                    className="form-input"
+                                                    placeholder={receiptStatus === "obtained" ? "請輸入發票號碼" : "請說明原因"}
+                                                />
+                                            </Field>
+                                            {receiptStatus === "obtained" && (
+                                                <Field label="發票日期" required>
+                                                    <input
+                                                        type="date"
+                                                        value={invoiceDate}
+                                                        onChange={(e) => setInvoiceDate(e.target.value)}
+                                                        className="form-input"
+                                                    />
+                                                </Field>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -514,32 +540,35 @@ const PaymentRequest: React.FC = () => {
                                             minHeight: '120px',
                                             alignItems: 'center'
                                         }}>
-                                            <label
-                                                title="上傳附件"
-                                                style={{
-                                                    width: '100%',
-                                                    flex: 1,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    border: '1px dashed var(--color-border)',
-                                                    borderRadius: '0.5rem',
-                                                    margin: '0.5rem 0',
-                                                    backgroundColor: 'var(--color-bg-secondary)',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
-                                            >
-                                                <Upload size={24} style={{ color: 'var(--color-text-secondary)' }} />
-                                                <input
-                                                    type="file"
-                                                    style={{ display: 'none' }}
-                                                    multiple
-                                                    onChange={(e) => handleFiles(e.target.files)}
-                                                />
-                                            </label>
+                                            {/* Only show upload button if no attachments */}
+                                            {attachments.length === 0 && (
+                                                <label
+                                                    title="上傳附件"
+                                                    style={{
+                                                        width: '100%',
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        border: '1px dashed var(--color-border)',
+                                                        borderRadius: '0.5rem',
+                                                        margin: '0.5rem 0',
+                                                        backgroundColor: 'var(--color-bg-secondary)',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                                                >
+                                                    <Upload size={24} style={{ color: 'var(--color-text-secondary)' }} />
+                                                    <input
+                                                        type="file"
+                                                        style={{ display: 'none' }}
+                                                        multiple
+                                                        onChange={(e) => handleFiles(e.target.files)}
+                                                    />
+                                                </label>
+                                            )}
 
                                             {attachments.length > 0 && (
                                                 <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -593,25 +622,27 @@ const PaymentRequest: React.FC = () => {
                     <div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
                         <button
                             type="button"
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate('/')}
                             className="btn btn-ghost"
                             style={{ marginRight: 'auto', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}
                         >
                             取消
                         </button>
 
-                        <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); handleSaveDraft(); }}
-                            className="btn btn-ghost"
-                            style={{ border: '1px solid var(--color-border)', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
-                        >
-                            <Save size={18} style={{ marginRight: '0.5rem' }} />
-                            儲存草稿
-                        </button>
+                        {!isResubmit && (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); handleSaveDraft(); }}
+                                className="btn btn-ghost"
+                                style={{ border: '1px solid var(--color-border)', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
+                            >
+                                <Save size={18} style={{ marginRight: '0.5rem' }} />
+                                儲存草稿
+                            </button>
+                        )}
                         <button type="submit" className="btn btn-primary" style={{ minWidth: '120px', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}>
                             <Send size={18} style={{ marginRight: '0.5rem' }} />
-                            提交申請
+                            {isResubmit ? '重新提交申請' : '提交申請'}
                         </button>
                     </div>
 

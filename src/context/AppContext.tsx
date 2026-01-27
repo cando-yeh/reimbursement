@@ -7,8 +7,8 @@ interface AppContextType {
   vendorRequests: VendorRequest[];
   payments: Payment[];
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Claim;
-  updateClaim: (id: string, data: Partial<Claim>) => void;
-  updateClaimStatus: (id: string, newStatus: Claim['status']) => void;
+  updateClaim: (id: string, data: Partial<Claim>, note?: string) => void;
+  updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => void;
   deleteClaim: (id: string) => void;
   addPayment: (payee: string, claimIds: string[], paymentDate: string) => Payment;
   cancelPayment: (paymentId: string) => void;
@@ -177,8 +177,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   const addClaim = (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
-    // Calculate total from items if not provided
-    const calculatedAmount = claimData.items.reduce((sum, item) => sum + item.amount, 0);
+    // Use provided amount, or calculate from items if not provided
+    const calculatedAmount = claimData.amount !== undefined
+      ? claimData.amount
+      : claimData.items.reduce((sum, item) => sum + item.amount, 0);
 
     // Determine initial status: if user has approver -> pending_approval, else -> pending_finance
     // Note: In real app, we check if current user IS the applicant. If not, logic might differ.
@@ -191,31 +193,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applicantId: currentUser.id, // Enforce ownership
       amount: calculatedAmount,
       status: claimData.status || initialStatus, // Allow overriding if specific flow demands
-      date: claimData.date || new Date().toISOString().split('T')[0]
+      date: claimData.date || new Date().toISOString().split('T')[0],
+      history: [{
+        timestamp: new Date().toISOString(),
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        action: (claimData.status === 'draft') ? 'draft' : 'submitted',
+        note: undefined
+      }]
     };
     setClaims(prev => [newClaim, ...prev]);
     return newClaim;
   };
 
-  const updateClaim = (id: string, data: Partial<Claim>) => {
+  const updateClaim = (id: string, data: Partial<Claim>, note?: string) => {
     setClaims(prev => prev.map(c => {
       if (c.id === id) {
-        // Recalculate amount if items changed? 
-        // For simplicity, trust the data passed in, or re-calculate if items are present.
-        // But data is Partial.
-        return { ...c, ...data };
+        // If status is changing, log it
+        let newHistory = c.history || [];
+        if (data.status && data.status !== c.status) {
+          newHistory = [
+            ...newHistory,
+            {
+              timestamp: new Date().toISOString(),
+              actorId: currentUser.id,
+              actorName: currentUser.name,
+              action: data.status === 'pending_approval' || data.status === 'pending_finance'
+                ? 'submitted'
+                : `status_change_to_${data.status}`,
+              note: note
+            }
+          ];
+        }
+
+        return { ...c, ...data, history: newHistory };
       }
       return c;
     }));
   };
 
-  const updateClaimStatus = (id: string, newStatus: Claim['status']) => {
+  const updateClaimStatus = (id: string, newStatus: Claim['status'], note?: string) => {
     setClaims(prev => prev.map(c => {
       if (c.id === id) {
+        const historyItem = {
+          timestamp: new Date().toISOString(),
+          actorId: currentUser.id,
+          actorName: currentUser.name,
+          action: `status_change_to_${newStatus}`,
+          note: note
+        };
         return {
           ...c,
           status: newStatus,
-          datePaid: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : c.datePaid
+          datePaid: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : c.datePaid,
+          history: [...(c.history || []), historyItem]
         };
       }
       return c;
@@ -240,10 +271,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       claimIds
     };
 
-    // Update claim statuses to 'completed'
-    setClaims(prev => prev.map(c =>
-      claimIds.includes(c.id) ? { ...c, status: 'completed' as const, datePaid: newPayment.paymentDate } : c
-    ));
+    // Update claim statuses
+    setClaims(prev => prev.map(c => {
+      if (claimIds.includes(c.id)) {
+        // Determine next status: if invoice is missing ('not_yet'), go to pending_evidence
+        // Only applicable for 'payment' type or ensure paymentDetails exists
+        const needsEvidence = c.paymentDetails?.invoiceStatus === 'not_yet';
+        const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
+
+        const historyItem = {
+          timestamp: new Date().toISOString(),
+          actorId: currentUser.id,
+          actorName: currentUser.name,
+          action: 'paid',
+          note: undefined
+        };
+        return {
+          ...c,
+          status: nextStatus as 'pending_evidence' | 'completed',
+          datePaid: newPayment.paymentDate,
+          history: [...(c.history || []), historyItem]
+        };
+      }
+      return c;
+    }));
 
     setPayments(prev => [newPayment, ...prev]);
     return newPayment;

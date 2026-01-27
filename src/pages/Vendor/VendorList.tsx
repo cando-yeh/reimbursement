@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
 
 export default function VendorList() {
     const { vendors, requestDeleteVendor, vendorRequests, currentUser } = useApp();
+    const [searchTerm, setSearchTerm] = useState('');
 
     const canManageVendors = currentUser.permissions.includes('general') || currentUser.permissions.includes('finance_audit');
 
@@ -17,10 +19,20 @@ export default function VendorList() {
 
     // Combine real vendors and pending-add vendors
     // using a type assertion or intersection to handle the temporary isPendingAdd flag efficiently
-    const displayVendors = [
+    let displayVendors = [
         ...vendors.map(v => ({ ...v, isPendingAdd: false })),
         ...pendingAddRequests.map(r => ({ ...r.data!, id: r.data!.id!, isPendingAdd: true }))
     ] as (typeof vendors[0] & { isPendingAdd: boolean })[];
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+        const query = searchTerm.toLowerCase();
+        displayVendors = displayVendors.filter(v =>
+            v.name.toLowerCase().includes(query) ||
+            (v.serviceContent && v.serviceContent.toLowerCase().includes(query)) ||
+            (v.bankAccount && v.bankAccount.includes(query))
+        );
+    }
 
     return (
         <div>
@@ -43,6 +55,8 @@ export default function VendorList() {
                         type="text"
                         placeholder="搜尋廠商..."
                         className="search-input"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
@@ -51,10 +65,10 @@ export default function VendorList() {
                 <table className="vendor-table">
                     <thead>
                         <tr>
-                            <th style={{ width: '25%', minWidth: '300px', textAlign: 'center' }}>廠商名稱</th>
-                            <th style={{ width: '25%', textAlign: 'center' }}>服務內容</th>
+                            <th style={{ width: '25%', minWidth: '300px', textAlign: 'center', whiteSpace: 'nowrap' }}>廠商名稱</th>
+                            <th style={{ width: '25%', textAlign: 'center', whiteSpace: 'nowrap' }}>服務內容</th>
                             <th style={{ width: '30%', textAlign: 'center', whiteSpace: 'nowrap' }}>銀行資訊</th>
-                            <th style={{ width: '20%', textAlign: 'center' }}>操作</th>
+                            <th style={{ width: '20%', textAlign: 'center', whiteSpace: 'nowrap' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,7 +79,7 @@ export default function VendorList() {
 
                             return (
                                 <tr key={vendor.id}>
-                                    <td style={{ fontWeight: 500 }}>
+                                    <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <Building size={16} className="text-secondary" />
                                             {vendor.name}
@@ -134,10 +148,10 @@ export default function VendorList() {
                                 </tr>
                             );
                         })}
-                        {vendors.length === 0 && (
+                        {displayVendors.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="empty-state">
-                                    找不到廠商。請新增一筆資料。
+                                    {searchTerm ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}
                                 </td>
                             </tr>
                         )}

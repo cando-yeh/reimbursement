@@ -451,7 +451,7 @@ textarea {
 /* List View Styles */
 .vendor-table-container {
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .vendor-table {

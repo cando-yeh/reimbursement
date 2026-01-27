@@ -14,6 +14,7 @@ export interface ExpenseItem {
     description: string;
     category?: string; // Expense Category
     notes?: string;
+    fileUrl?: string; // For session preview
 }
 
 export interface Claim {
@@ -33,7 +34,9 @@ export interface Claim {
         payerNotes?: string;
         invoiceStatus: 'obtained' | 'not_yet' | 'unable';
         invoiceNumber?: string;
+        invoiceDate?: string;
         invoiceFile?: string;
+        invoiceUrl?: string; // For session preview
         // For non-fixed vendor accounts
         bankCode?: string;
         bankAccount?: string;
@@ -56,10 +59,23 @@ export interface Claim {
         idFrontImage?: string;
         idBackImage?: string;
         bankBookImage?: string;
+        idFrontUrl?: string; // For session preview
+        idBackUrl?: string;  // For session preview
+        bankBookUrl?: string; // For session preview
     };
 
     datePaid?: string; // Optional, set when status becomes 'paid'
     evidenceFiles?: string[]; // Array of file paths/base64 for post-payment evidence
+    noReceiptReason?: string; // Reason for any "no receipt" claim items
+    history?: ClaimHistory[];
+}
+
+export interface ClaimHistory {
+    timestamp: string; // ISO string
+    actorId: string; // User ID who performed the action
+    actorName: string; // Snapshot of name
+    action: string; // e.g., 'submitted', 'approved', 'rejected', 'finance_approved', 'paid', 'edited'
+    note?: string; // Optional comment
 }
 
 export interface VendorRequest {

@@ -1,8 +1,3 @@
-// clsx removed
-
-// Actually I didn't install clsx. I'll use standard conditional styles.
-
-
 interface StatusBadgeProps {
     status: string;
 }

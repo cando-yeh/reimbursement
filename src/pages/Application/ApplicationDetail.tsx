@@ -1,15 +1,89 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import StatusBadge from '../../components/Common/StatusBadge';
-import { ArrowLeft, CheckCircle, Send, Trash2, AlertCircle, Edit2, Undo2, Check, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud } from 'lucide-react';
 
+
+
+const formatAction = (action: string) => {
+    switch (action) {
+        case 'submitted': return '送出申請 (待主管審核)';
+        case 'status_change_to_pending_approval': return '重新提交 (待審核)';
+        case 'status_change_to_pending_finance': return '主管核准 (待財務審核)';
+        case 'status_change_to_approved': return '財務核准 (待付款)';
+        case 'status_change_to_completed': return '已完成'; // pending_finance_review -> completed
+        case 'status_change_to_rejected': return '已退回';
+        case 'status_change_to_pending_evidence': return '要求補件';
+        case 'status_change_to_draft': return '撤回至草稿';
+        case 'draft': return '建立草稿';
+        case 'status_change_to_pending_finance_review': return '已補件 (待財務確認)';
+        case 'paid': return '已付款';
+        default: return action;
+    }
+};
 
 export default function ApplicationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { claims, updateClaimStatus, deleteClaim, currentUser, availableUsers } = useApp();
-
+    const { claims, updateClaimStatus, deleteClaim, updateClaim, currentUser, availableUsers } = useApp();
     const claim = claims.find(c => c.id === id);
+
+    const [evidenceInvoiceNumber, setEvidenceInvoiceNumber] = useState('');
+    const [evidenceInvoiceDate, setEvidenceInvoiceDate] = useState('');
+    const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+    const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+
+    // No Receipt Modal State
+    const [showNoReceiptModal, setShowNoReceiptModal] = useState(false);
+    const [noReceiptDate, setNoReceiptDate] = useState('');
+    const [noReceiptReason, setNoReceiptReason] = useState('');
+
+    // Rejection Modal State
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+
+    const handleSubmitEvidence = () => {
+        if (!claim || !id) return;
+        if (!evidenceInvoiceNumber.trim() || !evidenceInvoiceDate || !evidenceFile) {
+            alert('請填寫發票號碼、發票日期並上傳憑證檔案');
+            return;
+        }
+
+        const updateData: any = {
+            status: 'pending_finance_review'
+        };
+
+        if (claim.type === 'payment' && claim.paymentDetails) {
+            updateData.paymentDetails = {
+                ...claim.paymentDetails,
+                invoiceStatus: 'obtained',
+                invoiceNumber: evidenceInvoiceNumber.trim(),
+                invoiceDate: evidenceInvoiceDate,
+                invoiceFile: evidenceFile.name,
+                invoiceUrl: URL.createObjectURL(evidenceFile)
+            };
+        } else if (claim.items && claim.items.length > 0) {
+            // For employee reimbursement, update items that have missing receipts
+            updateData.items = claim.items.map(item => {
+                if (!item.notes || item.notes === '無憑證' || item.notes === '') {
+                    return {
+                        ...item,
+                        invoiceNumber: evidenceInvoiceNumber.trim(),
+                        notes: evidenceFile.name,
+                        fileUrl: URL.createObjectURL(evidenceFile)
+                    };
+                }
+                return item;
+            });
+        }
+
+        updateClaim(id, updateData);
+        setShowEvidenceModal(false);
+        setEvidenceInvoiceNumber('');
+        setEvidenceInvoiceDate('');
+        setEvidenceFile(null);
+    };
 
     // Check if current user can approve this claim
     const canApprove = (() => {
@@ -34,9 +108,7 @@ export default function ApplicationDetail() {
     const handleApprove = () => {
         if (!claim || !id) return;
 
-        const confirmMsg = claim.status === 'pending_finance_review'
-            ? '確定要確認此憑證嗎？'
-            : '確定要核准此申請單嗎？';
+        const confirmMsg = '確定要核准此申請單嗎？';
 
         if (confirm(confirmMsg)) {
             if (claim.status === 'pending_approval') {
@@ -46,26 +118,31 @@ export default function ApplicationDetail() {
             } else if (claim.status === 'pending_finance_review') {
                 updateClaimStatus(id, 'completed');
             }
-            navigate('/?tab=claim_approvals');
+            navigate('/reviews?tab=claim_approvals');
         }
     };
 
     // Handle rejection
     const handleReject = () => {
         if (!claim || !id) return;
+        setShowRejectModal(true);
+    };
 
-        const confirmMsg = claim.status === 'pending_finance_review'
-            ? '確定要駁回此憑證嗎？(將退回至待補件狀態)'
-            : '確定要退回此申請單嗎？';
-
-        if (confirm(confirmMsg)) {
-            if (claim.status === 'pending_finance_review') {
-                updateClaimStatus(id, 'pending_evidence');
-            } else {
-                updateClaimStatus(id, 'rejected');
-            }
-            navigate('/?tab=claim_approvals');
+    const handleSubmitReject = () => {
+        if (!claim || !id) return;
+        if (!rejectReason.trim()) {
+            alert('請填寫退回理由');
+            return;
         }
+
+        if (claim.status === 'pending_finance_review') {
+            updateClaimStatus(id, 'pending_evidence', rejectReason.trim());
+        } else {
+            updateClaimStatus(id, 'rejected', rejectReason.trim());
+        }
+        setShowRejectModal(false);
+        setRejectReason('');
+        navigate('/reviews?tab=claim_approvals');
     };
 
 
@@ -90,30 +167,6 @@ export default function ApplicationDetail() {
     };
 
     const handleBack = () => {
-        // Smart navigation based on status
-        if (!claim) return navigate(-1);
-
-        // Applicant views
-        if (currentUser.id === claim.applicantId) {
-            switch (claim.status) {
-                case 'draft': return navigate('/?tab=drafts');
-                case 'pending_evidence': return navigate('/?tab=evidence');
-                case 'rejected': return navigate('/?tab=returned');
-                case 'completed': return navigate('/?tab=completed');
-                case 'pending_approval':
-                case 'pending_finance':
-                case 'pending_finance_review':
-                case 'approved':
-                    return navigate('/?tab=in_review');
-            }
-        }
-
-        // Approver views
-        if (canApprove) {
-            return navigate('/?tab=claim_approvals');
-        }
-
-        // Default fallback
         navigate(-1);
     };
 
@@ -168,10 +221,8 @@ export default function ApplicationDetail() {
                         {currentUser.id === claim.applicantId && (claim.status === 'pending_approval' || claim.status === 'pending_finance') && (
                             <button onClick={() => {
                                 handleStatusChange('draft');
-                                // Navigate to edit page after withdrawing
-                                if (claim.type === 'service') navigate(`/applications/service/${claim.id}`);
-                                else if (claim.type === 'payment') navigate(`/payment-request/${claim.id}`);
-                                else navigate(`/reimburse/${claim.id}`);
+                                // Navigate to drafts tab list after withdrawing
+                                navigate('/?tab=drafts');
                             }} className="btn btn-ghost" style={{ color: 'var(--color-warning)', border: '1px solid var(--color-warning)', backgroundColor: 'transparent' }}>
                                 <Undo2 size={18} /> 撤回至草稿
                             </button>
@@ -181,10 +232,10 @@ export default function ApplicationDetail() {
                         {canApprove && (
                             <>
                                 <button onClick={handleApprove} className="btn btn-primary">
-                                    <Check size={18} /> {claim.status === 'pending_finance_review' ? '確認憑證' : '核准'}
+                                    <Check size={18} /> 核准
                                 </button>
                                 <button onClick={handleReject} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger)', backgroundColor: 'transparent' }}>
-                                    <X size={18} /> {claim.status === 'pending_finance_review' ? '退回補件' : '退回'}
+                                    <X size={18} /> 退回
                                 </button>
                             </>
                         )}
@@ -202,14 +253,190 @@ export default function ApplicationDetail() {
                             </div>
                         )}
 
-                        {claim.status === 'pending_evidence' && (
-                            <button onClick={() => alert('此功能尚未實作 (上傳憑證)')} className="btn" style={{ backgroundColor: 'var(--color-warning)', color: 'white' }}>
-                                <AlertCircle size={18} /> 上傳憑證
-                            </button>
+                        {/* Post-Payment Evidence Upload (Applicant) */}
+                        {claim.status === 'pending_evidence' && currentUser.id === claim.applicantId && (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={() => setShowEvidenceModal(true)} className="btn btn-primary">
+                                    <UploadCloud size={18} /> 上傳憑證
+                                </button>
+                                <button onClick={() => setShowNoReceiptModal(true)} className="btn" style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}>
+                                    無憑證
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
             </header>
+
+            {/* Evidence Modal */}
+            {showEvidenceModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                        <h3 className="heading-md" style={{ marginBottom: '1rem' }}>上傳補件憑證</h3>
+
+                        <div className="form-group">
+                            <label className="form-group label">發票號碼 *</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={evidenceInvoiceNumber}
+                                onChange={e => setEvidenceInvoiceNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
+                                placeholder="請輸入發票號碼"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-group label">發票日期 *</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={evidenceInvoiceDate}
+                                onChange={e => setEvidenceInvoiceDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-group label">憑證檔案 *</label>
+                            <label
+                                htmlFor="evidence-file-input"
+                                style={{
+                                    padding: '2rem',
+                                    border: `2px dashed ${evidenceFile ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                                    borderRadius: '6px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    display: 'block',
+                                    backgroundColor: evidenceFile ? 'rgba(59, 130, 246, 0.05)' : 'transparent'
+                                }}
+                            >
+                                <UploadCloud size={24} style={{ color: evidenceFile ? 'var(--color-primary)' : 'var(--color-text-secondary)', marginBottom: '0.5rem' }} />
+                                {evidenceFile ? (
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 500 }}>
+                                        ✓ {evidenceFile.name}
+                                    </p>
+                                ) : (
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>點擊上傳檔案</p>
+                                )}
+                            </label>
+                            <input
+                                id="evidence-file-input"
+                                type="file"
+                                accept="image/*,.pdf"
+                                style={{ display: 'none' }}
+                                onChange={e => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        setEvidenceFile(e.target.files[0]);
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <div className="modal-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setShowEvidenceModal(false)}>取消</button>
+                            <button className="btn btn-primary" onClick={handleSubmitEvidence}>提交</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* No Receipt Modal */}
+            {showNoReceiptModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                        <h3 className="heading-md" style={{ marginBottom: '1rem' }}>無憑證申報</h3>
+
+                        <div className="form-group">
+                            <label className="form-group label">交易日期 *</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={noReceiptDate}
+                                onChange={e => setNoReceiptDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-group label">無憑證原因 *</label>
+                            <textarea
+                                className="form-input"
+                                rows={3}
+                                value={noReceiptReason}
+                                onChange={e => setNoReceiptReason(e.target.value)}
+                                placeholder="請說明無法取得憑證的原因"
+                                style={{ resize: 'vertical' }}
+                            />
+                        </div>
+
+                        <div className="modal-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setShowNoReceiptModal(false)}>取消</button>
+                            <button className="btn btn-primary" onClick={() => {
+                                if (!claim || !id) return;
+                                if (!noReceiptDate || !noReceiptReason.trim()) {
+                                    alert('請填寫交易日期和無憑證原因');
+                                    return;
+                                }
+                                const updateData: any = {
+                                    status: 'pending_finance_review'
+                                };
+
+                                if (claim.type === 'payment' && claim.paymentDetails) {
+                                    updateData.paymentDetails = {
+                                        ...claim.paymentDetails,
+                                        invoiceStatus: 'unable',
+                                        invoiceNumber: noReceiptReason.trim(),
+                                        invoiceDate: noReceiptDate
+                                    };
+                                } else if (claim.items && claim.items.length > 0) {
+                                    // For employee reimbursement, update items that have missing receipts
+                                    updateData.items = claim.items.map(item => {
+                                        if (!item.notes || item.notes === '') {
+                                            return {
+                                                ...item,
+                                                notes: '無憑證'
+                                            };
+                                        }
+                                        return item;
+                                    });
+                                }
+
+                                updateClaim(id, updateData);
+                                setShowNoReceiptModal(false);
+                                setNoReceiptDate('');
+                                setNoReceiptReason('');
+                            }}>提交</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reject Modal */}
+            {showRejectModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                        <h3 className="heading-md" style={{ marginBottom: '1rem' }}>退回理由</h3>
+
+                        <div className="form-group">
+                            <label className="form-group label">請輸入退回理由 *</label>
+                            <textarea
+                                className="form-input"
+                                rows={4}
+                                value={rejectReason}
+                                onChange={e => setRejectReason(e.target.value)}
+                                placeholder="請說明退回此申請單的原因"
+                                style={{ resize: 'vertical' }}
+                            />
+                        </div>
+
+                        <div className="modal-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button className="btn btn-ghost" onClick={() => {
+                                setShowRejectModal(false);
+                                setRejectReason('');
+                            }}>取消</button>
+                            <button className="btn btn-primary" onClick={handleSubmitReject}>確認退回</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="card">
                 <div className="detail-meta-grid">
@@ -225,7 +452,7 @@ export default function ApplicationDetail() {
 
                     <div>
                         <label className="form-group label">
-                            受款人
+                            付款對象
                         </label>
                         <div className="meta-value">
                             {claim.payee}
@@ -283,41 +510,30 @@ export default function ApplicationDetail() {
                                 {(claim.serviceDetails.idFrontImage || claim.serviceDetails.idBackImage || claim.serviceDetails.bankBookImage) && (
                                     <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--color-border)' }}>
                                         <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>附件: </span>
-                                        {claim.serviceDetails.idFrontImage && <span style={{ marginRight: '1rem', fontSize: '0.85rem' }}>📄 {claim.serviceDetails.idFrontImage}</span>}
-                                        {claim.serviceDetails.idBackImage && <span style={{ marginRight: '1rem', fontSize: '0.85rem' }}>📄 {claim.serviceDetails.idBackImage}</span>}
-                                        {claim.serviceDetails.bankBookImage && <span style={{ fontSize: '0.85rem' }}>📄 {claim.serviceDetails.bankBookImage}</span>}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Vendor Payment Specific Details */}
-                    {claim.type === 'payment' && claim.paymentDetails && (
-                        <div className="card" style={{ backgroundColor: 'var(--color-bg)', border: 'none', marginBottom: '1.5rem' }}>
-                            <h4 className="heading-md" style={{ fontSize: '1rem', marginBottom: '1rem' }}>付款申請明細</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>交易內容:</span> {claim.paymentDetails.transactionContent}
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>發票狀態:</span>
-                                    <span className={`status-badge status-${claim.paymentDetails.invoiceStatus === 'obtained' ? 'approved' : 'pending'}`}>
-                                        {claim.paymentDetails.invoiceStatus === 'obtained' ? '已取得' :
-                                            claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '無法取得'}
-                                    </span>
-                                </div>
-
-                                {claim.paymentDetails.invoiceNumber && (
-                                    <div>
-                                        <span style={{ color: 'var(--color-text-secondary)' }}>發票號碼:</span> {claim.paymentDetails.invoiceNumber}
-                                    </div>
-                                )}
-
-                                {claim.paymentDetails.payerNotes && (
-                                    <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--color-border)' }}>
-                                        <span style={{ color: 'var(--color-text-secondary)' }}>備註:</span> {claim.paymentDetails.payerNotes}
+                                        {claim.serviceDetails.idFrontImage && (
+                                            <span
+                                                style={{ marginRight: '1rem', fontSize: '0.85rem', cursor: claim.serviceDetails.idFrontUrl ? 'pointer' : 'default', color: claim.serviceDetails.idFrontUrl ? 'var(--color-primary)' : 'inherit' }}
+                                                onClick={() => claim.serviceDetails?.idFrontUrl && window.open(claim.serviceDetails.idFrontUrl, '_blank')}
+                                            >
+                                                📄 {claim.serviceDetails.idFrontImage}
+                                            </span>
+                                        )}
+                                        {claim.serviceDetails.idBackImage && (
+                                            <span
+                                                style={{ marginRight: '1rem', fontSize: '0.85rem', cursor: claim.serviceDetails.idBackUrl ? 'pointer' : 'default', color: claim.serviceDetails.idBackUrl ? 'var(--color-primary)' : 'inherit' }}
+                                                onClick={() => claim.serviceDetails?.idBackUrl && window.open(claim.serviceDetails.idBackUrl, '_blank')}
+                                            >
+                                                📄 {claim.serviceDetails.idBackImage}
+                                            </span>
+                                        )}
+                                        {claim.serviceDetails.bankBookImage && (
+                                            <span
+                                                style={{ fontSize: '0.85rem', cursor: claim.serviceDetails.bankBookUrl ? 'pointer' : 'default', color: claim.serviceDetails.bankBookUrl ? 'var(--color-primary)' : 'inherit' }}
+                                                onClick={() => claim.serviceDetails?.bankBookUrl && window.open(claim.serviceDetails.bankBookUrl, '_blank')}
+                                            >
+                                                📄 {claim.serviceDetails.bankBookImage}
+                                            </span>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -328,24 +544,97 @@ export default function ApplicationDetail() {
                     <table className="vendor-table" style={{ marginTop: '0.5rem' }}>
                         <thead>
                             <tr>
-                                <th>日期</th>
-                                <th>類別</th>
-                                <th>項目/說明</th>
-                                <th>備註</th>
-                                <th style={{ textAlign: 'right' }}>金額</th>
+                                <th style={{ textAlign: 'center', width: '110px', whiteSpace: 'nowrap' }}>日期</th>
+                                <th style={{ textAlign: 'center', width: '90px', whiteSpace: 'nowrap' }}>類別</th>
+                                <th style={{ textAlign: 'center' }}>交易說明</th>
+                                <th style={{ textAlign: 'center', width: '100px', whiteSpace: 'nowrap' }}>金額</th>
+                                <th style={{ textAlign: 'center', width: '80px', whiteSpace: 'nowrap' }}>憑證</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {claim.items && claim.items.length > 0 ? (
+                            {claim.type === 'payment' && claim.paymentDetails ? (
+                                <tr>
+                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                        {(claim.paymentDetails as any).invoiceDate ||
+                                            (claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '-')}
+                                    </td>
+                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                        {(claim as any).expenseCategory && (
+                                            <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>
+                                                {(claim as any).expenseCategory}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td style={{ fontWeight: 500, textAlign: 'center' }}>{claim.paymentDetails.transactionContent}</td>
+                                    <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>$</span>
+                                            <span>{claim.amount.toLocaleString()}</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                        {(claim.paymentDetails as any).invoiceFile ? (
+                                            <button
+                                                onClick={() => window.open((claim.paymentDetails as any).invoiceUrl || '#', '_blank')}
+                                                style={{
+                                                    padding: '0.25rem 0.5rem',
+                                                    backgroundColor: 'var(--color-bg)',
+                                                    border: '1px solid var(--color-border)',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.75rem',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.25rem'
+                                                }}
+                                            >
+                                                📄 查看
+                                            </button>
+                                        ) : claim.paymentDetails.invoiceStatus === 'not_yet' ? (
+                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
+                                        ) : (
+                                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ) : claim.items && claim.items.length > 0 ? (
                                 claim.items.map((item, idx) => (
                                     <tr key={item.id || idx}>
-                                        <td>{item.date}</td>
-                                        <td>
+                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{item.date}</td>
+                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                             {item.category && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{item.category}</span>}
                                         </td>
-                                        <td style={{ fontWeight: 500 }}>{item.description}</td>
-                                        <td style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>{item.notes || '-'}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${item.amount.toLocaleString()}</td>
+                                        <td style={{ fontWeight: 500, textAlign: 'center' }}>{item.description}</td>
+                                        <td style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>$</span>
+                                                <span>{item.amount.toLocaleString()}</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                            {(item as any).receiptFile || (item.notes && item.notes !== '無憑證' && item.notes !== '') ? (
+                                                <button
+                                                    onClick={() => window.open((item as any).fileUrl || '#', '_blank')}
+                                                    style={{
+                                                        padding: '0.25rem 0.5rem',
+                                                        backgroundColor: 'var(--color-bg)',
+                                                        border: '1px solid var(--color-border)',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.75rem',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.25rem'
+                                                    }}
+                                                >
+                                                    📄 查看
+                                                </button>
+                                            ) : (item as any).noReceipt || item.notes === '無憑證' ? (
+                                                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>
+                                            ) : (
+                                                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
@@ -363,8 +652,110 @@ export default function ApplicationDetail() {
                             </tr>
                         </tfoot>
                     </table>
+
+                    {/* Payer Notes - for vendor payment only */}
+                    {claim.type === 'payment' && claim.paymentDetails?.payerNotes && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                💬 付款人備註
+                            </span>
+                            <p style={{ marginTop: '0.5rem', color: 'var(--color-text)' }}>{claim.paymentDetails.payerNotes}</p>
+                        </div>
+                    )}
+
+                    {/* No Receipt Reason - for employee reimbursement */}
+                    {claim.noReceiptReason && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid #f59e0b' }}>
+                            <span style={{ fontWeight: 600, color: '#d97706', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                ⚠️ 無憑證原因
+                            </span>
+                            <p style={{ marginTop: '0.5rem', color: 'var(--color-text)' }}>{claim.noReceiptReason}</p>
+                        </div>
+                    )}
+
+                    {/* Invoice Unable Reason - for vendor payment */}
+                    {claim.type === 'payment' && claim.paymentDetails?.invoiceStatus === 'unable' && claim.paymentDetails?.invoiceNumber && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid #f59e0b' }}>
+                            <span style={{ fontWeight: 600, color: '#d97706', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                ⚠️ 無法取得發票原因
+                            </span>
+                            <p style={{ marginTop: '0.5rem', color: 'var(--color-text)' }}>{claim.paymentDetails.invoiceNumber}</p>
+                        </div>
+                    )}
                 </div>
-            </div>
-        </div>
+            </div >
+
+            {/* History Card */}
+            {
+                claim.history && claim.history.length > 0 && (
+                    <div className="card" style={{ marginTop: '1.5rem' }}>
+                        <h2 className="heading-md" style={{ marginBottom: '1rem' }}>歷史紀錄</h2>
+                        <div className="history-timeline" style={{ position: 'relative', paddingLeft: '1rem' }}>
+                            {claim.history.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item, idx) => (
+                                <div key={idx} style={{
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    paddingBottom: idx === claim.history!.length - 1 ? 0 : '1.5rem',
+                                    position: 'relative'
+                                }}>
+                                    {/* Timeline Line */}
+                                    {idx !== claim.history!.length - 1 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '7px',
+                                            top: '24px',
+                                            bottom: 0,
+                                            width: '2px',
+                                            backgroundColor: '#e5e7eb'
+                                        }} />
+                                    )}
+
+                                    {/* Timeline Dot */}
+                                    <div style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'var(--color-primary)',
+                                        marginTop: '4px',
+                                        flexShrink: 0,
+                                        zIndex: 1
+                                    }} />
+
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div>
+                                                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.actorName}</span>
+                                                <span style={{ margin: '0 0.5rem', color: '#9ca3af' }}>•</span>
+                                                <span style={{ fontWeight: 500 }}>
+                                                    {formatAction(item.action)}
+                                                </span>
+                                            </div>
+                                            <time style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                                                {new Date(item.timestamp).toLocaleString('zh-TW', { hour12: false })}
+                                            </time>
+                                        </div>
+                                        {item.note && (item.action === 'status_change_to_rejected' || item.action === 'status_change_to_pending_evidence') &&
+                                            !item.note.includes('Status changed from') && !item.note.includes('Status updated to') && (
+                                                <div style={{
+                                                    marginTop: '0.6rem',
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--color-text-secondary)',
+                                                    padding: '0.5rem 0.75rem',
+                                                    backgroundColor: '#f9fafb',
+                                                    borderRadius: '4px',
+                                                    borderLeft: '3px solid #d1d5db'
+                                                }}>
+                                                    <span>理由：{item.note}</span>
+                                                </div>
+                                            )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            }
+
+        </div >
     );
 }

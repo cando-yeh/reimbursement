@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Claim } from '../../types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X } from 'lucide-react';
+import { EXPENSE_CATEGORIES } from '../../utils/constants';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -10,25 +11,12 @@ interface ExpenseItemWithAttachment {
     amount: number;
     description: string;
     category?: string;
+    invoiceNumber?: string;
     noReceipt: boolean;
     receiptFile: File | null;
     existingReceiptName?: string;
+    fileUrl?: string; // Session-based URL
 }
-
-const EXPENSE_CATEGORIES = [
-    '保險費',
-    '旅費',
-    '廣告費',
-    '交際費',
-    '捐贈',
-    '宜睿票券',
-    '郵電費',
-    '職工福利',
-    '軟體使用費',
-    '雜項購置',
-    '租金支出',
-    '文具用品'
-];
 
 export default function EmployeeReimbursement() {
     const { id } = useParams();
@@ -36,8 +24,12 @@ export default function EmployeeReimbursement() {
     const { addClaim, updateClaim, claims, currentUser } = useApp();
 
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
-        { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', noReceipt: false, receiptFile: null }
+        { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
     ]);
+    const [noReceiptReason, setNoReceiptReason] = useState('');
+
+    const existingClaim = id ? claims.find(c => c.id === id) : null;
+    const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
 
     // Load existing data
     useEffect(() => {
@@ -50,11 +42,15 @@ export default function EmployeeReimbursement() {
                     amount: i.amount,
                     description: i.description,
                     category: i.category || '',
+                    invoiceNumber: (i as any).invoiceNumber || '',
                     noReceipt: i.notes === '無憑證',
                     receiptFile: null,
-                    existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined
+                    existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined,
+                    fileUrl: (i as any).fileUrl || undefined
                 }));
                 if (loadedItems.length > 0) setItems(loadedItems);
+                // Load noReceiptReason
+                if (claim.noReceiptReason) setNoReceiptReason(claim.noReceiptReason);
             }
         }
     }, [id, claims]);
@@ -71,7 +67,7 @@ export default function EmployeeReimbursement() {
     const addItem = () => {
         setItems(prev => [
             ...prev,
-            { id: Date.now().toString(), amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', noReceipt: false, receiptFile: null }
+            { id: Date.now().toString(), amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
         ]);
     };
 
@@ -105,9 +101,15 @@ export default function EmployeeReimbursement() {
 
         // Check receipts
         if (action === 'submit') {
-            const missingReceipts = validItems.filter(i => !i.noReceipt && !i.receiptFile);
+            const missingReceipts = validItems.filter(i => !i.noReceipt && !i.receiptFile && !i.existingReceiptName);
             if (missingReceipts.length > 0) {
                 alert('請為所有項目上傳憑證，或勾選「無憑證」。');
+                return;
+            }
+            // Validate noReceiptReason if any item has noReceipt
+            const hasNoReceiptItems = validItems.some(i => i.noReceipt);
+            if (hasNoReceiptItems && noReceiptReason.trim() === '') {
+                alert('請填寫無憑證原因。');
                 return;
             }
         }
@@ -127,13 +129,16 @@ export default function EmployeeReimbursement() {
                 type: 'employee',
                 payee: currentUser.name,
                 status: updateStatus,
+                noReceiptReason: validItems.some(i => i.noReceipt) ? noReceiptReason : undefined,
                 items: validItems.map(item => ({
                     id: item.id,
                     date: item.date,
                     amount: item.amount,
                     description: item.description,
                     category: item.category,
-                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || '')
+                    invoiceNumber: item.invoiceNumber,
+                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || ''),
+                    fileUrl: item.fileUrl
                 }))
             });
         } else {
@@ -143,13 +148,16 @@ export default function EmployeeReimbursement() {
                 type: 'employee',
                 payee: currentUser.name,
                 status: status,
+                noReceiptReason: validItems.some(i => i.noReceipt) ? noReceiptReason : undefined,
                 items: validItems.map(item => ({
                     id: item.id,
                     date: item.date,
                     amount: item.amount,
                     description: item.description,
                     category: item.category,
-                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || '')
+                    invoiceNumber: item.invoiceNumber,
+                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || ''),
+                    fileUrl: item.fileUrl
                 }))
             });
         }
@@ -176,9 +184,9 @@ export default function EmployeeReimbursement() {
                 {/* Items List Header - Adjusted grid for Category */}
                 <div style={{ overflowX: 'auto' }} className="no-scrollbar">
                     <div style={{
-                        minWidth: '700px',
+                        minWidth: '800px',
                         display: 'grid',
-                        gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 80px 50px 10px',
+                        gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 100px 80px 50px 10px',
                         gap: '0.75rem',
                         padding: '0.75rem',
                         backgroundColor: 'var(--color-bg)',
@@ -193,6 +201,7 @@ export default function EmployeeReimbursement() {
                         <div>費用類別</div>
                         <div>費用說明</div>
                         <div>金額</div>
+                        <div>發票號碼</div>
                         <div>憑證</div>
                         <div>無憑證</div>
                         <div></div>
@@ -204,9 +213,9 @@ export default function EmployeeReimbursement() {
                             <div
                                 key={item.id}
                                 style={{
-                                    minWidth: '700px',
+                                    minWidth: '800px',
                                     display: 'grid',
-                                    gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 80px 50px 10px',
+                                    gridTemplateColumns: '130px 120px minmax(150px, 1fr) 100px 100px 80px 50px 10px',
                                     gap: '0.75rem',
                                     padding: '0.75rem',
                                     borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
@@ -254,6 +263,18 @@ export default function EmployeeReimbursement() {
                                         }}
                                     />
                                 </div>
+                                {item.noReceipt ? (
+                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', display: 'flex', justifyContent: 'center' }}>-</span>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                                        placeholder="發票號碼"
+                                        value={item.invoiceNumber || ''}
+                                        onChange={e => handleItemChange(item.id, 'invoiceNumber', e.target.value)}
+                                    />
+                                )}
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                     {item.noReceipt ? (
                                         <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>-</span>
@@ -306,7 +327,9 @@ export default function EmployeeReimbursement() {
                                         style={{ display: 'none' }}
                                         onChange={(e) => {
                                             if (e.target.files && e.target.files[0]) {
-                                                handleItemChange(item.id, 'receiptFile', e.target.files[0]);
+                                                const file = e.target.files[0];
+                                                handleItemChange(item.id, 'receiptFile', file);
+                                                handleItemChange(item.id, 'fileUrl', URL.createObjectURL(file));
                                             }
                                         }}
                                     />
@@ -345,6 +368,23 @@ export default function EmployeeReimbursement() {
                     <Plus size={18} /> 新增一筆費用
                 </button>
 
+                {/* No Receipt Reason Section */}
+                {items.some(i => i.noReceipt) && (
+                    <div className="form-group" style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)', borderRadius: '8px', border: '1px solid var(--color-warning)' }}>
+                        <label className="label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-warning)' }}>
+                            ⚠️ 無憑證原因 <span style={{ color: 'var(--color-danger)' }}>*</span>
+                        </label>
+                        <textarea
+                            className="form-input"
+                            value={noReceiptReason}
+                            onChange={e => setNoReceiptReason(e.target.value)}
+                            placeholder="請說明為何此筆費用無法提供憑證..."
+                            rows={3}
+                            style={{ marginTop: '0.5rem' }}
+                        />
+                    </div>
+                )}
+
                 <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem' }}>
                     <button
                         type="button"
@@ -354,13 +394,15 @@ export default function EmployeeReimbursement() {
                     >
                         取消
                     </button>
-                    <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
-                        <Save size={18} />
-                        儲存草稿
-                    </button>
+                    {!isResubmit && (
+                        <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
+                            <Save size={18} />
+                            儲存草稿
+                        </button>
+                    )}
                     <button type="button" onClick={() => handleSubmit('submit')} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                         <Send size={18} />
-                        提交申請
+                        {isResubmit ? '重新提交申請' : '提交申請'}
                     </button>
                 </div>
             </div>

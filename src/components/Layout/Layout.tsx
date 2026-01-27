@@ -101,7 +101,8 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
     const vendorApprovalsCount = isFinance ? vendorRequests.filter(r => r.status === 'pending').length : 0;
 
     // Total pending count
-    const totalPendingCount = pendingEvidenceCount + returnedCount + claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
+    const myPendingCount = pendingEvidenceCount + returnedCount;
+    const reviewPendingCount = claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
 
     return (
         <div className="app-container">
@@ -117,7 +118,10 @@ function LayoutWithState({ children }: { children: React.ReactNode }) {
                 <nav className="sidebar-nav">
                     {hasPermission('general') && (
                         <>
-                            <NavItem to="/" icon={LayoutDashboard} label="申請單管理" badge={totalPendingCount} />
+                            <NavItem to="/" icon={LayoutDashboard} label="我的請款" badge={myPendingCount} />
+                            {(isManager || isFinance) && (
+                                <NavItem to="/reviews" icon={LayoutDashboard} label="申請審核" badge={reviewPendingCount} />
+                            )}
                             <NavItem to="/vendors" icon={Users} label="廠商列表" />
                         </>
                     )}

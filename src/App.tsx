@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
+import ReviewDashboard from './pages/Dashboard/ReviewDashboard';
 import VendorList from './pages/Vendor/VendorList';
 import AddVendor from './pages/Vendor/AddVendor';
 
@@ -13,6 +14,7 @@ import ApplicationTypeSelect from './pages/Application/ApplicationTypeSelect';
 import UserManagement from './pages/Admin/UserManagement';
 import PaymentDetail from './pages/Payment/PaymentDetail';
 
+// ...
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/reviews" element={<ReviewDashboard />} />
             <Route path="/vendors" element={<VendorList />} />
             <Route path="/vendors/add" element={<AddVendor />} />
             <Route path="/vendors/edit/:id" element={<AddVendor />} />

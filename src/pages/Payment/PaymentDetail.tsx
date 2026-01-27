@@ -36,8 +36,8 @@ export default function PaymentDetail() {
             <header className="reimburse-header">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                     <div>
-                        <button onClick={() => navigate('/?tab=payment_records')} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
-                            <ArrowLeft size={16} /> 回付款紀錄
+                        <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
+                            <ArrowLeft size={16} style={{ marginRight: '0.25rem' }} /> 回上一頁
                         </button>
                         <div className="detail-title-group">
                             <h1 className="heading-lg">付款單 #{payment.id}</h1>
