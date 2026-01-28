@@ -73,39 +73,15 @@ export default function LoginPage() {
                         使用 Google 帳號登入
                     </button>
 
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-gray-200" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-white px-2 text-gray-500">或是使用測試帳號</span>
-                        </div>
-                    </div>
-
-                    <div className="grid gap-3">
-                        {availableUsers.map(user => (
-                            <button
-                                key={user.id}
-                                onClick={() => handleMockLogin(user.id)}
-                                className="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
-                            >
-                                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center group-hover:bg-white transition-colors">
-                                    {getRoleIcon(user.permissions)}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-bold text-gray-900">{user.name}</div>
-                                    <div className="text-sm text-gray-500">{user.roleName}</div>
-                                </div>
-                                <div className="text-blue-600 opacity-0 transform -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-                                    登入 →
-                                </div>
-                            </button>
-                        ))}
+                    <div className="pt-4">
+                        <p className="text-sm text-gray-500 italic">
+                            請確保您的 Google 帳戶在組織許可範圍內。
+                        </p>
                     </div>
                 </div>
 
                 <div className="mt-8 text-xs text-gray-400">
-                    測試環境：包含 Google OAuth 與 Mock Data
+                    系統安全保護中：僅限內部 Google 帳戶訪問
                 </div>
             </div>
         </div>

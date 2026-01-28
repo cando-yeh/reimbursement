@@ -182,29 +182,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="profile-detail" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>切換使用者 (DEMO)</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                        {availableUsers.map(user => (
-                                            <button
-                                                key={user.id}
-                                                className={`btn ${currentUser.id === user.id ? 'btn-primary' : 'btn-ghost'}`}
-                                                onClick={() => { switchUser(user.id); setIsProfileOpen(false); }}
-                                                style={{ justifyContent: 'flex-start', padding: '0.5rem', fontSize: '0.8rem', width: '100%' }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                                                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#333' }}>
-                                                        {user.name.charAt(0)}
-                                                    </div>
-                                                    <div style={{ flex: 1, textAlign: 'left' }}>
-                                                        <div>{user.name}</div>
-                                                        <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>{user.roleName}</div>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
                                 <div style={{ marginTop: '0.5rem' }}>
                                     <button
                                         className="btn btn-ghost"
