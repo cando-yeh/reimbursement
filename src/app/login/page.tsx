@@ -14,8 +14,13 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
-        const redirectTo = `${window.location.origin}/auth/callback`;
-        console.log('Attempting login with redirectTo:', redirectTo);
+
+        // Priority: Manually set SITE_URL > Current window origin
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+        const redirectTo = `${siteUrl.replace(/\/$/, '')}/auth/callback`;
+
+        console.log('Final Redirect URL being sent to Supabase:', redirectTo);
+
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
