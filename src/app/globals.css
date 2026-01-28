@@ -470,6 +470,7 @@ textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .status-badge.approved {

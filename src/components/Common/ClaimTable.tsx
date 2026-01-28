@@ -103,7 +103,7 @@ const ClaimTable = ({
                             )}
                             <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
                             <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{claim.date}</td>
-                            <td><StatusBadge status={claim.status} /></td>
+                            <td style={{ whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
                             <td>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                                     {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
