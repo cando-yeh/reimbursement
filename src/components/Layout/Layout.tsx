@@ -185,7 +185,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </div>
 
                         {isProfileOpen && (
-                            <div className="profile-popup" onClick={(e) => e.stopPropagation()} style={{ width: '300px' }}>
+                            <div className="profile-popup" onClick={(e) => e.stopPropagation()} style={{ width: '240px' }}>
                                 <div className="profile-header">
                                     {isEditingName ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginBottom: '0.5rem' }}>
@@ -207,13 +207,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                             <div>
                                                 <div className="profile-name">{currentUser.name}</div>
                                                 <div className="profile-role">{currentUser.email}</div>
+                                                {availableUsers.find(u => u.id === currentUser.approverId) && (
+                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)' }}>
+                                                        審核主管: {availableUsers.find(u => u.id === currentUser.approverId)?.name}
+                                                    </div>
+                                                )}
                                             </div>
                                             <button
                                                 className="btn btn-ghost"
-                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', height: 'auto' }}
+                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', height: 'auto', whiteSpace: 'nowrap' }}
                                                 onClick={() => setIsEditingName(true)}
                                             >
-                                                編輯名稱
+                                                編輯
                                             </button>
                                         </div>
                                     )}

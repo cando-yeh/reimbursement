@@ -10,9 +10,10 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, action }: PageHeaderProps) {
     return (
-        <div className="vendor-header" style={{ marginBottom: '2.5rem' }}>
+        <div className="vendor-header" style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
                 <h1 className="heading-lg" style={{ marginBottom: '0.25rem' }}>{title}</h1>
+
                 {subtitle && <p className="vendor-subtitle">{subtitle}</p>}
             </div>
             {action && <div>{action}</div>}

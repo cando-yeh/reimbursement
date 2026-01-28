@@ -61,15 +61,15 @@ const ClaimTable = ({
                 <tr>
                     {selectable && <th style={{ width: '40px' }}></th>}
                     <th>申請編號</th>
-                    <th>申請日期</th>
-                    <th>狀態</th>
-                    <th>類型</th>
-                    <th>申請人</th>
-                    <th>付款對象</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>申請日期</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>狀態</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>類型</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>申請人</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>付款對象</th>
                     {showApprover && <th>審核者</th>}
                     <th>說明</th>
                     <th>金額</th>
-                    {payments && <th>付款日期</th>}
+                    {payments && <th style={{ whiteSpace: 'nowrap' }}>付款日期</th>}
                     {renderActions && <th>操作</th>}
                 </tr>
             </thead>
@@ -79,6 +79,7 @@ const ClaimTable = ({
                         <td
                             colSpan={8 + (selectable ? 1 : 0) + (showApprover ? 1 : 0) + (payments ? 1 : 0) + (renderActions ? 1 : 0)}
                             className="empty-state"
+                            style={{ textAlign: 'center' }}
                         >
                             {emptyMessage}
                         </td>
@@ -100,15 +101,15 @@ const ClaimTable = ({
                                     />
                                 </td>
                             )}
-                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>#{claim.id.slice(0, 8)}</td>
-                            <td style={{ fontSize: '0.9rem' }}>{claim.date}</td>
+                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
+                            <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{claim.date}</td>
                             <td><StatusBadge status={claim.status} /></td>
                             <td>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                                     {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
                                 </span>
                             </td>
-                            <td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
                                 {getApplicantName(claim)}
                             </td>
                             <td>
@@ -129,7 +130,7 @@ const ClaimTable = ({
                                 </div>
                             </td>
                             {payments && (
-                                <td style={{ fontSize: '0.9rem' }}>
+                                <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                                     {getPaymentDate(claim)}
                                 </td>
                             )}

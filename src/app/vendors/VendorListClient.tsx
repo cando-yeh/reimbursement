@@ -134,7 +134,7 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                                     </td>
                                     <td>
                                         {vendor.bankCode ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                                                 <span style={{ fontWeight: 500 }}>
                                                     ({vendor.bankCode} {BANK_LIST.find(b => b.code === vendor.bankCode)?.name})
                                                 </span>
