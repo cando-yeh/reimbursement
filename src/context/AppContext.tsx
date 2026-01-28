@@ -398,9 +398,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const requestAddVendor = async (vendor: Omit<Vendor, 'id'>) => {
+    const tempId = `temp-${Date.now()}`;
+    const optimisticRequest: any = {
+      id: tempId,
+      type: 'add',
+      status: 'pending',
+      timestamp: new Date().toISOString().split('T')[0],
+      data: vendor,
+      applicantId: currentUser?.id,
+      applicantName: currentUser?.name
+    };
+
+    setVendorRequests(prev => [optimisticRequest, ...prev]);
+
     const result = await createVendorRequest({ type: 'add', data: vendor });
     if (result.success) {
-      alert('廠商新增申請已送出');
+      // Background sync
       const { success, data } = await getVendorRequests();
       if (success && data) {
         setVendorRequests(data.map((r: any) => ({
@@ -410,17 +423,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
-      // Refresh vendors if it was an instant change (though requests go to approval)
-      // but for consistency if we ever add direct additions.
       await fetchVendors();
       return true;
+    } else {
+      // Revert if failed
+      setVendorRequests(prev => prev.filter(r => r.id !== tempId));
+      alert('申請失敗: ' + result.error);
+      return false;
     }
-    alert('申請失敗: ' + result.error);
-    return false;
   };
 
   const requestUpdateVendor = async (id: string, data: Partial<Vendor>) => {
     const existingVendor = vendors.find(v => v.id === id);
+    const tempId = `temp-${Date.now()}`;
+    const optimisticRequest: any = {
+      id: tempId,
+      type: 'update',
+      status: 'pending',
+      vendorId: id,
+      timestamp: new Date().toISOString().split('T')[0],
+      data: data,
+      originalData: existingVendor,
+      applicantId: currentUser?.id,
+      applicantName: currentUser?.name
+    };
+
+    setVendorRequests(prev => [optimisticRequest, ...prev]);
+
     const result = await createVendorRequest({
       type: 'update',
       vendorId: id,
@@ -429,7 +458,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     if (result.success) {
-      alert('廠商變更申請已送出');
+      // Background sync
       const { success, data: reqs } = await getVendorRequests();
       if (success && reqs) {
         setVendorRequests(reqs.map((r: any) => ({
@@ -440,13 +469,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })));
       }
       return true;
+    } else {
+      // Revert
+      setVendorRequests(prev => prev.filter(r => r.id !== tempId));
+      alert('申請失敗: ' + result.error);
+      return false;
     }
-    alert('申請失敗: ' + result.error);
-    return false;
   };
 
   const requestDeleteVendor = async (id: string) => {
     const vendor = vendors.find(v => v.id === id);
+    const tempId = `temp-${Date.now()}`;
+    const optimisticRequest: any = {
+      id: tempId,
+      type: 'delete',
+      status: 'pending',
+      vendorId: id,
+      timestamp: new Date().toISOString().split('T')[0],
+      data: {},
+      originalData: vendor,
+      applicantId: currentUser?.id,
+      applicantName: currentUser?.name
+    };
+
+    setVendorRequests(prev => [optimisticRequest, ...prev]);
+
     const result = await createVendorRequest({
       type: 'delete',
       vendorId: id,
@@ -455,7 +502,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     if (result.success) {
-      alert('廠商刪除申請已送出');
+      // Background sync
       const { success, data: reqs } = await getVendorRequests();
       if (success && reqs) {
         setVendorRequests(reqs.map((r: any) => ({
@@ -466,9 +513,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })));
       }
       return true;
+    } else {
+      // Revert
+      setVendorRequests(prev => prev.filter(r => r.id !== tempId));
+      alert('申請失敗: ' + result.error);
+      return false;
     }
-    alert('申請失敗: ' + result.error);
-    return false;
   };
 
   const approveVendorRequest = async (requestId: string) => {
