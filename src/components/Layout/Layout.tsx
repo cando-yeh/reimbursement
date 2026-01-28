@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -51,6 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
     const [isEditingName, setIsEditingName] = React.useState(false);
     const [tempName, setTempName] = React.useState('');
+    const profileRef = useRef<HTMLDivElement>(null);
     const { currentUser, switchUser, logout, isAuthenticated, availableUsers, claims, vendorRequests, updateUser, isAuthLoading } = useApp();
     const router = useRouter();
     const pathname = usePathname();
@@ -70,6 +71,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             setTempName(currentUser.name);
         }
     }, [currentUser]);
+
+    // Handle click outside to close profile popover
+    React.useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+                setIsProfileOpen(false);
+            }
+        }
+
+        if (isProfileOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isProfileOpen]);
 
     // Don't show layout on login page
     if (pathname === '/login') {
@@ -139,7 +159,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <div className="user-profile" onClick={() => setIsProfileOpen(!isProfileOpen)}>
+                    <div
+                        className="user-profile"
+                        ref={profileRef}
+                        onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    >
                         <div className="avatar" style={{ backgroundColor: 'var(--color-primary)' }}>
                             {currentUser.name.charAt(0)}
                         </div>
