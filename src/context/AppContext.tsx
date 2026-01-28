@@ -204,9 +204,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (currentUser?.email) {
           const dbUser = (data as User[]).find(u => u.email === currentUser.email);
-          if (dbUser && dbUser.id !== currentUser.id) {
-            console.log('--- AppContext: Migrating currentUser to DB ID ---', dbUser.id);
-            setCurrentUser(dbUser);
+          if (dbUser) {
+            // Check if we need to update the current user state
+            // We update if the ID changed (migration) OR if role/permissions/name changed
+            const hasChanges =
+              dbUser.id !== currentUser.id ||
+              dbUser.roleName !== currentUser.roleName ||
+              JSON.stringify(dbUser.permissions) !== JSON.stringify(currentUser.permissions) ||
+              dbUser.name !== currentUser.name;
+
+            if (hasChanges) {
+              console.log('--- AppContext: Syncing currentUser with DB ---', dbUser.roleName);
+              setCurrentUser(dbUser);
+            }
           }
         }
       }
