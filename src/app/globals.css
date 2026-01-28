@@ -300,6 +300,10 @@ textarea {
   border-color: var(--color-border);
 }
 
+.user-profile {
+  position: relative;
+}
+
 .avatar {
   width: 42px;
   height: 42px;

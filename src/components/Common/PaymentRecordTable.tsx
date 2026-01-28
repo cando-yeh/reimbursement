@@ -10,11 +10,11 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
     <table className="vendor-table">
         <thead>
             <tr>
-                <th>付款編號</th>
-                <th>付款日期</th>
-                <th>付款對象</th>
-                <th>付款金額</th>
-                <th>申請單數</th>
+                <th style={{ whiteSpace: 'nowrap' }}>付款編號</th>
+                <th style={{ whiteSpace: 'nowrap' }}>付款日期</th>
+                <th style={{ whiteSpace: 'nowrap' }}>付款對象</th>
+                <th style={{ whiteSpace: 'nowrap' }}>付款金額</th>
+                <th style={{ whiteSpace: 'nowrap' }}>申請單數</th>
             </tr>
         </thead>
         <tbody>
@@ -27,16 +27,16 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
                         onClick={() => onRowClick && onRowClick(payment)}
                         style={{ cursor: onRowClick ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
                     >
-                        <td style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>#{payment.id}</td>
-                        <td>{payment.paymentDate}</td>
-                        <td style={{ fontWeight: 500 }}>{payment.payee}</td>
-                        <td style={{ fontWeight: 600 }}>
+                        <td style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{payment.id}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{payment.paymentDate}</td>
+                        <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{payment.payee}</td>
+                        <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
                                 <span>$</span>
                                 <span>{payment.amount.toLocaleString()}</span>
                             </div>
                         </td>
-                        <td>{payment.claimIds.length} 筆</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{payment.claimIds.length} 筆</td>
                     </tr>
                 ))
             )}
