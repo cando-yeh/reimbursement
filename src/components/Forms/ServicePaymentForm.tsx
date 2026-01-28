@@ -213,7 +213,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
     return (
         <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
             <PageHeader
-                title="勞務報酬單"
+                title="個人勞務"
                 subtitle="支付專業服務、稿費、講座或勞務報酬費用。"
             />
 

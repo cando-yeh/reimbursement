@@ -26,8 +26,6 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
                         key={payment.id}
                         onClick={() => onRowClick && onRowClick(payment)}
                         style={{ cursor: onRowClick ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                     >
                         <td style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>#{payment.id}</td>
                         <td>{payment.paymentDate}</td>
@@ -43,7 +41,7 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
                 ))
             )}
         </tbody>
-    </table>
+    </table >
 );
 
 export default PaymentRecordTable;

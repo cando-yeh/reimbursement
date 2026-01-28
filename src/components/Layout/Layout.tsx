@@ -26,7 +26,7 @@ const NavItem = ({ to, icon: Icon, label, badge }: NavItemProps) => {
             <Icon size={20} />
             <span>{label}</span>
             {badge !== undefined && badge > 0 && (
-                <span style={{
+                <span className="nav-badge" style={{
                     position: 'absolute',
                     right: '12px',
                     top: '50%',
@@ -38,7 +38,8 @@ const NavItem = ({ to, icon: Icon, label, badge }: NavItemProps) => {
                     padding: '2px 6px',
                     borderRadius: '10px',
                     minWidth: '18px',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    boxShadow: '0 2px 4px rgba(220, 38, 38, 0.2)'
                 }}>
                     {badge > 99 ? '99+' : badge}
                 </span>
@@ -136,7 +137,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="app-container">
             <aside className="sidebar">
                 <div className="sidebar-header">
-                    <h1 className="brand">請款報銷系統</h1>
+                    <h1 className="brand">
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            background: 'linear-gradient(135deg, var(--color-primary), #a855f7)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                        }}>
+                            <ShieldCheck size={20} />
+                        </div>
+                        請款系統
+                    </h1>
                 </div>
 
                 <nav className="sidebar-nav">
@@ -161,7 +176,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         ref={profileRef}
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
                     >
-                        <div className="avatar" style={{ backgroundColor: 'var(--color-primary)' }}>
+                        <div className="avatar">
                             {currentUser.name.charAt(0)}
                         </div>
                         <div>

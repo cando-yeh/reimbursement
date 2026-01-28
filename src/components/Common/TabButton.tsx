@@ -1,4 +1,3 @@
-
 interface TabButtonProps {
     active: boolean;
     onClick: () => void;
@@ -15,8 +14,8 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
             borderRadius: 'var(--radius-md)',
             backgroundColor: active ? 'white' : 'transparent',
             color: active ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            boxShadow: active ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-            fontWeight: active ? 700 : 500,
+            boxShadow: active ? 'var(--shadow-sm)' : 'none',
+            fontWeight: active ? 600 : 500,
             whiteSpace: 'nowrap',
             display: 'flex',
             alignItems: 'center',
@@ -24,7 +23,8 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
             border: 'none',
             fontSize: '0.9rem',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative' // For precise badge positioning if needed
         }}
     >
         {label}
@@ -38,7 +38,7 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
                 borderRadius: '12px',
                 minWidth: '20px',
                 textAlign: 'center',
-                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
             }}>
                 {badge > 99 ? '99+' : badge}
             </span>

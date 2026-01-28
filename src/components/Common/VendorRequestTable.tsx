@@ -25,7 +25,6 @@ const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) =
                         key={req.id}
                         onClick={() => onRowClick && onRowClick(req)}
                         style={{ cursor: onRowClick ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
-                        className="hover:bg-gray-50"
                     >
                         <td>
                             <span className={`status-badge ${req.type === 'add' ? 'approved' : req.type === 'delete' ? 'pending' : 'paid'}`}>

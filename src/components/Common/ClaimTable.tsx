@@ -89,8 +89,6 @@ const ClaimTable = ({
                             key={claim.id}
                             onClick={() => onRowClick && onRowClick(claim)}
                             style={{ cursor: onRowClick ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                         >
                             {selectable && (
                                 <td>
