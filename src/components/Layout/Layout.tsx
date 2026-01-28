@@ -208,7 +208,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                                 <div className="profile-name" style={{ fontWeight: 'bold' }}>{currentUser.name}</div>
                                                 <div className="profile-role">{currentUser.email}</div>
                                                 {availableUsers.find(u => u.id === currentUser.approverId) && (
-                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)' }}>
                                                         請款核准人: {availableUsers.find(u => u.id === currentUser.approverId)?.name}
                                                     </div>
                                                 )}
