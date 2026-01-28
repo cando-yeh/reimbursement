@@ -232,7 +232,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     return (
         <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
             <PageHeader
-                title="廠商付款申請"
+                title="廠商請款"
                 subtitle="請填寫付款對象、金額及相關憑證資料。"
             />
 

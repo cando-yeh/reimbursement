@@ -437,7 +437,7 @@ export default function ApplicationDetailPage() {
                 <div className="detail-meta-grid">
                     <div>
                         <label className="form-group label">申請類型</label>
-                        <div className="meta-value-caps">{claim.type === 'employee' ? '個人報銷' : claim.type === 'service' ? '勞務付款' : '廠商付款'}</div>
+                        <div className="meta-value-caps">{claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}</div>
                     </div>
                     <div>
                         <label className="form-group label">付款對象</label>

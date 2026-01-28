@@ -107,7 +107,7 @@ const ClaimTable = ({
                             <td><StatusBadge status={claim.status} /></td>
                             <td>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                                    {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商付款' : '勞務報酬'}
+                                    {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
                                 </span>
                             </td>
                             <td>

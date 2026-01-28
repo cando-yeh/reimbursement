@@ -193,7 +193,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     return (
         <div className="reimburse-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <PageHeader
-                title="個人報銷申請"
+                title="員工報銷"
                 subtitle="適用於交通費、差旅費、交際費等代墊款項報銷。"
             />
 
