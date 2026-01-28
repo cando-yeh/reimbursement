@@ -7,7 +7,7 @@ import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X, Loader2 } from 'lucide-react';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
-import { createClient } from '@/utils/supabase/client';
+import { uploadFile } from '@/utils/storage';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -23,10 +23,8 @@ interface ExpenseItemWithAttachment {
 }
 
 export default function EmployeeReimbursementForm({ editId }: { editId?: string }) {
+    const { claims, currentUser, addClaim, updateClaim, vendors, vendorRequests } = useApp();
     const router = useRouter();
-    // We still use currentUser for UI logic (e.g. showing name), but submission uses session
-    const { claims, currentUser } = useApp();
-    const supabase = createClient();
 
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
         { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
@@ -82,26 +80,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
         return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     };
 
-    const uploadFile = async (file: File) => {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-        const filePath = `receipts/${fileName}`;
 
-        const { error } = await supabase.storage
-            .from('receipts')
-            .upload(filePath, file);
-
-        if (error) {
-            console.error('Upload Error:', error);
-            throw new Error(`憑證上傳失敗: ${error.message} (Code: ${error.name})`);
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('receipts')
-            .getPublicUrl(filePath);
-
-        return publicUrl;
-    };
 
     const handleSubmit = async (action: 'submit' | 'draft') => {
         if (!currentUser) return;
@@ -139,7 +118,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
             const processedItems = await Promise.all(validItems.map(async (item) => {
                 let fileUrl = item.fileUrl;
                 if (item.receiptFile) {
-                    fileUrl = await uploadFile(item.receiptFile);
+                    fileUrl = await uploadFile(item.receiptFile, item.date);
                 }
 
                 return {

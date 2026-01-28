@@ -12,6 +12,7 @@ interface SearchableVendorSelectProps {
     onOpen?: () => void;
     error?: string;
     placeholder?: string;
+    disabled?: boolean;
 }
 
 export default function SearchableVendorSelect({
@@ -22,7 +23,8 @@ export default function SearchableVendorSelect({
     onBlur,
     onOpen,
     error,
-    placeholder = "搜尋廠商..."
+    placeholder = "搜尋廠商...",
+    disabled
 }: SearchableVendorSelectProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
@@ -149,6 +151,7 @@ export default function SearchableVendorSelect({
                     value={inputValue}
                     onChange={handleInputChange}
                     onFocus={handleInputFocus}
+                    disabled={disabled}
                 />
 
                 {value && (
