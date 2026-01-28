@@ -137,9 +137,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <aside className="sidebar">
                 <div className="sidebar-header">
                     <h1 className="brand">請款報銷系統</h1>
-                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>
-                        角色: {currentUser.roleName}
-                    </div>
                 </div>
 
                 <nav className="sidebar-nav">
