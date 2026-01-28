@@ -43,13 +43,11 @@ export default function Dashboard() {
   const completed = myClaims.filter(c => c.status === 'completed');
 
   return (
-    <div className="container" style={{ padding: '2rem' }}>
-      <DashboardClient
-        activeTab={activeTab}
-        data={{ drafts, pendingEvidence, returned, inReview, pendingPayment, completed }}
-        payments={payments}
-        availableUsers={availableUsers}
-      />
-    </div>
+    <DashboardClient
+      activeTab={activeTab}
+      data={{ drafts, pendingEvidence, returned, inReview, pendingPayment, completed }}
+      payments={payments}
+      availableUsers={availableUsers}
+    />
   );
 }

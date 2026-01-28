@@ -40,9 +40,9 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
 
     return (
         <div className="container" style={{ padding: '2rem' }}>
-            <div className="vendor-header" style={{ marginBottom: '2.5rem' }}>
+            <div className="vendor-header">
                 <div>
-                    <h1 className="heading-lg" style={{ marginBottom: '0.25rem' }}>我的請款</h1>
+                    <h1 className="heading-lg">我的請款</h1>
                     <p className="vendor-subtitle">管理您的申請單、待傳檔案與審核狀態</p>
                 </div>
                 <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
