@@ -88,7 +88,6 @@ export default function UserManagementPage() {
                             <th>角色</th>
                             <th>管理者</th>
                             <th>核准人</th>
-                            <th>Email</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -155,7 +154,7 @@ export default function UserManagementPage() {
                                                     .filter(u => u.id !== user.id)
                                                     .map(u => (
                                                         <option key={u.id} value={u.id}>
-                                                            {u.name} ({u.email || '無 Email'})
+                                                            {u.name}
                                                         </option>
                                                     ))}
                                             </select>
@@ -167,9 +166,7 @@ export default function UserManagementPage() {
                                             ) : <span style={{ color: '#ccc', fontStyle: 'italic' }}>-</span>
                                         )}
                                     </td>
-                                    <td style={{ color: 'var(--color-text-secondary)' }}>
-                                        {user.email || '-'}
-                                    </td>
+
                                     <td>
                                         {isEditing ? (
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
