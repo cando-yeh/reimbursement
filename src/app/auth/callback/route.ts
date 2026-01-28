@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
                 // We don't block login, but app functionality might be limited
             }
 
-            return NextResponse.redirect(`${request.nextUrl.origin}${next}`);
+            const redirectTo = new URL(next, request.url);
+            return NextResponse.redirect(redirectTo);
         }
     }
 
@@ -54,10 +55,12 @@ export async function GET(request: NextRequest) {
             token_hash,
         });
         if (!error) {
-            return NextResponse.redirect(`${request.nextUrl.origin}${next}`);
+            const redirectTo = new URL(next, request.url);
+            return NextResponse.redirect(redirectTo);
         }
     }
 
     // return the user to an error page with some instructions
-    return NextResponse.redirect(`${request.nextUrl.origin}/login?error=auth`);
+    const errorUrl = new URL('/login?error=auth', request.url);
+    return NextResponse.redirect(errorUrl);
 }
