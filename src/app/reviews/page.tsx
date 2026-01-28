@@ -65,7 +65,7 @@ function ReviewDashboardInner() {
 
     // Filter Logic
     const claimApprovals = claims.filter(c => {
-        if (c.status === 'pending_approval' && isManager) {
+        if (c.status === 'pending_approval') {
             const applicant = availableUsers.find(u => u.id === c.applicantId);
             if (applicant && applicant.approverId === currentUser.id) return true;
         }
