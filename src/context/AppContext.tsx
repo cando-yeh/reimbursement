@@ -165,9 +165,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     // Check initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
-        handleAuthChange(user);
+        await handleAuthChange(user);
       }
       setIsAuthLoading(false);
     });
