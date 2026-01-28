@@ -46,12 +46,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Static supabase client to prevent re-creation and infinite loops
 const supabase = createClient();
 
-// Mock Initial Data
-const INITIAL_VENDORS: Vendor[] = [
-  { id: 'v1', name: 'TechSolutions Inc.', serviceContent: 'IT Support & Hardware', bankCode: '004', bankAccount: '123456789012' },
-  { id: 'v2', name: 'CleanOffice Supplies', serviceContent: 'Office Supplies', bankCode: '822', bankAccount: '987654321098' },
-  { id: 'v3', name: 'Global Logistics', serviceContent: 'Shipping & Delivery', bankCode: '013', bankAccount: '456789012345' },
-];
+// Initial Data
+const INITIAL_VENDORS: Vendor[] = [];
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -92,8 +88,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (savedRequests) setVendorRequests(JSON.parse(savedRequests));
 
       const savedUsers = localStorage.getItem('users');
-      if (savedUsers) setAvailableUsers(JSON.parse(savedUsers));
-      else setAvailableUsers(MOCK_USERS);
+      if (savedUsers) {
+        setAvailableUsers(JSON.parse(savedUsers));
+      } else {
+        // Only keep MOCK_USERS during development or as fallback
+        setAvailableUsers(MOCK_USERS);
+      }
 
       const savedPayments = localStorage.getItem('payments');
       if (savedPayments) setPayments(JSON.parse(savedPayments));
