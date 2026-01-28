@@ -157,7 +157,7 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
             note: note
         };
 
-        await prisma.claim.update({
+        const updatedClaim = await prisma.claim.update({
             where: { id },
             data: {
                 status: newStatus as ClaimStatus,
@@ -166,7 +166,14 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
         });
 
         revalidatePath('/');
-        return { success: true };
+        return {
+            success: true,
+            data: {
+                ...updatedClaim,
+                date: updatedClaim.date.toISOString().split('T')[0],
+                datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
+            }
+        };
     } catch (error: any) {
         console.error('Update Status Error:', error);
         return { success: false, error: error.message };
@@ -212,10 +219,10 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
             });
         }
 
-        await prisma.claim.update({
+        const updatedClaim = await prisma.claim.update({
             where: { id },
             data: {
-                ...data, // This relies on CreateClaimInput matching prisma fields mostly
+                ...data,
                 amount: amount,
                 type: data.type as ClaimType | undefined,
                 status: data.status as ClaimStatus | undefined,
@@ -227,7 +234,14 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
         });
 
         revalidatePath('/');
-        return { success: true };
+        return {
+            success: true,
+            data: {
+                ...updatedClaim,
+                date: updatedClaim.date.toISOString().split('T')[0],
+                datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
+            }
+        };
     } catch (error: any) {
         console.error('Update Claim Error:', error);
         return { success: false, error: error.message };

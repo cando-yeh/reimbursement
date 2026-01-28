@@ -159,7 +159,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             };
             if (editId) await updateClaim(editId, newClaim);
             else await addClaim(newClaim as any);
-            window.location.href = '/?tab=drafts';
+            router.push('/?tab=drafts');
         } catch (error: any) {
             console.error(error);
             alert('儲存失敗: ' + error.message);
@@ -216,7 +216,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             };
             if (editId) await updateClaim(editId, newClaim);
             else await addClaim(newClaim as any);
-            window.location.href = '/?tab=in_review';
+            router.push('/?tab=in_review');
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);

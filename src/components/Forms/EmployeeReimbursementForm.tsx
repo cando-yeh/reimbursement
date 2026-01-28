@@ -167,19 +167,14 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     ...claimData,
                     status: updateStatus
                 });
-
-                // Force reload of window to ensure context refreshes, 
-                // OR better: use window.location.href to redirect which forces reload
-                window.location.href = action === 'draft' ? '/?tab=drafts' : '/reviews?tab=claim_approvals';
-                return;
+                // router.push navigation happens below
             } else {
                 // Create
                 result = await createClaimAction({
                     ...claimData,
                     status: status || 'pending_finance'
                 });
-                window.location.href = action === 'draft' ? '/?tab=drafts' : '/reviews?tab=claim_approvals';
-                return;
+                // router.push navigation happens below
             }
 
             if (!result.success) {
@@ -187,8 +182,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 return;
             }
 
-            router.push(action === 'draft' ? '/?tab=drafts' : '/?tab=in_review');
-            router.refresh(); // Refresh server components
+            router.push(action === 'draft' ? '/?tab=drafts' : (editId ? '/reviews?tab=claim_approvals' : '/?tab=in_review'));
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);

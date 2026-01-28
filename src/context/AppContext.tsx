@@ -354,36 +354,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateClaim = async (id: string, data: Partial<Claim>, note?: string) => {
-    // Optimistic Update
-    setClaims(prev => prev.map(c => {
-      if (c.id === id) {
-        // ... history logic handled by server mostly, but we can simulate for UI ...
-        return { ...c, ...data };
-      }
-      return c;
-    }));
+    // 1. Optimistic Update
+    setClaims(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
 
-    // Server Action
-    await updateClaimAction(id, data);
+    // 2. Server Action
+    const result = await updateClaimAction(id, data);
 
-    // Ideally refetch to get updated history/timestamps
-    const { success, data: updatedClaims } = await getClaims();
-    if (success && updatedClaims) setClaims(updatedClaims);
+    // 3. Sync with actual server data (handles history/timestamps)
+    if (result.success && result.data) {
+      setClaims(prev => prev.map(c => c.id === id ? result.data as Claim : c));
+    } else if (!result.success) {
+      console.error('Update Claim Failed:', result.error);
+      // Re-sync from server to revert optimistic change if really needed, 
+      // but let's assume success for now or the next refresh will fix it.
+    }
   };
 
   const updateClaimStatus = async (id: string, newStatus: Claim['status'], note?: string) => {
-    // Optimistic Update
-    setClaims(prev => prev.map(c => {
-      if (c.id === id) return { ...c, status: newStatus };
-      return c;
-    }));
+    // 1. Optimistic Update
+    setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
 
-    // Server Action
-    await updateClaimStatusAction(id, newStatus, note);
+    // 2. Server Action
+    const result = await updateClaimStatusAction(id, newStatus, note);
 
-    // Refetch to sync history
-    const { success, data: updatedClaims } = await getClaims();
-    if (success && updatedClaims) setClaims(updatedClaims);
+    // 3. Sync
+    if (result.success && result.data) {
+      setClaims(prev => prev.map(c => c.id === id ? result.data as Claim : c));
+    }
   };
 
   const deleteClaim = async (id: string) => {

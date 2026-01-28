@@ -1,8 +1,48 @@
 import { createClient } from './supabase/client';
 
 /**
+ * Compresses an image file before upload.
+ */
+async function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<File | Blob> {
+    if (!file.type.startsWith('image/')) return file;
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                    } else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
  * Uploads a file to Supabase Storage with a date-based folder structure and semantic naming.
- * Path format: YYYYMM/Name_Category_Amount_Index.ext
+ * Includes automatic image compression for photos.
+ * Path format: YYYYMM/Payee_Category_Amount_Index.ext
  * 
  * @param file The file to upload
  * @param dateString YYYY-MM-DD format string for folder classification
@@ -21,6 +61,12 @@ export async function uploadFile(
     index: number
 ) {
     const supabase = createClient();
+
+    // 0. Compress if it's an image
+    let fileToUpload: File | Blob = file;
+    if (file.type.startsWith('image/')) {
+        fileToUpload = await compressImage(file);
+    }
 
     // 1. Extract YYYYMM from dateString
     let yearMonth = '';
@@ -47,7 +93,7 @@ export async function uploadFile(
     // 3. Upload to 'receipts' bucket
     const { error } = await supabase.storage
         .from('receipts')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
 
     if (error) {
         console.error('Upload Error:', error);
