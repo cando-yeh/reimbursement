@@ -449,6 +449,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
+      // Refresh vendors if it was an instant change (though requests go to approval)
+      // but for consistency if we ever add direct additions.
+      await fetchVendors();
       return true;
     }
     alert('申請失敗: ' + result.error);
@@ -519,6 +522,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
+      // Crucial: Refresh the actual vendors list so they appear in the UI
+      await fetchVendors();
       alert('審核已核准');
     }
   };
@@ -535,6 +540,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
+      // Refresh to ensure consistency if any status changed
+      await fetchVendors();
       alert('審核已駁回');
     }
   };

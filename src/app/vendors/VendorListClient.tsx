@@ -13,29 +13,29 @@ interface VendorListClientProps {
     currentUser: any;
 }
 
-export default function VendorListClient({ initialVendors, initialRequests, currentUser }: VendorListClientProps) {
-    const { requestDeleteVendor } = useApp();
+export default function VendorListClient({ currentUser }: { currentUser: any }) {
+    const { vendors, vendorRequests, requestDeleteVendor } = useApp();
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
     const canManageVendors = currentUser && (currentUser.permissions.includes('general') || currentUser.permissions.includes('finance_audit'));
 
     const getPendingAction = (vendorId: string) => {
-        return initialRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId));
+        return vendorRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId));
     };
 
-    const pendingAddRequests = initialRequests.filter(r => r.status === 'pending' && r.type === 'add' && r.data);
+    const pendingAddRequests = vendorRequests.filter(r => r.status === 'pending' && r.type === 'add' && r.data);
 
     // Merge actual vendors and pending additions
     let displayVendors = [
-        ...initialVendors.map(v => ({ ...v, isPendingAdd: false })),
-        ...pendingAddRequests.map(r => ({ ...r.data, id: r.data.id || `temp-${Math.random()}`, isPendingAdd: true }))
+        ...vendors.map(v => ({ ...v, isPendingAdd: false })),
+        ...pendingAddRequests.map(r => ({ ...(r.data as any), id: (r.data as any)?.id || `temp-${Math.random()}`, isPendingAdd: true }))
     ];
 
     if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
         displayVendors = displayVendors.filter(v =>
-            v.name.toLowerCase().includes(query) ||
+            (v.name || '').toLowerCase().includes(query) ||
             (v.serviceContent && v.serviceContent.toLowerCase().includes(query)) ||
             (v.bankAccount && v.bankAccount.includes(query))
         );
@@ -49,15 +49,7 @@ export default function VendorListClient({ initialVendors, initialRequests, curr
 
     const handleDeleteRequest = async (vendorId: string) => {
         if (window.confirm('確定要申請刪除此廠商嗎？')) {
-            const success = await requestDeleteVendor(vendorId);
-            if (success) {
-                // message handled in context
-                window.location.reload(); // Still might want reload to update server list? 
-                // But context has new requests.
-                // VendorListClient uses `initialRequests` prop OR context?
-                // It uses props. So reload is needed for THIS page listing until we refactor it to use context too.
-                // But context update ensures Reviews page (Dashboard) is correct.
-            }
+            await requestDeleteVendor(vendorId);
         }
     };
 

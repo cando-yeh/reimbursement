@@ -6,7 +6,13 @@ import { useApp } from '@/context/AppContext';
 import PageSkeleton from '@/components/Common/PageSkeleton';
 
 export default function VendorListPage() {
-    const { vendors, vendorRequests, currentUser, isAuthLoading } = useApp();
+    const { vendors, vendorRequests, currentUser, isAuthLoading, fetchVendors } = useApp();
+
+    React.useEffect(() => {
+        if (currentUser) {
+            fetchVendors();
+        }
+    }, [currentUser?.id]);
 
     if (isAuthLoading) {
         return <PageSkeleton />;
@@ -18,8 +24,6 @@ export default function VendorListPage() {
 
     return (
         <VendorListClient
-            initialVendors={vendors}
-            initialRequests={vendorRequests}
             currentUser={currentUser}
         />
     );
