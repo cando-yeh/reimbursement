@@ -7,7 +7,6 @@ import { LogIn, User as UserIcon, ShieldCheck, Wallet, Chrome } from 'lucide-rea
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginPage() {
-    const { availableUsers, login } = useApp();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const supabase = createClient();
@@ -35,17 +34,6 @@ export default function LoginPage() {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleMockLogin = (userId: string) => {
-        login(userId);
-        router.push('/');
-    };
-
-    const getRoleIcon = (permissions: string[]) => {
-        if (permissions.includes('user_management')) return <ShieldCheck className="text-blue-500" size={24} />;
-        if (permissions.includes('finance_audit')) return <Wallet className="text-purple-500" size={24} />;
-        return <UserIcon className="text-gray-500" size={24} />;
     };
 
     return (
