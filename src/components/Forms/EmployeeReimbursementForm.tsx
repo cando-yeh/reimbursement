@@ -6,7 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X, Loader2 } from 'lucide-react';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
-import { createClaim, updateClaim } from '@/app/actions/claims';
+import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
 import { createClient } from '@/utils/supabase/client';
 
 interface ExpenseItemWithAttachment {
@@ -176,16 +176,24 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     ? 'draft'
                     : (currentUser.approverId ? 'pending_approval' : 'pending_finance');
 
-                result = await updateClaim(editId, {
+                // Use Server Action directly but enable revalidation
+                result = await updateClaimAction(editId, {
                     ...claimData,
                     status: updateStatus
                 });
+
+                // Force reload of window to ensure context refreshes, 
+                // OR better: use window.location.href to redirect which forces reload
+                window.location.href = action === 'draft' ? '/?tab=drafts' : '/reviews?tab=claim_approvals';
+                return;
             } else {
                 // Create
-                result = await createClaim({
+                result = await createClaimAction({
                     ...claimData,
                     status: status || 'pending_finance'
                 });
+                window.location.href = action === 'draft' ? '/?tab=drafts' : '/reviews?tab=claim_approvals';
+                return;
             }
 
             if (!result.success) {

@@ -83,8 +83,12 @@ export async function createClaim(data: CreateClaimInput) {
         // Initial Status Logic
         const initialStatus = dbUser.approverId ? 'pending_approval' : 'pending_finance';
 
+        // Custom 8-char ID
+        const id = Math.random().toString(36).substring(2, 10);
+
         const newClaim = await prisma.claim.create({
             data: {
+                id: id,
                 type: data.type as ClaimType,
                 payee: data.payee,
                 payeeId: data.payeeId,

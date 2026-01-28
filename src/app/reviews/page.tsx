@@ -170,7 +170,10 @@ function ReviewDashboardInner() {
                     <ClaimTable
                         claims={claimApprovals.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
                         emptyMessage="無待審核項目"
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
+                        onRowClick={(claim: Claim) => {
+                            console.log('Navigating to claim:', claim.id);
+                            if (claim.id) router.push(`/claims/${claim.id}`);
+                        }}
                         availableUsers={availableUsers}
                     />
                 </div>
