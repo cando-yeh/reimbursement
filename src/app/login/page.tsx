@@ -46,7 +46,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white font-sans overflow-hidden">
             {/* Left Panel - Visual & Brand using Tailwind Class for Gradient */}
-            <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] text-white flex-col justify-between p-12 lg:p-20">
+            <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] text-white flex-col justify-center p-12 lg:p-20">
 
                 {/* Abstract Shapes/Mesh Gradient Effect */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-40">
@@ -54,15 +54,7 @@ export default function LoginPage() {
                     <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#8B5CF6] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
                 </div>
 
-                <div className="relative z-10 animate-fade-in-down">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20">
-                            <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight">FinSystem</span>
-                    </div>
-                </div>
-
+                {/* Content Centered Vertically */}
                 <div className="relative z-10 max-w-md animate-fade-in-up">
                     <h1 className="text-5xl font-extrabold leading-tight mb-6">
                         企業報銷<br />
@@ -90,7 +82,7 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className="relative z-10 text-xs text-slate-500 pt-10">
+                <div className="absolute bottom-8 left-12 text-xs text-slate-500 z-10">
                     © 2024 Enterprise Reimbursement System. All rights reserved.
                 </div>
             </div>
