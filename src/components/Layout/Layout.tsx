@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { LayoutDashboard, Users } from 'lucide-react';
+import { ClipboardList, ShieldCheck, Building2, Users } from 'lucide-react';
 
 interface NavItemProps {
     to: string;
@@ -142,11 +142,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <nav className="sidebar-nav">
                     {hasPermission('general') && (
                         <>
-                            <NavItem to="/" icon={LayoutDashboard} label="我的請款" badge={myPendingCount} />
+                            <NavItem to="/" icon={ClipboardList} label="我的請款" badge={myPendingCount} />
                             {(isManager || isFinance) && (
-                                <NavItem to="/reviews" icon={LayoutDashboard} label="申請審核" badge={reviewPendingCount} />
+                                <NavItem to="/reviews" icon={ShieldCheck} label="申請審核" badge={reviewPendingCount} />
                             )}
-                            <NavItem to="/vendors" icon={Users} label="廠商列表" />
+                            <NavItem to="/vendors" icon={Building2} label="廠商列表" />
                         </>
                     )}
 

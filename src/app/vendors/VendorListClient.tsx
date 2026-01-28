@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
 import Pagination from '@/components/Common/Pagination';
+import PageHeader from '@/components/Common/PageHeader';
 import { useApp } from '@/context/AppContext';
 
 interface VendorListClientProps {
@@ -53,32 +54,24 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
         }
     };
 
+    const headerAction = canManageVendors && (
+        <Link
+            href="/vendors/add"
+            className="btn btn-primary"
+            style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+        >
+            <Plus size={20} style={{ marginRight: '4px' }} />
+            新增廠商
+        </Link>
+    );
+
     return (
         <div className="container" style={{ padding: '2rem' }}>
-            <header className="vendor-header">
-                <div>
-                    <h1 className="heading-lg">廠商列表</h1>
-                    <p className="vendor-subtitle">管理您的付款對象。</p>
-                </div>
-                {canManageVendors && (
-                    <Link
-                        href="/vendors/add"
-                        className="btn btn-primary"
-                        title="新增廠商"
-                        style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '50%',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Plus size={24} />
-                    </Link>
-                )}
-            </header>
+            <PageHeader
+                title="廠商列表"
+                subtitle="管理您的付款對象。"
+                action={headerAction || undefined}
+            />
 
             <div className="card vendor-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid var(--color-border)' }}>
