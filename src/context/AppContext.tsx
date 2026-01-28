@@ -31,8 +31,9 @@ interface AppContextType {
   logout: () => void;
   switchUser: (userId: string) => void;
   availableUsers: User[];
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  updateUser: (id: string, updates: Partial<User>) => Promise<{ success: boolean; error?: string }>;
+  deleteUser: (id: string) => Promise<void>;
+  refreshUsers: () => Promise<void>;
   isAuthLoading: boolean;
 }
 
@@ -223,52 +224,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [router]); // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
 
-  // 5. Fetch Users from DB (optional/utility)
-  useEffect(() => {
-    const fetchDBUsers = async () => {
-      if (!currentUser) return;
-      try {
-        const { data, error } = await supabase.from('User').select('*');
-        if (!error && data && data.length > 0) {
-          setAvailableUsers(prev => {
-            const dbUsers = data as User[];
-            // Create a map by ID for efficient merge
-            const userMap = new Map();
-            // Add existing (mock) users first
-            prev.forEach(u => userMap.set(u.id, u));
-            // Add/Overwrite with DB users
-            dbUsers.forEach(u => userMap.set(u.id, u));
-            // Also merge by email to handle UUID vs Mock ID transition
-            dbUsers.forEach(u => {
-              if (u.email) {
-                const existingByEmail = Array.from(userMap.values()).find(ex => ex.email === u.email);
-                if (existingByEmail && existingByEmail.id !== u.id) {
-                  // If we found a mock user with same email but different ID, 
-                  // we should probably keep the DB one (UUID) as the source of truth for name lookup
-                  userMap.delete(existingByEmail.id);
-                  userMap.set(u.id, u);
-                }
+  // 5. Fetch Users from DB
+  const fetchDBUsers = async () => {
+    if (!currentUser) return;
+    try {
+      const { data, error } = await supabase.from('User').select('*');
+      if (!error && data && data.length > 0) {
+        setAvailableUsers(prev => {
+          const dbUsers = data as User[];
+          const userMap = new Map();
+          prev.forEach(u => userMap.set(u.id, u));
+          dbUsers.forEach(u => userMap.set(u.id, u));
+          dbUsers.forEach(u => {
+            if (u.email) {
+              const existingByEmail = Array.from(userMap.values()).find(ex => ex.email === u.email);
+              if (existingByEmail && existingByEmail.id !== u.id) {
+                userMap.delete(existingByEmail.id);
+                userMap.set(u.id, u);
               }
-            });
-            return Array.from(userMap.values());
-          });
-
-          // Update currentUser if their ID changed (e.g. from mock 'u5' to real UUID)
-          if (currentUser?.email) {
-            const dbUser = (data as User[]).find(u => u.email === currentUser.email);
-            if (dbUser && dbUser.id !== currentUser.id) {
-              console.log('--- AppContext: Migrating currentUser to DB ID ---', dbUser.id);
-              setCurrentUser(dbUser);
-              localStorage.setItem('currentUserId', dbUser.id);
             }
+          });
+          return Array.from(userMap.values());
+        });
+
+        if (currentUser?.email) {
+          const dbUser = (data as User[]).find(u => u.email === currentUser.email);
+          if (dbUser && dbUser.id !== currentUser.id) {
+            console.log('--- AppContext: Migrating currentUser to DB ID ---', dbUser.id);
+            setCurrentUser(dbUser);
+            localStorage.setItem('currentUserId', dbUser.id);
           }
         }
-      } catch (err) {
-        console.error('Failed to fetch users from DB:', err);
       }
-    };
+    } catch (err) {
+      console.error('Failed to fetch users from DB:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchDBUsers();
-  }, [currentUser]);
+  }, [currentUser?.id]); // Only refetch when the actual identity changes, not just any property
 
   // --- App Actions ---
 
@@ -305,7 +300,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     }
     // Server update
-    await updateUserAction(id, updates);
+    const result = await updateUserAction(id, updates);
+    if (result.success) {
+      // Re-sync after success to handle any DB-level logic or triggers
+      await fetchDBUsers();
+    } else {
+      // If it failed, we should ideally revert, but for now we re-sync from DB
+      await fetchDBUsers();
+    }
+    return result;
   };
 
   const deleteUser = async (id: string) => {
@@ -317,7 +320,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!result.success) {
       console.error('Failed to delete user from DB:', result.error);
       alert('刪除失敗，請重試');
-      // Revert could be here, but simple alert is okay for now
+      await fetchDBUsers(); // Re-sync if failed
     }
 
     if (currentUser?.id === id) logout();
@@ -573,6 +576,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       availableUsers,
       updateUser,
       deleteUser,
+      refreshUsers: fetchDBUsers,
       isAuthLoading
     }}>
       {children}

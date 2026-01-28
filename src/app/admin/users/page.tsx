@@ -28,7 +28,7 @@ export default function UserManagementPage() {
         setEditApproverId(undefined);
     };
 
-    const saveEdit = (userId: string) => {
+    const saveEdit = async (userId: string) => {
         if (currentUser && userId === currentUser.id && currentUser.permissions.includes('user_management') && !isAdmin) {
             const otherAdmins = availableUsers.filter(u => u.id !== userId && u.permissions.includes('user_management'));
             if (otherAdmins.length === 0) {
@@ -55,8 +55,12 @@ export default function UserManagementPage() {
             approverId: editApproverId
         };
 
-        updateUser(userId, updateData);
-        setEditingId(null);
+        const result = await updateUser(userId, updateData);
+        if (result.success) {
+            setEditingId(null);
+        } else {
+            alert('儲存失敗: ' + result.error);
+        }
     };
 
     const handleDelete = (userId: string) => {
@@ -151,7 +155,7 @@ export default function UserManagementPage() {
                                                     .filter(u => u.id !== user.id)
                                                     .map(u => (
                                                         <option key={u.id} value={u.id}>
-                                                            {u.name}
+                                                            {u.name} ({u.email || '無 Email'})
                                                         </option>
                                                     ))}
                                             </select>
