@@ -1,18 +1,28 @@
 import { createClient } from './supabase/client';
 
 /**
- * Uploads a file to Supabase Storage with a date-based folder structure.
- * Path format: YYYYMM/random_timestamp.ext
+ * Uploads a file to Supabase Storage with a date-based folder structure and semantic naming.
+ * Path format: YYYYMM/Name_Category_Amount_Index.ext
  * 
  * @param file The file to upload
- * @param date YYYY-MM-DD format string
+ * @param dateString YYYY-MM-DD format string for folder classification
+ * @param applicantName Name of the applicant
+ * @param category Expense category
+ * @param amount Expense amount
+ * @param index Sequence index (starting from 0)
  * @returns Public URL of the uploaded file
  */
-export async function uploadFile(file: File, dateString: string) {
+export async function uploadFile(
+    file: File,
+    dateString: string,
+    applicantName: string,
+    category: string,
+    amount: number,
+    index: number
+) {
     const supabase = createClient();
 
-    // 1. Extract YYYYMM from dateString (format: YYYY-MM-DD or similar)
-    // If the date is invalid, fallback to current date
+    // 1. Extract YYYYMM from dateString
     let yearMonth = '';
     try {
         const date = new Date(dateString);
@@ -27,9 +37,11 @@ export async function uploadFile(file: File, dateString: string) {
         yearMonth = `${year}${month}`;
     }
 
-    // 2. Generate unique filename
+    // 2. Generate semantic filename: Name_Category_Amount_Index.ext
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+    const safeName = applicantName.replace(/[/\\?%*:|"<>]/g, '-'); // Basic sanitization
+    const safeCategory = category.replace(/[/\\?%*:|"<>]/g, '-');
+    const fileName = `${safeName}_${safeCategory}_${amount}_${index}.${fileExt}`;
     const filePath = `${yearMonth}/${fileName}`;
 
     // 3. Upload to 'receipts' bucket

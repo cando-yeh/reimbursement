@@ -124,7 +124,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         try {
             let finalInvoiceUrl = invoiceUrl;
             if (attachments.length > 0) {
-                finalInvoiceUrl = await uploadFile(attachments[0], invoiceDate || new Date().toISOString().split('T')[0]);
+                finalInvoiceUrl = await uploadFile(
+                    attachments[0],
+                    invoiceDate || new Date().toISOString().split('T')[0],
+                    currentUser.name,
+                    expenseCategory || '未分類',
+                    amount || 0,
+                    0
+                );
             }
 
             const newClaim = {
@@ -174,7 +181,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         try {
             let finalInvoiceUrl = invoiceUrl;
             if (attachments.length > 0) {
-                finalInvoiceUrl = await uploadFile(attachments[0], invoiceDate || new Date().toISOString().split('T')[0]);
+                finalInvoiceUrl = await uploadFile(
+                    attachments[0],
+                    invoiceDate || new Date().toISOString().split('T')[0],
+                    currentUser.name,
+                    expenseCategory,
+                    amount,
+                    0
+                );
             }
 
             const newClaim = {

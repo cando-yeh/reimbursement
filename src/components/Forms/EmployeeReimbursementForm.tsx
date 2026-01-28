@@ -115,10 +115,17 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
         try {
             // Process uploads
-            const processedItems = await Promise.all(validItems.map(async (item) => {
+            const processedItems = await Promise.all(validItems.map(async (item, index) => {
                 let fileUrl = item.fileUrl;
                 if (item.receiptFile) {
-                    fileUrl = await uploadFile(item.receiptFile, item.date);
+                    fileUrl = await uploadFile(
+                        item.receiptFile,
+                        item.date,
+                        currentUser.name,
+                        item.category!,
+                        item.amount,
+                        index
+                    );
                 }
 
                 return {
