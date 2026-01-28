@@ -111,453 +111,455 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsInitialized(true);
       isInitialLoad.current = false;
     }
-    // 6. Fetch Claims & Vendors from Server when User is authenticated
-    useEffect(() => {
-      const fetchServerData = async () => {
-        if (!currentUser) return;
+  }, []);
 
-        // Fetch Claims
-        const { success: cSuccess, data: cData } = await getClaims();
-        if (cSuccess && cData) {
-          setClaims(cData);
+  // 6. Fetch Claims & Vendors from Server when User is authenticated
+  useEffect(() => {
+    const fetchServerData = async () => {
+      if (!currentUser) return;
+
+      // Fetch Claims
+      const { success: cSuccess, data: cData } = await getClaims();
+      if (cSuccess && cData) {
+        setClaims(cData);
+      }
+
+      // Fetch Vendors
+      const { success: vSuccess, data: vData } = await getVendors();
+      if (vSuccess && vData) {
+        setVendors(vData);
+      }
+
+      // Fetch Vendor Requests
+      const { success: rSuccess, data: rData } = await getVendorRequests();
+      if (rSuccess && rData) {
+        // Convert Data Types if needed or just cast
+        setVendorRequests(rData.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data,
+          originalData: r.originalData
+        })));
+      }
+    };
+
+    fetchServerData();
+  }, [currentUser]);
+
+  // 3. Keep track of Auth status separately
+  useEffect(() => {
+    setIsAuthenticated(!!currentUser);
+  }, [currentUser]);
+
+  // 4. Supabase Auth Integration (Stabilized)
+  useEffect(() => {
+    const handleAuthChange = async (sessionUser: any) => {
+      console.log('--- AppContext: handleAuthChange ---', sessionUser?.email);
+
+      if (!sessionUser) {
+        setCurrentUser(null);
+        localStorage.removeItem('currentUserId');
+        return;
+      }
+
+      // Avoid redundant updates
+      setCurrentUser(prevUser => {
+        if (prevUser?.id === sessionUser.id || (prevUser?.email && prevUser.email === sessionUser.email)) {
+          return prevUser;
         }
 
-        // Fetch Vendors
-        const { success: vSuccess, data: vData } = await getVendors();
-        if (vSuccess && vData) {
-          setVendors(vData);
+        // Find existing user or create mock profile
+        const users = availableUsersRef.current;
+        let foundUser = users.find(u => u.id === sessionUser.id || u.email === sessionUser.email);
+
+        if (!foundUser) {
+          foundUser = {
+            id: sessionUser.id,
+            name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown',
+            email: sessionUser.email || '',
+            roleName: '一般員工',
+            permissions: ['general'],
+          };
+          setAvailableUsers(prev => [...prev.filter(u => u.id !== foundUser!.id), foundUser!]);
         }
 
-        // Fetch Vendor Requests
-        const { success: rSuccess, data: rData } = await getVendorRequests();
-        if (rSuccess && rData) {
-          // Convert Data Types if needed or just cast
-          setVendorRequests(rData.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data,
-            originalData: r.originalData
-          })));
-        }
-      };
-
-      fetchServerData();
-    }, [currentUser]);
-
-    // 3. Keep track of Auth status separately
-    useEffect(() => {
-      setIsAuthenticated(!!currentUser);
-    }, [currentUser]);
-
-    // 4. Supabase Auth Integration (Stabilized)
-    useEffect(() => {
-      const handleAuthChange = async (sessionUser: any) => {
-        console.log('--- AppContext: handleAuthChange ---', sessionUser?.email);
-
-        if (!sessionUser) {
-          setCurrentUser(null);
-          localStorage.removeItem('currentUserId');
-          return;
-        }
-
-        // Avoid redundant updates
-        setCurrentUser(prevUser => {
-          if (prevUser?.id === sessionUser.id || (prevUser?.email && prevUser.email === sessionUser.email)) {
-            return prevUser;
-          }
-
-          // Find existing user or create mock profile
-          const users = availableUsersRef.current;
-          let foundUser = users.find(u => u.id === sessionUser.id || u.email === sessionUser.email);
-
-          if (!foundUser) {
-            foundUser = {
-              id: sessionUser.id,
-              name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown',
-              email: sessionUser.email || '',
-              roleName: '一般員工',
-              permissions: ['general'],
-            };
-            setAvailableUsers(prev => [...prev.filter(u => u.id !== foundUser!.id), foundUser!]);
-          }
-
-          localStorage.setItem('currentUserId', foundUser.id);
-          return foundUser;
-        });
-      };
-
-      // Check initial session
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user) {
-          await handleAuthChange(user);
-        }
-        setIsAuthLoading(false);
+        localStorage.setItem('currentUserId', foundUser.id);
+        return foundUser;
       });
+    };
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log('--- AppContext: onAuthStateChange ---', event, session?.user?.email);
+    // Check initial session
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        await handleAuthChange(user);
+      }
+      setIsAuthLoading(false);
+    });
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          handleAuthChange(session.user);
-          // Only redirect if on login page and not already navigating
-          if (window.location.pathname === '/login') {
-            router.refresh();
-            router.push('/');
-          }
-        } else if (event === 'SIGNED_OUT') {
-          handleAuthChange(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('--- AppContext: onAuthStateChange ---', event, session?.user?.email);
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        handleAuthChange(session.user);
+        // Only redirect if on login page and not already navigating
+        if (window.location.pathname === '/login') {
           router.refresh();
-          router.push('/login');
+          router.push('/');
         }
-      });
+      } else if (event === 'SIGNED_OUT') {
+        handleAuthChange(null);
+        router.refresh();
+        router.push('/login');
+      }
+    });
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    }, [router]); // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]); // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
 
-    // 5. Fetch Users from DB (optional/utility)
-    useEffect(() => {
-      const fetchDBUsers = async () => {
-        if (!currentUser) return;
-        try {
-          const { data, error } = await supabase.from('User').select('*');
-          if (!error && data && data.length > 0) {
-            setAvailableUsers(prev => {
-              const dbUsers = data as User[];
-              // Create a map by ID for efficient merge
-              const userMap = new Map();
-              // Add existing (mock) users first
-              prev.forEach(u => userMap.set(u.id, u));
-              // Add/Overwrite with DB users
-              dbUsers.forEach(u => userMap.set(u.id, u));
-              // Also merge by email to handle UUID vs Mock ID transition
-              dbUsers.forEach(u => {
-                if (u.email) {
-                  const existingByEmail = Array.from(userMap.values()).find(ex => ex.email === u.email);
-                  if (existingByEmail && existingByEmail.id !== u.id) {
-                    // If we found a mock user with same email but different ID, 
-                    // we should probably keep the DB one (UUID) as the source of truth for name lookup
-                    userMap.delete(existingByEmail.id);
-                    userMap.set(u.id, u);
-                  }
+  // 5. Fetch Users from DB (optional/utility)
+  useEffect(() => {
+    const fetchDBUsers = async () => {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await supabase.from('User').select('*');
+        if (!error && data && data.length > 0) {
+          setAvailableUsers(prev => {
+            const dbUsers = data as User[];
+            // Create a map by ID for efficient merge
+            const userMap = new Map();
+            // Add existing (mock) users first
+            prev.forEach(u => userMap.set(u.id, u));
+            // Add/Overwrite with DB users
+            dbUsers.forEach(u => userMap.set(u.id, u));
+            // Also merge by email to handle UUID vs Mock ID transition
+            dbUsers.forEach(u => {
+              if (u.email) {
+                const existingByEmail = Array.from(userMap.values()).find(ex => ex.email === u.email);
+                if (existingByEmail && existingByEmail.id !== u.id) {
+                  // If we found a mock user with same email but different ID, 
+                  // we should probably keep the DB one (UUID) as the source of truth for name lookup
+                  userMap.delete(existingByEmail.id);
+                  userMap.set(u.id, u);
                 }
-              });
-              return Array.from(userMap.values());
+              }
             });
-          }
-        } catch (err) {
-          console.error('Failed to fetch users from DB:', err);
+            return Array.from(userMap.values());
+          });
         }
-      };
-      fetchDBUsers();
-    }, [currentUser]);
-
-    // --- App Actions ---
-
-    const login = (userId: string) => {
-      const user = availableUsers.find(u => u.id === userId);
-      if (user) {
-        setCurrentUser(user);
-        localStorage.setItem('currentUserId', user.id);
-        setIsAuthenticated(true);
-        router.push('/');
+      } catch (err) {
+        console.error('Failed to fetch users from DB:', err);
       }
     };
+    fetchDBUsers();
+  }, [currentUser]);
 
-    const logout = async () => {
-      await supabase.auth.signOut();
-      setCurrentUser(null);
-      localStorage.removeItem('currentUserId');
-      setIsAuthenticated(false);
-      router.push('/login');
-    };
+  // --- App Actions ---
 
-    const switchUser = (userId: string) => {
-      const user = availableUsers.find(u => u.id === userId);
-      if (user) {
-        setCurrentUser(user);
-        localStorage.setItem('currentUserId', user.id);
+  const login = (userId: string) => {
+    const user = availableUsers.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem('currentUserId', user.id);
+      setIsAuthenticated(true);
+      router.push('/');
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    localStorage.removeItem('currentUserId');
+    setIsAuthenticated(false);
+    router.push('/login');
+  };
+
+  const switchUser = (userId: string) => {
+    const user = availableUsers.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem('currentUserId', user.id);
+    }
+  };
+
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    // Optimistic update
+    setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    if (currentUser?.id === id) {
+      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    }
+    // Server update
+    await updateUserAction(id, updates);
+  };
+
+  const deleteUser = async (id: string) => {
+    // Optimistic update
+    setAvailableUsers(prev => prev.filter(u => u.id !== id));
+
+    // Server update
+    const result = await deleteUserAction(id);
+    if (!result.success) {
+      console.error('Failed to delete user from DB:', result.error);
+      alert('刪除失敗，請重試');
+      // Revert could be here, but simple alert is okay for now
+    }
+
+    if (currentUser?.id === id) logout();
+  };
+
+  const addClaim = async (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
+    // 1. Calculate amount if needed (for server action input)
+    const calculatedAmount = claimData.amount !== undefined
+      ? claimData.amount
+      : (claimData.items || []).reduce((sum, item) => sum + item.amount, 0);
+
+    // 2. Optimistic Update (Optional but tricky with ID generation, skipping for simpler consistency)
+    // Or we can generate a temp ID. Let's rely on server response for now to get real ID.
+
+    // 3. Server Action
+    const result = await createClaimAction({
+      ...claimData,
+      amount: calculatedAmount,
+      status: claimData.status as any,
+      // We need to ensure types match for items (ExpenseItem[])
+      items: claimData.items as any
+    });
+
+    if (result.success && result.data) {
+      setClaims(prev => [result.data as Claim, ...prev]);
+      return result.data as Claim;
+    } else {
+      alert('建立申請單失敗: ' + result.error);
+      return null;
+    }
+  };
+
+  const updateClaim = async (id: string, data: Partial<Claim>, note?: string) => {
+    // Optimistic Update
+    setClaims(prev => prev.map(c => {
+      if (c.id === id) {
+        // ... history logic handled by server mostly, but we can simulate for UI ...
+        return { ...c, ...data };
       }
+      return c;
+    }));
+
+    // Server Action
+    await updateClaimAction(id, data);
+
+    // Ideally refetch to get updated history/timestamps
+    const { success, data: updatedClaims } = await getClaims();
+    if (success && updatedClaims) setClaims(updatedClaims);
+  };
+
+  const updateClaimStatus = async (id: string, newStatus: Claim['status'], note?: string) => {
+    // Optimistic Update
+    setClaims(prev => prev.map(c => {
+      if (c.id === id) return { ...c, status: newStatus };
+      return c;
+    }));
+
+    // Server Action
+    await updateClaimStatusAction(id, newStatus, note);
+
+    // Refetch to sync history
+    const { success, data: updatedClaims } = await getClaims();
+    if (success && updatedClaims) setClaims(updatedClaims);
+  };
+
+  const deleteClaim = async (id: string) => {
+    setClaims(prev => prev.filter(c => c.id !== id));
+    await deleteClaimAction(id);
+  };
+
+  const addPayment = (payee: string, claimIds: string[], paymentDate: string): Payment => {
+    const selectedClaims = claims.filter(c => claimIds.includes(c.id));
+    const totalAmount = selectedClaims.reduce((sum, c) => sum + c.amount, 0);
+
+    const newPayment: Payment = {
+      id: `p${Date.now()}`,
+      payee,
+      paymentDate: paymentDate,
+      amount: totalAmount,
+      claimIds
     };
 
-    const updateUser = async (id: string, updates: Partial<User>) => {
-      // Optimistic update
-      setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-      if (currentUser?.id === id) {
-        setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    setClaims(prev => prev.map(c => {
+      if (claimIds.includes(c.id)) {
+        const needsEvidence = c.paymentDetails?.invoiceStatus === 'not_yet';
+        const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
+
+        const historyItem = {
+          timestamp: new Date().toISOString(),
+          actorId: currentUser?.id || 'system',
+          actorName: currentUser?.name || 'System',
+          action: 'paid',
+        };
+        return {
+          ...c,
+          status: nextStatus as 'pending_evidence' | 'completed',
+          datePaid: newPayment.paymentDate,
+          history: [...(c.history || []), historyItem]
+        };
       }
-      // Server update
-      await updateUserAction(id, updates);
-    };
+      return c;
+    }));
 
-    const deleteUser = async (id: string) => {
-      // Optimistic update
-      setAvailableUsers(prev => prev.filter(u => u.id !== id));
+    setPayments(prev => [newPayment, ...prev]);
+    return newPayment;
+  };
 
-      // Server update
-      const result = await deleteUserAction(id);
-      if (!result.success) {
-        console.error('Failed to delete user from DB:', result.error);
-        alert('刪除失敗，請重試');
-        // Revert could be here, but simple alert is okay for now
+  const cancelPayment = (paymentId: string) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    setClaims(prev => prev.map(c =>
+      payment.claimIds.includes(c.id) ? { ...c, status: 'approved', datePaid: undefined } : c
+    ));
+
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+  };
+
+  const requestAddVendor = async (vendor: Omit<Vendor, 'id'>) => {
+    const result = await createVendorRequest({ type: 'add', data: vendor });
+    if (result.success) {
+      alert('廠商新增申請已送出');
+      const { success, data } = await getVendorRequests();
+      if (success && data) {
+        setVendorRequests(data.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
       }
+      return true;
+    }
+    alert('申請失敗: ' + result.error);
+    return false;
+  };
 
-      if (currentUser?.id === id) logout();
-    };
+  const requestUpdateVendor = async (id: string, data: Partial<Vendor>) => {
+    const existingVendor = vendors.find(v => v.id === id);
+    const result = await createVendorRequest({
+      type: 'update',
+      vendorId: id,
+      data: data,
+      originalData: existingVendor
+    });
 
-    const addClaim = async (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
-      // 1. Calculate amount if needed (for server action input)
-      const calculatedAmount = claimData.amount !== undefined
-        ? claimData.amount
-        : (claimData.items || []).reduce((sum, item) => sum + item.amount, 0);
-
-      // 2. Optimistic Update (Optional but tricky with ID generation, skipping for simpler consistency)
-      // Or we can generate a temp ID. Let's rely on server response for now to get real ID.
-
-      // 3. Server Action
-      const result = await createClaimAction({
-        ...claimData,
-        amount: calculatedAmount,
-        status: claimData.status as any,
-        // We need to ensure types match for items (ExpenseItem[])
-        items: claimData.items as any
-      });
-
-      if (result.success && result.data) {
-        setClaims(prev => [result.data as Claim, ...prev]);
-        return result.data as Claim;
-      } else {
-        alert('建立申請單失敗: ' + result.error);
-        return null;
+    if (result.success) {
+      alert('廠商變更申請已送出');
+      const { success, data: reqs } = await getVendorRequests();
+      if (success && reqs) {
+        setVendorRequests(reqs.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
       }
-    };
+      return true;
+    }
+    alert('申請失敗: ' + result.error);
+    return false;
+  };
 
-    const updateClaim = async (id: string, data: Partial<Claim>, note?: string) => {
-      // Optimistic Update
-      setClaims(prev => prev.map(c => {
-        if (c.id === id) {
-          // ... history logic handled by server mostly, but we can simulate for UI ...
-          return { ...c, ...data };
-        }
-        return c;
-      }));
+  const requestDeleteVendor = async (id: string) => {
+    const vendor = vendors.find(v => v.id === id);
+    const result = await createVendorRequest({
+      type: 'delete',
+      vendorId: id,
+      originalData: vendor,
+      data: {}
+    });
 
-      // Server Action
-      await updateClaimAction(id, data);
-
-      // Ideally refetch to get updated history/timestamps
-      const { success, data: updatedClaims } = await getClaims();
-      if (success && updatedClaims) setClaims(updatedClaims);
-    };
-
-    const updateClaimStatus = async (id: string, newStatus: Claim['status'], note?: string) => {
-      // Optimistic Update
-      setClaims(prev => prev.map(c => {
-        if (c.id === id) return { ...c, status: newStatus };
-        return c;
-      }));
-
-      // Server Action
-      await updateClaimStatusAction(id, newStatus, note);
-
-      // Refetch to sync history
-      const { success, data: updatedClaims } = await getClaims();
-      if (success && updatedClaims) setClaims(updatedClaims);
-    };
-
-    const deleteClaim = async (id: string) => {
-      setClaims(prev => prev.filter(c => c.id !== id));
-      await deleteClaimAction(id);
-    };
-
-    const addPayment = (payee: string, claimIds: string[], paymentDate: string): Payment => {
-      const selectedClaims = claims.filter(c => claimIds.includes(c.id));
-      const totalAmount = selectedClaims.reduce((sum, c) => sum + c.amount, 0);
-
-      const newPayment: Payment = {
-        id: `p${Date.now()}`,
-        payee,
-        paymentDate: paymentDate,
-        amount: totalAmount,
-        claimIds
-      };
-
-      setClaims(prev => prev.map(c => {
-        if (claimIds.includes(c.id)) {
-          const needsEvidence = c.paymentDetails?.invoiceStatus === 'not_yet';
-          const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
-
-          const historyItem = {
-            timestamp: new Date().toISOString(),
-            actorId: currentUser?.id || 'system',
-            actorName: currentUser?.name || 'System',
-            action: 'paid',
-          };
-          return {
-            ...c,
-            status: nextStatus as 'pending_evidence' | 'completed',
-            datePaid: newPayment.paymentDate,
-            history: [...(c.history || []), historyItem]
-          };
-        }
-        return c;
-      }));
-
-      setPayments(prev => [newPayment, ...prev]);
-      return newPayment;
-    };
-
-    const cancelPayment = (paymentId: string) => {
-      const payment = payments.find(p => p.id === paymentId);
-      if (!payment) return;
-
-      setClaims(prev => prev.map(c =>
-        payment.claimIds.includes(c.id) ? { ...c, status: 'approved', datePaid: undefined } : c
-      ));
-
-      setPayments(prev => prev.filter(p => p.id !== paymentId));
-    };
-
-    const requestAddVendor = async (vendor: Omit<Vendor, 'id'>) => {
-      const result = await createVendorRequest({ type: 'add', data: vendor });
-      if (result.success) {
-        alert('廠商新增申請已送出');
-        const { success, data } = await getVendorRequests();
-        if (success && data) {
-          setVendorRequests(data.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data as any,
-            originalData: r.originalData as any
-          })));
-        }
-        return true;
+    if (result.success) {
+      alert('廠商刪除申請已送出');
+      const { success, data: reqs } = await getVendorRequests();
+      if (success && reqs) {
+        setVendorRequests(reqs.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
       }
-      alert('申請失敗: ' + result.error);
-      return false;
-    };
+      return true;
+    }
+    alert('申請失敗: ' + result.error);
+    return false;
+  };
 
-    const requestUpdateVendor = async (id: string, data: Partial<Vendor>) => {
-      const existingVendor = vendors.find(v => v.id === id);
-      const result = await createVendorRequest({
-        type: 'update',
-        vendorId: id,
-        data: data,
-        originalData: existingVendor
-      });
-
-      if (result.success) {
-        alert('廠商變更申請已送出');
-        const { success, data: reqs } = await getVendorRequests();
-        if (success && reqs) {
-          setVendorRequests(reqs.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data as any,
-            originalData: r.originalData as any
-          })));
-        }
-        return true;
+  const approveVendorRequest = async (requestId: string) => {
+    const result = await approveVendorRequestAction(requestId, 'approve');
+    if (result?.success) {
+      const { success: rSuccess, data: rData } = await getVendorRequests();
+      if (rSuccess && rData) {
+        setVendorRequests(rData.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
       }
-      alert('申請失敗: ' + result.error);
-      return false;
-    };
+      alert('審核已核准');
+    }
+  };
 
-    const requestDeleteVendor = async (id: string) => {
-      const vendor = vendors.find(v => v.id === id);
-      const result = await createVendorRequest({
-        type: 'delete',
-        vendorId: id,
-        originalData: vendor,
-        data: {}
-      });
-
-      if (result.success) {
-        alert('廠商刪除申請已送出');
-        const { success, data: reqs } = await getVendorRequests();
-        if (success && reqs) {
-          setVendorRequests(reqs.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data as any,
-            originalData: r.originalData as any
-          })));
-        }
-        return true;
+  const rejectVendorRequest = async (requestId: string) => {
+    const result = await approveVendorRequestAction(requestId, 'reject');
+    if (result?.success) {
+      const { success: rSuccess, data: rData } = await getVendorRequests();
+      if (rSuccess && rData) {
+        setVendorRequests(rData.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
       }
-      alert('申請失敗: ' + result.error);
-      return false;
-    };
+      alert('審核已駁回');
+    }
+  };
 
-    const approveVendorRequest = async (requestId: string) => {
-      const result = await approveVendorRequestAction(requestId, 'approve');
-      if (result?.success) {
-        const { success: rSuccess, data: rData } = await getVendorRequests();
-        if (rSuccess && rData) {
-          setVendorRequests(rData.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data as any,
-            originalData: r.originalData as any
-          })));
-        }
-        alert('審核已核准');
-      }
-    };
-
-    const rejectVendorRequest = async (requestId: string) => {
-      const result = await approveVendorRequestAction(requestId, 'reject');
-      if (result?.success) {
-        const { success: rSuccess, data: rData } = await getVendorRequests();
-        if (rSuccess && rData) {
-          setVendorRequests(rData.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data as any,
-            originalData: r.originalData as any
-          })));
-        }
-        alert('審核已駁回');
-      }
-    };
-
-    return (
-      <AppContext.Provider value={{
-        vendors,
-        claims,
-        vendorRequests,
-        payments,
-        addClaim,
-        updateClaim,
-        updateClaimStatus,
-        deleteClaim,
-        addPayment,
-        cancelPayment,
-        requestAddVendor,
-        requestUpdateVendor,
-        requestDeleteVendor,
-        approveVendorRequest,
-        rejectVendorRequest,
-        currentUser,
-        isAuthenticated,
-        login,
-        logout,
-        switchUser,
-        availableUsers,
-        updateUser,
-        deleteUser,
-        isAuthLoading
-      }}>
-        {children}
-      </AppContext.Provider>
-    );
-  }
+  return (
+    <AppContext.Provider value={{
+      vendors,
+      claims,
+      vendorRequests,
+      payments,
+      addClaim,
+      updateClaim,
+      updateClaimStatus,
+      deleteClaim,
+      addPayment,
+      cancelPayment,
+      requestAddVendor,
+      requestUpdateVendor,
+      requestDeleteVendor,
+      approveVendorRequest,
+      rejectVendorRequest,
+      currentUser,
+      isAuthenticated,
+      login,
+      logout,
+      switchUser,
+      availableUsers,
+      updateUser,
+      deleteUser,
+      isAuthLoading
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+}
 
 export function useApp() {
-    const context = useContext(AppContext);
-    if (context === undefined) {
-      throw new Error('useApp must be used within an AppProvider');
-    }
-    return context;
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
   }
+  return context;
+}
