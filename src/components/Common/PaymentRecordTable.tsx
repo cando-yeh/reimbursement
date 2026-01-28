@@ -19,7 +19,7 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
         </thead>
         <tbody>
             {payments.length === 0 ? (
-                <tr><td colSpan={5} className="empty-state">{emptyMessage || "無付款紀錄"}</td></tr>
+                <tr><td colSpan={5} className="empty-state" style={{ textAlign: 'center' }}>{emptyMessage || "無付款紀錄"}</td></tr>
             ) : (
                 payments.map((payment: any) => (
                     <tr

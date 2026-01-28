@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { ClipboardList, ShieldCheck, Building2, Users } from 'lucide-react';
+import { ClipboardList, ShieldCheck, Building2, Users, Edit2 } from 'lucide-react';
 
 interface NavItemProps {
     to: string;
@@ -204,21 +204,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                         </div>
                                     ) : (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                                            <div>
-                                                <div className="profile-name">{currentUser.name}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div className="profile-name" style={{ fontWeight: 'bold' }}>{currentUser.name}</div>
                                                 <div className="profile-role">{currentUser.email}</div>
                                                 {availableUsers.find(u => u.id === currentUser.approverId) && (
-                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)' }}>
-                                                        審核主管: {availableUsers.find(u => u.id === currentUser.approverId)?.name}
+                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        請款核准人: {availableUsers.find(u => u.id === currentUser.approverId)?.name}
                                                     </div>
                                                 )}
                                             </div>
                                             <button
                                                 className="btn btn-ghost"
-                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', height: 'auto', whiteSpace: 'nowrap' }}
+                                                style={{ padding: '0.25rem', height: 'auto', marginLeft: '0.5rem' }}
                                                 onClick={() => setIsEditingName(true)}
                                             >
-                                                編輯
+                                                <Edit2 size={16} />
                                             </button>
                                         </div>
                                     )}
@@ -226,7 +226,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 <div style={{ marginTop: '0.5rem' }}>
                                     <button
                                         className="btn btn-ghost"
-                                        style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)' }}
+                                        style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)', padding: '0.5rem' }}
                                         onClick={() => {
                                             logout();
                                             setIsProfileOpen(false);

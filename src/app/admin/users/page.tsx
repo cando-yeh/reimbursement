@@ -55,12 +55,15 @@ export default function UserManagementPage() {
             approverId: editApproverId
         };
 
-        const result = await updateUser(userId, updateData);
-        if (result.success) {
-            setEditingId(null);
-        } else {
-            alert('儲存失敗: ' + result.error);
-        }
+        // Optimistic UI: Close edit mode immediately
+        setEditingId(null);
+
+        updateUser(userId, updateData).then(result => {
+            if (!result.success) {
+                alert('儲存失敗: ' + result.error);
+                // If failed, we might want to re-open or the user will see the value revert
+            }
+        });
     };
 
     const handleDelete = (userId: string) => {
@@ -80,7 +83,7 @@ export default function UserManagementPage() {
                 </div>
             </div>
 
-            <div className="card vendor-table-container">
+            <div className="card vendor-table-container" style={{ marginTop: '2rem' }}>
                 <table className="vendor-table">
                     <thead>
                         <tr>
