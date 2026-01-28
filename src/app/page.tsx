@@ -1,61 +1,40 @@
+'use client';
+
 import React from 'react';
-import { getClaims } from './actions/claims';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/utils/supabase/server';
-import { User } from '@/types';
-import { redirect } from 'next/navigation';
+import { useApp } from '@/context/AppContext';
 import DashboardClient from '@/components/Dashboard/DashboardClient';
+import { useSearchParams, useRouter } from 'next/navigation';
+import PageSkeleton from '@/components/Common/PageSkeleton';
 
-// Mock payments for now
-const payments: any[] = [];
-// Mock availableUsers for now
-const availableUsers: User[] = [];
+// Client Component
+export default function Dashboard() {
+  const { currentUser, claims, availableUsers, payments, isAuthLoading } = useApp();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-// Server Component
-export default async function Dashboard({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
+  // Auth Redirection is now handled in AppContext/Layout, 
+  // but we can do a quick check here too or just show skeleton.
+  if (isAuthLoading) {
+    return <PageSkeleton />;
   }
 
-  const params = await searchParams;
-  const currentTab = params.tab as string;
+  if (!currentUser) {
+    // Should be redirected by logic elsewhere, but render nothing or skeleton
+    return <PageSkeleton />;
+  }
+
+  const currentTab = searchParams.get('tab');
   const activeTab = (currentTab && ['drafts', 'evidence', 'returned', 'in_review', 'pending_payment', 'completed'].includes(currentTab))
     ? currentTab as 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'completed'
     : 'drafts';
 
-  // Fetch DB User for permissions
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email || '' }
-  });
-
-  if (!dbUser) {
-    return <div className="p-8">找不到使用者資料，請聯絡管理員。</div>;
-  }
-
-  // Fetch Claims
-  const result = await getClaims();
-  const allClaims = result.data || [];
-
   // Filter Logic:
-  // 1. Regular users only see their own claims.
-  // 2. Finance ('財務') and Manager ('管理者') see all claims.
-  // 3. Approvers? In the pending items they should see subordinates' claims, 
-  //    but for "My Claims" (this page), it usually only shows their own submissions.
-
-  // Check based on permissions or role name containing key terms
   const isPrivileged =
-    (dbUser.permissions && (dbUser.permissions.includes('finance_audit') || dbUser.permissions.includes('user_management'))) ||
-    dbUser.roleName.includes('財務') ||
-    dbUser.roleName.includes('管理者');
+    (currentUser.permissions && (currentUser.permissions.includes('finance_audit') || currentUser.permissions.includes('user_management'))) ||
+    currentUser.roleName.includes('財務') ||
+    currentUser.roleName.includes('管理者');
 
-  const myClaims = isPrivileged ? allClaims : allClaims.filter(c => c.applicantId === dbUser.id);
+  const myClaims = isPrivileged ? claims : claims.filter(c => c.applicantId === currentUser.id);
 
   const drafts = myClaims.filter(c => c.status === 'draft');
   const pendingEvidence = myClaims.filter(c => c.status === 'pending_evidence');
