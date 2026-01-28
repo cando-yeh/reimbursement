@@ -60,7 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>(MOCK_USERS);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -84,7 +84,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const savedVendors = localStorage.getItem('vendors');
       if (savedVendors) setVendors(JSON.parse(savedVendors));
-      else setVendors(INITIAL_VENDORS);
 
       const savedClaims = localStorage.getItem('claims');
       if (savedClaims) setClaims(JSON.parse(savedClaims));
@@ -94,6 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const savedUsers = localStorage.getItem('users');
       if (savedUsers) setAvailableUsers(JSON.parse(savedUsers));
+      else setAvailableUsers(MOCK_USERS);
 
       const savedPayments = localStorage.getItem('payments');
       if (savedPayments) setPayments(JSON.parse(savedPayments));
