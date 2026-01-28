@@ -143,7 +143,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         };
         if (editId) updateClaim(editId, newClaim);
         else addClaim(newClaim as any);
-        router.push('/?tab=drafts');
+        window.location.href = '/?tab=drafts';
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -179,7 +179,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         };
         if (editId) updateClaim(editId, newClaim);
         else addClaim(newClaim as any);
-        router.push('/?tab=in_review');
+        window.location.href = '/?tab=in_review';
     };
 
     const showErr = (key: string) => (touched[key] && errors[key]) || undefined;

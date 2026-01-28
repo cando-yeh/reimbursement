@@ -98,7 +98,7 @@ export default function UserManagementPage() {
                             return (
                                 <tr key={user.id} style={currentUser && user.id === currentUser.id ? { backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)' } : {}}>
                                     <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '1rem', paddingLeft: '1rem' }}>
                                             <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
                                                 {user.name.charAt(0)}
                                             </div>
@@ -133,7 +133,9 @@ export default function UserManagementPage() {
                                                 />
                                             </div>
                                         ) : (
-                                            isUserAdmin ? <Check size={16} color="var(--color-primary)" /> : <span style={{ color: '#ccc' }}>-</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {isUserAdmin ? <Check size={16} color="var(--color-primary)" /> : <span style={{ color: '#ccc' }}>-</span>}
+                                            </div>
                                         )}
                                     </td>
                                     <td style={{ color: 'var(--color-text-secondary)' }}>

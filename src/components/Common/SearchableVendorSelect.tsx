@@ -53,7 +53,7 @@ export default function SearchableVendorSelect({
     // Filter vendors based on input text
     const filteredVendors = vendors.filter(v =>
         v.name.toLowerCase().includes(inputValue.toLowerCase())
-    );
+    ).slice(0, 50);
 
     // Handle clicking outside to close
     useEffect(() => {
