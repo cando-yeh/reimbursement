@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { Upload, X, FileText, ChevronDown, Save, Send, Loader2 } from 'lucide-react';
+import { Upload, X, FileText, ChevronDown, Save, Send, Loader2, CreditCard } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '@/utils/constants';
 import SearchableVendorSelect from '@/components/Common/SearchableVendorSelect';
 import { uploadFile } from '@/utils/storage';
@@ -228,20 +228,25 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const showErr = (key: string) => (touched[key] && errors[key]) || undefined;
 
     return (
-        <div className="form-container">
-            <header className="vendor-header simple" style={{ marginBottom: '2rem' }}>
-                <button type="button" onClick={() => router.back()} className="btn btn-ghost back-link" disabled={isSubmitting}>
-                    <ChevronDown size={16} style={{ transform: 'rotate(90deg)' }} /> 回前頁
+        <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
+            <header className="vendor-header simple" style={{ marginBottom: '2.5rem' }}>
+                <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>
+                    <ChevronDown size={18} style={{ transform: 'rotate(90deg)', marginRight: '4px' }} /> 回前頁
                 </button>
                 <h1 className="heading-lg">廠商付款申請</h1>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>請填寫付款對象、金額及相關憑證資料。</p>
             </header>
-            <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <form onSubmit={handleSubmit} className="space-y-8">
+
+            <div className="card" style={{ padding: '2.5rem' }}>
+                <form onSubmit={handleSubmit} className="space-y-10">
+                    {/* Section: Payee Info */}
                     <div className="form-section">
-                        <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>付款對象</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            付款對象
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <Field label="廠商名稱" required error={showErr("vendorId")}>
                                 <SearchableVendorSelect
                                     vendors={vendors}
@@ -253,11 +258,12 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                     disabled={isSubmitting}
                                 />
                             </Field>
+
                             {selectedVendor?.isFloatingAccount ? (
-                                <>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <Field label="收款銀行" required error={showErr("manualBankCode")}>
                                         <div style={{ position: 'relative' }}>
-                                            <select className="form-input" value={manualBankCode} onChange={e => setManualBankCode(e.target.value)} onBlur={() => setTouched(t => ({ ...t, manualBankCode: true }))} style={{ appearance: 'none' }} disabled={isSubmitting}>
+                                            <select className="form-input" value={manualBankCode} onChange={e => setManualBankCode(e.target.value)} onBlur={() => setTouched(t => ({ ...t, manualBankCode: true }))} style={{ appearance: 'none', paddingRight: '2rem' }} disabled={isSubmitting}>
                                                 <option value="">==請選擇==</option>
                                                 {BANK_LIST.map(bank => (<option key={bank.code} value={bank.code}>{bank.code} {bank.name}</option>))}
                                             </select>
@@ -267,113 +273,158 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                     <Field label="收款帳號" required error={showErr("manualBankAccount")}>
                                         <input type="text" value={manualBankAccount} onChange={e => { if (/^\d*$/.test(e.target.value)) setManualBankAccount(e.target.value); }} onBlur={() => setTouched(t => ({ ...t, manualBankAccount: true }))} className="form-input" placeholder="請輸入銀行帳號" inputMode="numeric" disabled={isSubmitting} />
                                     </Field>
-                                </>
+                                </div>
                             ) : (
                                 <Field label="付款帳號" hint={vendorId ? "" : "請先選擇廠商以顯示帳號"}>
-                                    <input type="text" value={bankAccountDisplay} disabled className="form-input" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }} placeholder="請先選擇廠商以顯示帳號" />
+                                    <div className="input-wrapper-icon">
+                                        <CreditCard size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                        <input type="text" value={bankAccountDisplay} disabled className="form-input has-icon" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text-secondary)', borderStyle: 'dashed' }} placeholder="請先選擇廠商" />
+                                    </div>
                                 </Field>
                             )}
                         </div>
                     </div>
-                    <div className="form-section" style={{ marginTop: '2rem' }}>
-                        <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>付款內容</h2>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div style={{ display: 'flex', gap: '1.5rem' }}>
-                                <div style={{ flex: 1 }}>
-                                    <Field label="費用類別" required error={showErr("expenseCategory")}>
-                                        <div style={{ position: 'relative' }}>
-                                            <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} onBlur={() => setTouched(t => ({ ...t, expenseCategory: true }))} className="form-input" style={{ appearance: 'none' }} disabled={isSubmitting}>
-                                                <option value="">請選擇費用類別</option>
-                                                {EXPENSE_CATEGORIES.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-                                            </select>
-                                            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}><ChevronDown size={16} /></div>
-                                        </div>
-                                    </Field>
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <Field label="請款金額" required error={showErr("amount")}>
-                                        <div style={{ position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>NT$</span>
-                                            <input type="text" inputMode="numeric" value={amountInput} onChange={(e) => setAmountInput(formatNumberWithCommas(e.target.value))} onBlur={() => setTouched(t => ({ ...t, amount: true }))} className="form-input" style={{ paddingLeft: '2.5rem', paddingRight: '1rem', textAlign: 'right' }} placeholder="0" disabled={isSubmitting} />
-                                        </div>
-                                    </Field>
-                                </div>
-                            </div>
-                            <Field label="交易內容" required error={showErr("description")}>
-                                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => setTouched(t => ({ ...t, description: true }))} className="form-input" placeholder="例如：伺服器費用" disabled={isSubmitting} />
-                            </Field>
-                        </div>
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <Field label="付款人備註" error={showErr("memo")}>
-                                <input type="text" value={memo} onChange={(e) => setMemo(e.target.value.slice(0, 10))} onBlur={() => setTouched(t => ({ ...t, memo: true }))} className="form-input" placeholder="顯示於對方銀行存摺，不得超過 10 個字" maxLength={10} disabled={isSubmitting} />
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}><span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{memo.length}/10</span></div>
-                            </Field>
-                        </div>
-                    </div>
-                    <div className="form-section" style={{ marginTop: '2rem' }}>
-                        <div className="form-section-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>發票與附件</h2>
-                        </div>
-                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 300px' }}>
-                                <Field label="發票收據狀態" required>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+                    {/* Section: Payment Details */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            付款內容
+                        </h2>
+
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <Field label="費用類別" required error={showErr("expenseCategory")}>
                                     <div style={{ position: 'relative' }}>
-                                        <select value={receiptStatus} onChange={(e) => { const v = e.target.value as any; setReceiptStatus(v); if (v !== "obtained") setInvoiceNumber(""); }} className="form-input" style={{ appearance: 'none' }} disabled={isSubmitting}>
-                                            <option value="obtained">已取得</option>
-                                            <option value="pending">未取得（稍後補）</option>
-                                            <option value="none">無法取得</option>
+                                        <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} onBlur={() => setTouched(t => ({ ...t, expenseCategory: true }))} className="form-input" style={{ appearance: 'none', paddingRight: '2rem' }} disabled={isSubmitting}>
+                                            <option value="">請選擇費用類別</option>
+                                            {EXPENSE_CATEGORIES.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
                                         </select>
                                         <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}><ChevronDown size={16} /></div>
                                     </div>
                                 </Field>
-                                {receiptStatus === "pending" ? (
-                                    <div style={{ border: '1px dashed var(--color-border)', borderRadius: '0.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', fontSize: '0.9rem', minHeight: '80px' }}>已選擇「未取得」，可於後續補上發票號碼。</div>
-                                ) : (
-                                    <>
-                                        <Field label={receiptStatus === "obtained" ? "發票號碼" : "無法取得原因"} required error={showErr("invoiceNumber")}>
-                                            <input type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(receiptStatus === 'obtained' ? e.target.value.replace(/[^a-zA-Z0-9]/g, '') : e.target.value)} onBlur={() => setTouched(t => ({ ...t, invoiceNumber: true }))} className="form-input" placeholder={receiptStatus === "obtained" ? "請輸入發票號碼" : "請說明原因"} disabled={isSubmitting} />
-                                        </Field>
-                                        {receiptStatus === "obtained" && (
-                                            <Field label="發票日期" required>
-                                                <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="form-input" disabled={isSubmitting} />
-                                            </Field>
-                                        )}
-                                    </>
-                                )}
+                                <Field label="請款金額" required error={showErr("amount")}>
+                                    <div style={{ position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem', fontWeight: 600, pointerEvents: 'none' }}>NT$</span>
+                                        <input type="text" inputMode="numeric" value={amountInput} onChange={(e) => setAmountInput(formatNumberWithCommas(e.target.value))} onBlur={() => setTouched(t => ({ ...t, amount: true }))} className="form-input" style={{ paddingLeft: '2.8rem', textAlign: 'right', fontWeight: 600, fontSize: '1.1rem' }} placeholder="0" disabled={isSubmitting} />
+                                    </div>
+                                </Field>
                             </div>
-                            <div style={{ width: '120px' }}>
-                                {receiptStatus === 'obtained' && (
-                                    <Field label="附件上傳" required error={showErr("attachments")}>
-                                        <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.75rem', padding: '0.5rem', backgroundColor: 'white', height: '100%', display: 'flex', flexDirection: 'column', minHeight: '120px', alignItems: 'center' }}>
-                                            {attachments.length === 0 && (
-                                                <label title="上傳附件" style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isSubmitting ? 'not-allowed' : 'pointer', border: '1px dashed var(--color-border)', borderRadius: '0.5rem', margin: '0.5rem 0', backgroundColor: 'var(--color-bg-secondary)' }}>
-                                                    <Upload size={24} style={{ color: 'var(--color-text-secondary)' }} />
-                                                    <input type="file" style={{ display: 'none' }} onChange={(e) => { if (e.target.files) { const f = e.target.files[0]; setAttachments([f]); setInvoiceUrl(URL.createObjectURL(f)); } }} disabled={isSubmitting} />
-                                                </label>
-                                            )}
-                                            {attachments.length > 0 && (
-                                                <div style={{ width: '100%', marginTop: '0.5rem' }}>
-                                                    {attachments.map((f, idx) => (
-                                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '0.25rem', border: '1px solid var(--color-border)', fontSize: '0.75rem' }}>
-                                                            <div title={f.name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
-                                                            <button type="button" onClick={() => setAttachments([])} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)' }} disabled={isSubmitting}><X size={14} /></button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {existingInvoiceFile && attachments.length === 0 && <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)' }}>已有檔案: {existingInvoiceFile}</div>}
-                                        </div>
+
+                            <Field label="交易內容" required error={showErr("description")}>
+                                <div className="input-wrapper-icon">
+                                    <FileText size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => setTouched(t => ({ ...t, description: true }))} className="form-input has-icon" placeholder="例如：12月份伺服器託管費用、辦公室文具採購" disabled={isSubmitting} />
+                                </div>
+                            </Field>
+
+                            <Field label="付款人備註" error={showErr("memo")}>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={memo} onChange={(e) => setMemo(e.target.value.slice(0, 10))} onBlur={() => setTouched(t => ({ ...t, memo: true }))} className="form-input" placeholder="選填：顯示於對方銀行存摺，限 10 字內" maxLength={10} disabled={isSubmitting} />
+                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{memo.length}/10</div>
+                                </div>
+                            </Field>
+                        </div>
+                    </div>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+                    {/* Section: Evidence/Attachments */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            憑證與附件
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+                            <div className="md:col-span-3 space-y-6">
+                                <Field label="發票號碼 / 無法提供原因" required error={showErr("invoiceNumber")}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                        <button type="button" onClick={() => { setReceiptStatus('obtained'); setInvoiceNumber(""); }} className={`btn ${receiptStatus === 'obtained' ? 'btn-primary' : 'btn-ghost'}`} style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }}>已取得發票</button>
+                                        <button type="button" onClick={() => { setReceiptStatus('pending'); setInvoiceNumber(""); }} className={`btn ${receiptStatus === 'pending' ? 'btn-primary' : 'btn-ghost'}`} style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }}>未取得(候補)</button>
+                                        <button type="button" onClick={() => { setReceiptStatus('none'); setInvoiceNumber(""); }} className={`btn ${receiptStatus === 'none' ? 'btn-primary' : 'btn-ghost'}`} style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }}>無法取得</button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={invoiceNumber}
+                                        onChange={(e) => setInvoiceNumber(receiptStatus === 'obtained' ? e.target.value.replace(/[^a-zA-Z0-9]/g, '') : e.target.value)}
+                                        onBlur={() => setTouched(t => ({ ...t, invoiceNumber: true }))}
+                                        className="form-input"
+                                        placeholder={receiptStatus === "obtained" ? "請輸入發票號碼" : receiptStatus === "none" ? "請說明無法取得原因" : "系統將標註為候傳項目"}
+                                        disabled={isSubmitting || receiptStatus === 'pending'}
+                                    />
+                                </Field>
+                                {receiptStatus === "obtained" && (
+                                    <Field label="發票日期" required>
+                                        <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="form-input" disabled={isSubmitting} />
                                     </Field>
                                 )}
                             </div>
+
+                            <div className="md:col-span-2">
+                                <Field label="憑證上傳" required={receiptStatus === 'obtained'} error={showErr("attachments")}>
+                                    <div
+                                        style={{
+                                            border: '2px dashed var(--color-border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            padding: '1.5rem',
+                                            backgroundColor: 'rgba(0,0,0,0.02)',
+                                            textAlign: 'center',
+                                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            minHeight: '160px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                        onClick={() => { if (!isSubmitting) document.getElementById('receipt-upload')?.click(); }}
+                                    >
+                                        <input type="file" id="receipt-upload" style={{ display: 'none' }} onChange={(e) => { if (e.target.files) { const f = e.target.files[0]; setAttachments([f]); setInvoiceUrl(URL.createObjectURL(f)); } }} disabled={isSubmitting} />
+
+                                        {attachments.length === 0 ? (
+                                            <>
+                                                <Upload size={32} style={{ color: 'var(--color-primary)', marginBottom: '0.75rem' }} />
+                                                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>點擊或拖曳上傳附件</p>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>JPEG, PNG, PDF (最大 10MB)</p>
+                                            </>
+                                        ) : (
+                                            <div style={{ width: '100%', position: 'relative' }}>
+                                                <div style={{ padding: '0.75rem', backgroundColor: 'white', borderRadius: '8px', border: '1px solid var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <div style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '8px', borderRadius: '6px' }}><FileText size={20} /></div>
+                                                    <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>{attachments[0].name}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{(attachments[0].size / 1024).toFixed(0)} KB</div>
+                                                    </div>
+                                                    <button type="button" onClick={(e) => { e.stopPropagation(); setAttachments([]); }} style={{ color: 'var(--color-danger)', padding: '4px' }} disabled={isSubmitting}><X size={18} /></button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {existingInvoiceFile && attachments.length === 0 && (
+                                            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 500 }}>
+                                                📄 已上傳: {existingInvoiceFile}
+                                            </div>
+                                        )}
+                                    </div>
+                                </Field>
+                            </div>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
-                        <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>取消</button>
-                        {!isResubmit && <button type="button" onClick={handleSaveDraft} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} 儲存草稿</button>}
-                        <button type="submit" className="btn btn-primary" style={{ minWidth: '120px' }} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />} {isResubmit ? '重新提交申請' : '提交申請'}</button>
+
+                    <div style={{ display: 'flex', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
+                        <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>取消離開</button>
+                        {!isResubmit && (
+                            <button type="button" onClick={handleSaveDraft} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', minWidth: '120px' }} disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                                儲存草稿
+                            </button>
+                        )}
+                        <button type="submit" className="btn btn-primary" style={{ minWidth: '150px', fontSize: '1rem' }} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+                            {isResubmit ? '重新提交申請' : '提交申請並送出'}
+                        </button>
                     </div>
                 </form>
             </div>

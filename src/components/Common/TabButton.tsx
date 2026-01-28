@@ -11,19 +11,20 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
     <button
         onClick={onClick}
         style={{
-            padding: '0.75rem 0',
-            borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
+            padding: '0.6rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: active ? 'white' : 'transparent',
             color: active ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            fontWeight: active ? 600 : 500,
+            boxShadow: active ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+            fontWeight: active ? 700 : 500,
             whiteSpace: 'nowrap',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            background: 'none',
-            borderTop: 'none',
-            borderLeft: 'none',
-            borderRight: 'none',
-            cursor: 'pointer'
+            gap: '0.6rem',
+            border: 'none',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
     >
         {label}
@@ -33,15 +34,16 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
                 color: 'white',
                 fontSize: '0.7rem',
                 fontWeight: 'bold',
-                padding: '2px 6px',
-                borderRadius: '10px',
-                minWidth: '18px',
-                textAlign: 'center'
+                padding: '2px 8px',
+                borderRadius: '12px',
+                minWidth: '20px',
+                textAlign: 'center',
+                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
             }}>
                 {badge > 99 ? '99+' : badge}
             </span>
         ) : (
-            <span>({count})</span>
+            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
         )}
     </button>
 );

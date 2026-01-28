@@ -39,19 +39,29 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
     };
 
     return (
-        <>
-            <div className="vendor-header">
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem' }}>
+            <div className="vendor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', padding: '1.5rem 0', borderBottom: '1px solid var(--color-border)' }}>
                 <div>
-                    <h1 className="heading-lg">我的請款</h1>
-                    <p className="vendor-subtitle">管理您的申請單與待辦事項</p>
+                    <h1 className="heading-lg" style={{ marginBottom: '0.5rem', fontSize: '2rem' }}>我的請款</h1>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}>管理您的申請單、待傳檔案與審核狀態</p>
                 </div>
-                <Link href="/applications/new" className="btn btn-primary" title="新增請款單" style={{ padding: 0, borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Plus size={24} />
+                <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(var(--color-primary-rgb), 0.2)' }}>
+                    <Plus size={20} />
+                    <span>新增申請單</span>
                 </Link>
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '1px' }}>
+            <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                padding: '0.5rem',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: '2.5rem',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
+            }}>
                 <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={data.drafts.length} />
                 <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={data.pendingEvidence.length} badge={data.pendingEvidence.length} />
                 <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={data.returned.length} badge={data.returned.length} />
@@ -146,6 +156,6 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
                     />
                 </div>
             )}
-        </>
+        </div>
     );
 }

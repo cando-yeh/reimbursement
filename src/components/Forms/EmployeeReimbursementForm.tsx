@@ -192,19 +192,30 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     };
 
     return (
-        <div className="reimburse-container">
-            <header className="reimburse-header">
-                <button onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }} disabled={isSubmitting}>
-                    <ArrowLeft size={16} /> 回前頁
+        <div className="reimburse-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+            <header className="reimburse-header" style={{ marginBottom: '2.5rem' }}>
+                <button onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>
+                    <ArrowLeft size={18} style={{ marginRight: '4px' }} /> 回前頁
                 </button>
-                <h1 className="heading-md">個人報銷申請</h1>
+                <h1 className="heading-lg">個人報銷申請</h1>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>適用於交通費、差旅費、交際費等代墊款項報銷。</p>
             </header>
 
-            <div className="card">
-                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h2 className="heading-sm">申請單資訊</h2>
-                    <div style={{ fontWeight: 'bold', color: 'var(--color-primary)', fontSize: '1.1rem' }}>
-                        總計: ${calculateTotal().toLocaleString()}
+            <div className="card" style={{ padding: '2rem' }}>
+                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>
+                    <div>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            費用明細
+                        </h2>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>請逐筆填寫報銷項目並上傳憑證</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', display: 'block' }}>總計金額 (TWD)</span>
+                        <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '1.75rem', lineHeight: 1 }}>
+                            <span style={{ fontSize: '1rem', marginRight: '4px' }}>NT$</span>
+                            {calculateTotal().toLocaleString()}
+                        </div>
                     </div>
                 </div>
 

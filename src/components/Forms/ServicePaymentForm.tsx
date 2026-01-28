@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
-import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image } from 'lucide-react';
+import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image, ChevronDown, CreditCard } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
 
 function formatNumberWithCommas(value: string | number) {
@@ -209,95 +209,146 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const requiredStar = <span style={{ color: 'var(--color-danger)' }}>*</span>;
 
     return (
-        <div className="form-container">
-            <header className="vendor-header simple" style={{ marginBottom: '2rem' }}>
-                <button type="button" onClick={() => router.back()} className="btn btn-ghost back-link">
-                    <ArrowLeft size={16} /> 回前頁
+        <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
+            <header className="vendor-header simple" style={{ marginBottom: '2.5rem' }}>
+                <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
+                    <ArrowLeft size={18} style={{ marginRight: '4px' }} /> 回前頁
                 </button>
                 <h1 className="heading-lg">勞務報酬單</h1>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>支付專業服務、稿費、講座或勞務報酬費用。</p>
             </header>
 
-            <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }}>
-                    <div style={{ display: 'grid', gap: '1rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>姓名 {requiredStar}</label>
-                                <input type="text" required className="form-input" value={formData.payeeName} onChange={e => setFormData({ ...formData, payeeName: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label>身分證字號 {requiredStar}</label>
-                                <input type="text" required className="form-input" value={formData.idNumber} onChange={e => setFormData({ ...formData, idNumber: e.target.value })} />
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>電子信箱 {requiredStar}</label>
-                                <div className="input-wrapper-icon">
-                                    <Mail size={18} className="input-icon" />
-                                    <input type="email" required className="form-input has-icon" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+            <div className="card" style={{ padding: '2.5rem' }}>
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }} className="space-y-10">
+                    {/* Section: Payee Profile */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            收款人基本資料
+                        </h2>
+
+                        <div style={{ display: 'grid', gap: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>姓名 {requiredStar}</label>
+                                    <input type="text" required className="form-input" value={formData.payeeName} onChange={e => setFormData({ ...formData, payeeName: e.target.value })} placeholder="請輸入全名" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>身分證字號 {requiredStar}</label>
+                                    <input type="text" required className="form-input" value={formData.idNumber} onChange={e => setFormData({ ...formData, idNumber: e.target.value })} placeholder="例如：A123456789" />
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label>戶籍地址 {requiredStar}</label>
-                                <div className="input-wrapper-icon">
-                                    <MapPin size={18} className="input-icon" />
-                                    <input type="text" required className="form-input has-icon" placeholder="請輸入詳盡地址" value={formData.registeredAddress} onChange={e => setFormData({ ...formData, registeredAddress: e.target.value })} />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>電子信箱 {requiredStar}</label>
+                                    <div className="input-wrapper-icon">
+                                        <Mail size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                        <input type="email" required className="form-input has-icon" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>戶籍地址 {requiredStar}</label>
+                                    <div className="input-wrapper-icon">
+                                        <MapPin size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                        <input type="text" required className="form-input has-icon" placeholder="請輸入完整地址" value={formData.registeredAddress} onChange={e => setFormData({ ...formData, registeredAddress: e.target.value })} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div className="form-group">
-                            <label>勞務內容 (事由) {requiredStar}</label>
-                            <input type="text" required className="form-input" placeholder="例如：超慢跑教練課程" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                    </div>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+                    {/* Section: Service Details */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            勞務內容與金額
+                        </h2>
+
+                        <div style={{ display: 'grid', gap: '1.5rem' }}>
+                            <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>勞務事由 {requiredStar}</label>
+                                <input type="text" required className="form-input" placeholder="例如：1月份專業顧問工作、特定課程講師費用" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: '1.5rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>勞務期間 (起) {requiredStar}</label>
+                                    <input type="date" required className="form-input" value={formData.servicePeriodStart} onChange={e => setFormData({ ...formData, servicePeriodStart: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>勞務期間 (訖) {requiredStar}</label>
+                                    <input type="date" required className="form-input" value={formData.servicePeriodEnd} onChange={e => setFormData({ ...formData, servicePeriodEnd: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>應付金額 {requiredStar}</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem', fontWeight: 600, pointerEvents: 'none' }}>NT$</span>
+                                        <input
+                                            type="text"
+                                            required
+                                            inputMode="numeric"
+                                            className="form-input"
+                                            style={{ paddingLeft: '2.8rem', textAlign: 'right', fontWeight: 600, fontSize: '1.1rem' }}
+                                            value={formatNumberWithCommas(formData.amount)}
+                                            onChange={e => setFormData({ ...formData, amount: parseAmountToNumber(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 150px', gap: '1rem' }}>
+                    </div>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+                    {/* Section: Bank Info */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            匯款帳戶
+                        </h2>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                             <div className="form-group">
-                                <label>勞務期間 (起) {requiredStar}</label>
-                                <input type="date" required className="form-input" value={formData.servicePeriodStart} onChange={e => setFormData({ ...formData, servicePeriodStart: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label>勞務期間 (訖) {requiredStar}</label>
-                                <input type="date" required className="form-input" value={formData.servicePeriodEnd} onChange={e => setFormData({ ...formData, servicePeriodEnd: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label>應付金額 {requiredStar}</label>
+                                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>銀行 {requiredStar}</label>
                                 <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem', pointerEvents: 'none' }}>NT$</span>
-                                    <input
-                                        type="text"
-                                        required
-                                        inputMode="numeric"
-                                        className="form-input"
-                                        style={{ paddingLeft: '2.5rem', textAlign: 'right' }}
-                                        value={formatNumberWithCommas(formData.amount)}
-                                        onChange={e => setFormData({ ...formData, amount: parseAmountToNumber(e.target.value) })}
-                                    />
+                                    <select required className="form-input" style={{ appearance: 'none', paddingRight: '2rem' }} value={formData.bankCode} onChange={e => setFormData({ ...formData, bankCode: e.target.value })}>
+                                        <option value="">==請選擇銀行==</option>
+                                        {BANK_LIST.map(bank => (<option key={bank.code} value={bank.code}>{bank.code} {bank.name}</option>))}
+                                    </select>
+                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}><ChevronDown size={16} /></div>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>銀行帳號 {requiredStar}</label>
+                                <div className="input-wrapper-icon">
+                                    <CreditCard size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input type="text" required pattern="[0-9]*" inputMode="numeric" className="form-input has-icon" placeholder="例如：123456789012" value={formData.bankAccount} onChange={handleAccountChange} />
                                 </div>
                             </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>銀行 {requiredStar}</label>
-                                <select required className="form-input" value={formData.bankCode} onChange={e => setFormData({ ...formData, bankCode: e.target.value })}>
-                                    <option value="">==請選擇==</option>
-                                    {BANK_LIST.map(bank => (<option key={bank.code} value={bank.code}>{bank.code} {bank.name}</option>))}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>銀行帳號 {requiredStar}</label>
-                                <input type="text" required pattern="[0-9]*" inputMode="numeric" className="form-input" placeholder="例如：123456789012" value={formData.bankAccount} onChange={handleAccountChange} />
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                    </div>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+                    {/* Section: Attachments */}
+                    <div className="form-section">
+                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
+                            身份證明與存摺影本
+                        </h2>
+
+                        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
                             {renderFileUpload('身分證正面', idFrontFile, setIdFrontFile, 'id-front')}
                             {renderFileUpload('身分證反面', idBackFile, setIdBackFile, 'id-back')}
                             {renderFileUpload('銀行存摺正面', bankBookFile, setBankBookFile, 'bank-book')}
                         </div>
                     </div>
-                    <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                        <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto' }}>取消</button>
-                        {!isResubmit && <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}><Save size={18} /> 儲存草稿</button>}
-                        <button type="submit" className="btn btn-primary"><Send size={18} /> {isResubmit ? '重新提交申請' : '提交申請'}</button>
+
+                    <div className="form-actions" style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                        <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }}>取消離開</button>
+                        {!isResubmit && <button type="button" onClick={() => handleSubmit('draft')} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', minWidth: '120px' }}><Save size={18} /> 儲存草稿</button>}
+                        <button type="submit" className="btn btn-primary" style={{ minWidth: '150px', fontSize: '1rem' }}><Send size={18} /> {isResubmit ? '重新提交申請' : '提交申請並送出'}</button>
                     </div>
                 </form>
             </div>
