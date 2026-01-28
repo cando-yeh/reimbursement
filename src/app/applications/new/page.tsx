@@ -18,7 +18,7 @@ export default function NewApplicationPage() {
             <FileText size={32} />
           </div>
           <div>
-            <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>一般費用報銷</h3>
+            <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>員工報銷</h3>
             <p style={{ color: 'var(--color-text-secondary)' }}>適用於交通費、差旅費、交際費等代墊款項申請。</p>
           </div>
         </Link>
@@ -39,7 +39,7 @@ export default function NewApplicationPage() {
             <Truck size={32} />
           </div>
           <div>
-            <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>支付個人勞務</h3>
+            <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>個人勞務</h3>
             <p style={{ color: 'var(--color-text-secondary)' }}>支付專業服務或勞務報酬費用。</p>
           </div>
         </Link>

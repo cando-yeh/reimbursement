@@ -46,7 +46,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white font-sans overflow-hidden">
             {/* Left Panel - Visual & Brand using Tailwind Class for Gradient */}
-            <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] text-white flex-col justify-center p-12 lg:p-20">
+            <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] text-white flex-col justify-center items-center p-12 lg:p-20">
 
                 {/* Abstract Shapes/Mesh Gradient Effect */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-40">
@@ -55,7 +55,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Content Centered Vertically */}
-                <div className="relative z-10 max-w-md animate-fade-in-up">
+                <div className="relative z-10 max-w-md animate-fade-in-up text-center">
                     <h1 className="text-5xl font-extrabold leading-tight mb-6">
                         企業報銷<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
@@ -66,7 +66,7 @@ export default function LoginPage() {
                         智能化的請款流程，即時的審核與撥款通知。<br />讓每一筆支出都清晰透明，效率倍增。
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 flex flex-col items-center">
                         <div className="flex items-center gap-3 text-sm text-slate-300">
                             <CheckCircle2 size={18} className="text-blue-400" />
                             <span>自動化 Email 通知流程</span>

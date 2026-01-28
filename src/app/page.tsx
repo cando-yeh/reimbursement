@@ -29,12 +29,9 @@ export default function Dashboard() {
     : 'drafts';
 
   // Filter Logic:
-  const isPrivileged =
-    (currentUser.permissions && (currentUser.permissions.includes('finance_audit') || currentUser.permissions.includes('user_management'))) ||
-    currentUser.roleName.includes('財務') ||
-    currentUser.roleName.includes('管理者');
-
-  const myClaims = isPrivileged ? claims : claims.filter(c => c.applicantId === currentUser.id);
+  // "My Claims" strictly filters for claims applied by the current user.
+  // Administrative views are handled in the Reviews page.
+  const myClaims = claims.filter(c => c.applicantId === currentUser.id);
 
   const drafts = myClaims.filter(c => c.status === 'draft');
   const pendingEvidence = myClaims.filter(c => c.status === 'pending_evidence');

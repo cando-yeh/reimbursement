@@ -139,7 +139,7 @@ export default function VendorListClient({ initialVendors, initialRequests, curr
                                         )}
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.75rem' }}>
                                             <Building size={16} className="text-secondary" />
                                             {vendor.name}
                                         </div>
@@ -149,11 +149,11 @@ export default function VendorListClient({ initialVendors, initialRequests, curr
                                     </td>
                                     <td>
                                         {vendor.bankCode ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                <div style={{ fontWeight: 500 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                                                <span style={{ fontWeight: 500 }}>
                                                     ({vendor.bankCode} {BANK_LIST.find(b => b.code === vendor.bankCode)?.name})
-                                                </div>
-                                                <div>{vendor.bankAccount}</div>
+                                                </span>
+                                                <span>{vendor.bankAccount}</span>
                                             </div>
                                         ) : (
                                             <span style={{ color: '#ccc' }}>-</span>

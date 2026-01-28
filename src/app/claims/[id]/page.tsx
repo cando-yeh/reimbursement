@@ -160,7 +160,7 @@ export default function ApplicationDetailPage() {
                 <div className="detail-actions">
                     <div>
                         <div className="detail-title-group">
-                            <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id.substring(0, 10)}...</h1>
+                            <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id.substring(0, 10)}</h1>
                         </div>
                         <p className="reimburse-subtitle">建立日期 {claim.date}</p>
                     </div>
@@ -390,7 +390,7 @@ export default function ApplicationDetailPage() {
             {/* Reject Modal */}
             {showRejectModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                    <div className="card" style={{ width: '400px', padding: '1.5rem' }}>
                         <h3 className="heading-md" style={{ marginBottom: '1rem' }}>退回理由</h3>
                         <div className="form-group">
                             <label className="form-group label">請輸入退回理由 *</label>
@@ -403,9 +403,9 @@ export default function ApplicationDetailPage() {
                                 style={{ resize: 'vertical' }}
                             />
                         </div>
-                        <div className="modal-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                        <div className="modal-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                             <button className="btn btn-ghost" onClick={() => { setShowRejectModal(false); setRejectReason(''); }}>取消</button>
-                            <button className="btn btn-primary" onClick={handleSubmitReject}>確認退回</button>
+                            <button className="btn btn-primary" onClick={handleSubmitReject}>送出</button>
                         </div>
                     </div>
                 </div>

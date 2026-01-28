@@ -9,6 +9,7 @@ interface SearchableVendorSelectProps {
     value: string;
     onChange: (vendorId: string) => void;
     onBlur?: () => void;
+    onOpen?: () => void;
     error?: string;
     placeholder?: string;
 }
@@ -19,6 +20,7 @@ export default function SearchableVendorSelect({
     value,
     onChange,
     onBlur,
+    onOpen,
     error,
     placeholder = "搜尋廠商..."
 }: SearchableVendorSelectProps) {
@@ -87,6 +89,7 @@ export default function SearchableVendorSelect({
 
     const handleInputFocus = () => {
         setIsOpen(true);
+        if (onOpen) onOpen();
         // Optional: Select all text on focus for easy replacement?
         // inputRef.current?.select();
     };
@@ -94,6 +97,7 @@ export default function SearchableVendorSelect({
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
         setIsOpen(true);
+        if (onOpen) onOpen();
         // If user clears input, clear selection
         if (e.target.value === '') {
             onChange('');

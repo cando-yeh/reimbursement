@@ -13,6 +13,7 @@ interface AppContextType {
   claims: Claim[];
   vendorRequests: VendorRequest[];
   payments: Payment[];
+  fetchVendors: () => Promise<void>;
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Promise<Claim | null>;
   updateClaim: (id: string, data: Partial<Claim>, note?: string) => Promise<void>;
   updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
@@ -118,29 +119,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fetchServerData = async () => {
       if (!currentUser) return;
 
-      // Fetch Claims
-      const { success: cSuccess, data: cData } = await getClaims();
-      if (cSuccess && cData) {
-        setClaims(cData);
-      }
+      console.time('fetchServerData');
+      try {
+        const [claimsResult, requestsResult] = await Promise.all([
+          getClaims(),
+          getVendorRequests()
+        ]);
 
-      // Fetch Vendors
-      const { success: vSuccess, data: vData } = await getVendors();
-      if (vSuccess && vData) {
-        setVendors(vData);
-      }
+        // 1. Claims
+        if (claimsResult.success && claimsResult.data) {
+          setClaims(claimsResult.data);
+        }
 
-      // Fetch Vendor Requests
-      const { success: rSuccess, data: rData } = await getVendorRequests();
-      if (rSuccess && rData) {
-        // Convert Data Types if needed or just cast
-        setVendorRequests(rData.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data,
-          originalData: r.originalData
-        })));
+        // 2. Vendors (Lazy loaded now)
+
+        // 3. Vendor Requests
+        if (requestsResult.success && requestsResult.data) {
+          setVendorRequests(requestsResult.data.map((r: any) => ({
+            ...r,
+            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+            data: r.data,
+            originalData: r.originalData
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching server data:', error);
       }
+      console.timeEnd('fetchServerData');
     };
 
     fetchServerData();
@@ -247,6 +252,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
             });
             return Array.from(userMap.values());
           });
+
+          // Update currentUser if their ID changed (e.g. from mock 'u5' to real UUID)
+          if (currentUser?.email) {
+            const dbUser = (data as User[]).find(u => u.email === currentUser.email);
+            if (dbUser && dbUser.id !== currentUser.id) {
+              console.log('--- AppContext: Migrating currentUser to DB ID ---', dbUser.id);
+              setCurrentUser(dbUser);
+              localStorage.setItem('currentUserId', dbUser.id);
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to fetch users from DB:', err);
@@ -524,12 +539,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchVendors = async () => {
+    console.log('Fetching vendors...');
+    const { success, data } = await getVendors();
+    if (success && data) {
+      setVendors(data);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       vendors,
       claims,
       vendorRequests,
       payments,
+      fetchVendors,
       addClaim,
       updateClaim,
       updateClaimStatus,

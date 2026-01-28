@@ -140,56 +140,59 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
         router.push(action === 'draft' ? '/?tab=drafts' : '/?tab=in_review');
     };
 
-    const renderFileUpload = (label: string, file: File | null, setFile: (f: File | null) => void, id: string) => (
-        <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-                {label} <span style={{ color: 'var(--color-danger)' }}>*</span>
-            </label>
-            <div
-                style={{
-                    border: '2px dashed var(--color-border)',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: (file || (fileUrls as any)[id.replace('-', '') + 'Image'] || (fileUrls as any)[id.replace('-', '')]) ? 'rgba(34, 197, 94, 0.1)' : 'var(--color-bg)',
-                    minHeight: '80px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                onClick={() => document.getElementById(id)?.click()}
-            >
-                <input
-                    type="file"
-                    id={id}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setFile(file);
-                            const url = URL.createObjectURL(file);
-                            if (id === 'id-front') setFileUrls(prev => ({ ...prev, idFront: url }));
-                            else if (id === 'id-back') setFileUrls(prev => ({ ...prev, idBack: url }));
-                            else if (id === 'bank-book') setFileUrls(prev => ({ ...prev, bankBook: url }));
-                        }
+    const renderFileUpload = (label: string, file: File | null, setFile: (f: File | null) => void, id: string) => {
+        const urlKey = id === 'id-front' ? 'idFront' : id === 'id-back' ? 'idBack' : 'bankBook';
+        const hasFile = file || (fileUrls as any)[urlKey];
+
+        return (
+            <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                    {label} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <div
+                    style={{
+                        border: '2px dashed var(--color-border)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: hasFile ? 'rgba(34, 197, 94, 0.1)' : 'var(--color-bg)',
+                        minHeight: '80px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                     }}
-                />
-                {(file || idFrontFile || idBackFile || bankBookFile || (fileUrls as any)[id.replace('-', '')]) ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Image size={18} style={{ color: 'var(--color-success)' }} />
-                        <span style={{ color: 'var(--color-success)', fontWeight: 500, fontSize: '0.85rem' }}>{file?.name || '已上傳檔案'}</span>
-                    </div>
-                ) : (
-                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                        <Upload size={20} style={{ marginBottom: '0.25rem' }} />
-                        <div>點擊上傳</div>
-                    </div>
-                )}
+                    onClick={() => document.getElementById(id)?.click()}
+                >
+                    <input
+                        type="file"
+                        id={id}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                setFile(file);
+                                const url = URL.createObjectURL(file);
+                                setFileUrls(prev => ({ ...prev, [urlKey]: url }));
+                            }
+                        }}
+                    />
+                    {hasFile ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Image size={18} style={{ color: 'var(--color-success)' }} />
+                            <span style={{ color: 'var(--color-success)', fontWeight: 500, fontSize: '0.85rem' }}>{file?.name || '已上傳檔案'}</span>
+                        </div>
+                    ) : (
+                        <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                            <Upload size={20} style={{ marginBottom: '0.25rem' }} />
+                            <div>點擊上傳</div>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const requiredStar = <span style={{ color: 'var(--color-danger)' }}>*</span>;
 
