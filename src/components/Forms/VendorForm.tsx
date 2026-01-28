@@ -7,6 +7,8 @@ import { BANK_LIST } from '@/utils/constants';
 import { Vendor } from '@/types';
 import { useApp } from '@/context/AppContext';
 
+import FormSection from '@/components/Common/FormSection';
+
 interface VendorFormProps {
     initialData?: Partial<Vendor>; // For edit mode
     mode: 'add' | 'edit';
@@ -53,12 +55,6 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
             if (success) {
                 // Alert is handled in context
                 router.push('/vendors');
-                // router.refresh(); // Context update is enough for client state, but refresh might be needed for other server components? 
-                // Context handles fetching fresh data.
-            } else {
-                // Error alert handled in context? 
-                // Context requestAddVendor alerts on failure.
-                // So we just stay here.
             }
         } catch (err: any) {
             console.error(err);
@@ -95,21 +91,15 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                 </div>
             )}
 
-            <div className="space-y-6">
-                {/* Section: Basic Info */}
-                <section>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '4px', height: '16px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                        基本資訊
-                    </h3>
-
+            <div className="space-y-8">
+                <FormSection title="基本資訊">
                     <div className="space-y-4">
                         <div className="form-group">
                             <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
                                 廠商名稱 <span style={{ color: 'var(--color-danger)' }}>*</span>
                             </label>
                             <div className="input-wrapper-icon">
-                                <Building size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                <Building size={18} className="input-icon" />
                                 <input
                                     type="text"
                                     className="form-input has-icon"
@@ -127,7 +117,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                                 服務內容/營業項目 <span style={{ color: 'var(--color-danger)' }}>*</span>
                             </label>
                             <div className="input-wrapper-icon">
-                                <FileText size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                <FileText size={18} className="input-icon" />
                                 <input
                                     type="text"
                                     className="form-input has-icon"
@@ -140,24 +130,16 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                             </div>
                         </div>
                     </div>
-                </section>
+                </FormSection>
 
-                <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '2rem 0' }} />
-
-                {/* Section: Bank Info */}
-                <section>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '4px', height: '16px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                        匯款帳項
-                    </h3>
-
+                <FormSection title="匯款帳項">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="form-group md:col-span-1">
                             <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
                                 銀行代碼 {!formData.isFloatingAccount && <span style={{ color: 'var(--color-danger)' }}>*</span>}
                             </label>
                             <div className="input-wrapper-icon">
-                                <Building size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                <Building size={18} className="input-icon" />
                                 <select
                                     className="form-input has-icon"
                                     style={{ appearance: 'none', backgroundColor: 'transparent' }}
@@ -184,7 +166,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                                 銀行帳號 {!formData.isFloatingAccount && <span style={{ color: 'var(--color-danger)' }}>*</span>}
                             </label>
                             <div className="input-wrapper-icon">
-                                <CreditCard size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                                <CreditCard size={18} className="input-icon" />
                                 <input
                                     type="text"
                                     className="form-input has-icon"
@@ -225,8 +207,9 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                             </div>
                         </label>
                     </div>
-                </section>
+                </FormSection>
             </div>
+
 
             <footer className="form-actions" style={{ marginTop: '3rem', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
                 <button

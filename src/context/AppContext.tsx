@@ -37,17 +37,10 @@ interface AppContextType {
   isAuthLoading: boolean;
 }
 
-export const MOCK_USERS: User[] = [
-  { id: 'u5', name: 'Cando Yeh', roleName: '系統管理員', permissions: ['general', 'finance_audit', 'user_management'], email: 'cando.yeh@gmail.com' },
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Static supabase client to prevent re-creation and infinite loops
 const supabase = createClient();
-
-// Initial Data
-const INITIAL_VENDORS: Vendor[] = [];
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -63,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [isInitialized, setIsInitialized] = useState(false);
-  const availableUsersRef = useRef<User[]>(MOCK_USERS);
+  const availableUsersRef = useRef<User[]>([]);
 
   // Sync ref with state for use in event listeners
   useEffect(() => {
@@ -71,48 +64,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [availableUsers]);
   const isInitialLoad = useRef(true);
 
-  // 1. Initial Data Load from LocalStorage
+  // Initial Data Load (Auth only, data is fetched in separate useEffect)
   useEffect(() => {
     if (!isInitialLoad.current) return;
 
-    console.log('--- AppContext: Initializing State from LocalStorage ---');
-
-    try {
-      const savedVendors = localStorage.getItem('vendors');
-      if (savedVendors) setVendors(JSON.parse(savedVendors));
-
-      const savedClaims = localStorage.getItem('claims');
-      if (savedClaims) setClaims(JSON.parse(savedClaims));
-
-      const savedRequests = localStorage.getItem('vendorRequests');
-      if (savedRequests) setVendorRequests(JSON.parse(savedRequests));
-
-      const savedUsers = localStorage.getItem('users');
-      if (savedUsers) {
-        setAvailableUsers(JSON.parse(savedUsers));
-      } else {
-        // No initial users, start with empty or the dev admin
-        setAvailableUsers(MOCK_USERS);
-      }
-
-      const savedPayments = localStorage.getItem('payments');
-      if (savedPayments) setPayments(JSON.parse(savedPayments));
-
-      const savedUserId = localStorage.getItem('currentUserId');
-      if (savedUserId && savedUsers) {
-        const users = JSON.parse(savedUsers) as User[];
-        const user = users.find(u => u.id === savedUserId);
-        if (user) {
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse localStorage:', e);
-    } finally {
-      setIsInitialized(true);
-      isInitialLoad.current = false;
-    }
+    setIsInitialized(true);
+    isInitialLoad.current = false;
   }, []);
 
   // 6. Fetch Claims & Vendors from Server when User is authenticated
@@ -164,7 +121,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (!sessionUser) {
         setCurrentUser(null);
-        localStorage.removeItem('currentUserId');
         return;
       }
 
@@ -189,7 +145,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setAvailableUsers(prev => [...prev.filter(u => u.id !== foundUser!.id), foundUser!]);
         }
 
-        localStorage.setItem('currentUserId', foundUser.id);
         return foundUser;
       });
     };
@@ -252,7 +207,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (dbUser && dbUser.id !== currentUser.id) {
             console.log('--- AppContext: Migrating currentUser to DB ID ---', dbUser.id);
             setCurrentUser(dbUser);
-            localStorage.setItem('currentUserId', dbUser.id);
           }
         }
       }
@@ -271,7 +225,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const user = availableUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUser(user);
-      localStorage.setItem('currentUserId', user.id);
       setIsAuthenticated(true);
       router.push('/');
     }
@@ -280,7 +233,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
-    localStorage.removeItem('currentUserId');
     setIsAuthenticated(false);
     router.push('/login');
   };
@@ -289,7 +241,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const user = availableUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUser(user);
-      localStorage.setItem('currentUserId', user.id);
     }
   };
 

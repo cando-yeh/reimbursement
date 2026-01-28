@@ -7,6 +7,8 @@ import { Upload, X, FileText, ChevronDown, Save, Send, Loader2, CreditCard } fro
 import { BANK_LIST, EXPENSE_CATEGORIES } from '@/utils/constants';
 import SearchableVendorSelect from '@/components/Common/SearchableVendorSelect';
 import { uploadFile } from '@/utils/storage';
+import PageHeader from '@/components/Common/PageHeader';
+import FormSection from '@/components/Common/FormSection';
 
 function formatNumberWithCommas(value: string) {
     const digits = value.replace(/[^\d]/g, "");
@@ -229,23 +231,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
 
     return (
         <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
-            <header className="vendor-header simple" style={{ marginBottom: '2.5rem' }}>
-                <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>
-                    <ChevronDown size={18} style={{ transform: 'rotate(90deg)', marginRight: '4px' }} /> 回前頁
-                </button>
-                <h1 className="heading-lg">廠商付款申請</h1>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>請填寫付款對象、金額及相關憑證資料。</p>
-            </header>
+            <PageHeader
+                title="廠商付款申請"
+                subtitle="請填寫付款對象、金額及相關憑證資料。"
+            />
 
             <div className="card" style={{ padding: '2.5rem' }}>
                 <form onSubmit={handleSubmit} className="space-y-10">
-                    {/* Section: Payee Info */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            付款對象
-                        </h2>
-
+                    <FormSection title="付款對象">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <Field label="廠商名稱" required error={showErr("vendorId")}>
                                 <SearchableVendorSelect
@@ -283,17 +276,9 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                 </Field>
                             )}
                         </div>
-                    </div>
+                    </FormSection>
 
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-                    {/* Section: Payment Details */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            付款內容
-                        </h2>
-
+                    <FormSection title="付款內容">
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <Field label="費用類別" required error={showErr("expenseCategory")}>
@@ -327,17 +312,9 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                 </div>
                             </Field>
                         </div>
-                    </div>
+                    </FormSection>
 
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-                    {/* Section: Evidence/Attachments */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            憑證與附件
-                        </h2>
-
+                    <FormSection title="憑證與附件">
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
                             <div className="md:col-span-3 space-y-6">
                                 <Field label="發票號碼 / 無法提供原因" required error={showErr("invoiceNumber")}>
@@ -411,7 +388,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                 </Field>
                             </div>
                         </div>
-                    </div>
+                    </FormSection>
 
                     <div style={{ display: 'flex', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
                         <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>取消離開</button>

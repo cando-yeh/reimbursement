@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ClaimTable from '@/components/Common/ClaimTable';
 import TabButton from '@/components/Common/TabButton'; // Ensure this component handles onClick/Link properly
+import PageHeader from '@/components/Common/PageHeader';
+import TabContainer from '@/components/Common/TabContainer';
 import { Claim, User, Payment } from '@/types';
 import { deleteClaim } from '@/app/actions/claims';
 
@@ -38,37 +40,29 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
         }
     };
 
+    const headerAction = (
+        <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
+            <Plus size={20} style={{ marginRight: '4px' }} />
+            新增申請單
+        </Link>
+    );
+
     return (
         <div className="container" style={{ padding: '2rem' }}>
-            <div className="vendor-header">
-                <div>
-                    <h1 className="heading-lg">我的請款</h1>
-                    <p className="vendor-subtitle">管理您的申請單、待傳檔案與審核狀態</p>
-                </div>
-                <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
-                    <Plus size={20} style={{ marginRight: '4px' }} />
-                    新增申請單
-                </Link>
-            </div>
+            <PageHeader
+                title="我的請款"
+                subtitle="管理您的申請單、待傳檔案與審核狀態"
+                action={headerAction}
+            />
 
-            {/* Tabs */}
-            <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                backgroundColor: 'rgba(0,0,0,0.03)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-lg)',
-                marginBottom: '2.5rem',
-                overflowX: 'auto',
-                scrollbarWidth: 'none'
-            }}>
+            <TabContainer>
                 <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={data.drafts.length} />
                 <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={data.pendingEvidence.length} badge={data.pendingEvidence.length} />
                 <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={data.returned.length} badge={data.returned.length} />
                 <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={data.inReview.length} />
                 <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={data.pendingPayment.length} />
                 <TabButton active={activeTab === 'completed'} onClick={() => handleTabChange('completed')} label="已完成" count={data.completed.length} />
-            </div>
+            </TabContainer>
 
             {/* Content Areas */}
             {activeTab === 'drafts' && (

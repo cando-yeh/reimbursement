@@ -6,6 +6,8 @@ import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image, ChevronDown, CreditCard } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
+import PageHeader from '@/components/Common/PageHeader';
+import FormSection from '@/components/Common/FormSection';
 
 function formatNumberWithCommas(value: string | number) {
     const val = typeof value === 'number' ? String(value) : value;
@@ -210,23 +212,14 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
 
     return (
         <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
-            <header className="vendor-header simple" style={{ marginBottom: '2.5rem' }}>
-                <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
-                    <ArrowLeft size={18} style={{ marginRight: '4px' }} /> 回前頁
-                </button>
-                <h1 className="heading-lg">勞務報酬單</h1>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>支付專業服務、稿費、講座或勞務報酬費用。</p>
-            </header>
+            <PageHeader
+                title="勞務報酬單"
+                subtitle="支付專業服務、稿費、講座或勞務報酬費用。"
+            />
 
             <div className="card" style={{ padding: '2.5rem' }}>
                 <form onSubmit={(e) => { e.preventDefault(); handleSubmit('submit'); }} className="space-y-10">
-                    {/* Section: Payee Profile */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            收款人基本資料
-                        </h2>
-
+                    <FormSection title="收款人基本資料">
                         <div style={{ display: 'grid', gap: '1.5rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <div className="form-group">
@@ -255,17 +248,9 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </FormSection>
 
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-                    {/* Section: Service Details */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            勞務內容與金額
-                        </h2>
-
+                    <FormSection title="勞務內容與金額">
                         <div style={{ display: 'grid', gap: '1.5rem' }}>
                             <div className="form-group">
                                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>勞務事由 {requiredStar}</label>
@@ -297,17 +282,9 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </FormSection>
 
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-                    {/* Section: Bank Info */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            匯款帳戶
-                        </h2>
-
+                    <FormSection title="匯款帳戶">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                             <div className="form-group">
                                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>銀行 {requiredStar}</label>
@@ -327,23 +304,15 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </FormSection>
 
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-
-                    {/* Section: Attachments */}
-                    <div className="form-section">
-                        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            身份證明與存摺影本
-                        </h2>
-
+                    <FormSection title="身份證明與存摺影本">
                         <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
                             {renderFileUpload('身分證正面', idFrontFile, setIdFrontFile, 'id-front')}
                             {renderFileUpload('身分證反面', idBackFile, setIdBackFile, 'id-back')}
                             {renderFileUpload('銀行存摺正面', bankBookFile, setBankBookFile, 'bank-book')}
                         </div>
-                    </div>
+                    </FormSection>
 
                     <div className="form-actions" style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                         <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }}>取消離開</button>

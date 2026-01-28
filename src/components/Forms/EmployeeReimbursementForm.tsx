@@ -22,6 +22,9 @@ interface ExpenseItemWithAttachment {
     fileUrl?: string;
 }
 
+import FormSection from '@/components/Common/FormSection';
+import PageHeader from '@/components/Common/PageHeader';
+
 export default function EmployeeReimbursementForm({ editId }: { editId?: string }) {
     const { claims, currentUser, addClaim, updateClaim, vendors, vendorRequests } = useApp();
     const router = useRouter();
@@ -79,8 +82,6 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const calculateTotal = () => {
         return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     };
-
-
 
     const handleSubmit = async (action: 'submit' | 'draft') => {
         if (!currentUser) return;
@@ -167,14 +168,12 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     ...claimData,
                     status: updateStatus
                 });
-                // router.push navigation happens below
             } else {
                 // Create
                 result = await createClaimAction({
                     ...claimData,
                     status: status || 'pending_finance'
                 });
-                // router.push navigation happens below
             }
 
             if (!result.success) {
@@ -193,24 +192,19 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
     return (
         <div className="reimburse-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <header className="reimburse-header" style={{ marginBottom: '2.5rem' }}>
-                <button onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>
-                    <ArrowLeft size={18} style={{ marginRight: '4px' }} /> 回前頁
-                </button>
-                <h1 className="heading-lg">個人報銷申請</h1>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>適用於交通費、差旅費、交際費等代墊款項報銷。</p>
-            </header>
+            <PageHeader
+                title="個人報銷申請"
+                subtitle="適用於交通費、差旅費、交際費等代墊款項報銷。"
+            />
 
             <div className="card" style={{ padding: '2rem' }}>
-                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>
-                    <div>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '4px', height: '18px', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }}></div>
-                            費用明細
-                        </h2>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>請逐筆填寫報銷項目並上傳憑證</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                        <FormSection title="費用明細">
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '-1rem', marginBottom: '1.5rem' }}>請逐筆填寫報銷項目並上傳憑證</p>
+                        </FormSection>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', minWidth: '150px' }}>
                         <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', display: 'block' }}>總計金額 (TWD)</span>
                         <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '1.75rem', lineHeight: 1 }}>
                             <span style={{ fontSize: '1rem', marginRight: '4px' }}>NT$</span>
@@ -218,6 +212,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                         </div>
                     </div>
                 </div>
+
 
                 <div style={{ overflowX: 'auto' }} className="no-scrollbar">
                     <div style={{

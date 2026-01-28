@@ -11,6 +11,8 @@ import TabButton from '@/components/Common/TabButton';
 import VendorRequestTable from '@/components/Common/VendorRequestTable';
 import PaymentRecordTable from '@/components/Common/PaymentRecordTable';
 import VendorRequestDetailModal from '@/components/Common/VendorRequestDetailModal';
+import PageHeader from '@/components/Common/PageHeader';
+import TabContainer from '@/components/Common/TabContainer';
 
 function ReviewDashboardInner() {
     // 1. Hooks - MUST BE AT THE TOP AND UNCONDITIONAL
@@ -136,24 +138,12 @@ function ReviewDashboardInner() {
 
     return (
         <div className="container" style={{ padding: '2rem' }}>
-            <div className="vendor-header">
-                <div>
-                    <h1 className="heading-lg">申請審核</h1>
-                    <p className="vendor-subtitle">管理待審核的申請與付款</p>
-                </div>
-            </div>
+            <PageHeader
+                title="申請審核"
+                subtitle="管理待審核的申請與付款"
+            />
 
-            {/* Tabs */}
-            <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                backgroundColor: 'rgba(0,0,0,0.03)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-lg)',
-                marginBottom: '2.5rem',
-                overflowX: 'auto',
-                scrollbarWidth: 'none'
-            }}>
+            <TabContainer>
                 <TabButton active={activeTab === 'claim_approvals'} onClick={() => handleTabChange('claim_approvals')} label="請款審核" count={claimApprovals.length} badge={claimApprovals.length} />
 
                 {isFinance && (
@@ -166,7 +156,7 @@ function ReviewDashboardInner() {
                 )}
 
                 <TabButton active={activeTab === 'all_applications'} onClick={() => handleTabChange('all_applications')} label="所有申請單" count={allApplications.length} />
-            </div>
+            </TabContainer>
 
             {/* Content Areas */}
             {activeTab === 'claim_approvals' && (
