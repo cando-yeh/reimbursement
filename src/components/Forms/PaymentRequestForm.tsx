@@ -296,8 +296,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                     <Field label="請款金額" required error={showErr("amount")}>
                                         <div style={{ position: 'relative' }}>
                                             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>NT$</span>
-                                            <input type="text" inputMode="numeric" value={amountInput} onChange={(e) => setAmountInput(formatNumberWithCommas(e.target.value))} onBlur={() => setTouched(t => ({ ...t, amount: true }))} className="form-input" style={{ paddingLeft: '2.5rem', paddingRight: '3rem', textAlign: 'right' }} placeholder="0" disabled={isSubmitting} />
-                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 500 }}>TWD</span>
+                                            <input type="text" inputMode="numeric" value={amountInput} onChange={(e) => setAmountInput(formatNumberWithCommas(e.target.value))} onBlur={() => setTouched(t => ({ ...t, amount: true }))} className="form-input" style={{ paddingLeft: '2.5rem', paddingRight: '1rem', textAlign: 'right' }} placeholder="0" disabled={isSubmitting} />
                                         </div>
                                     </Field>
                                 </div>

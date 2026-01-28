@@ -276,12 +276,12 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                     onChange={e => handleItemChange(item.id, 'description', e.target.value)}
                                     disabled={isSubmitting}
                                 />
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <span style={{ marginRight: '0.25rem', color: 'var(--color-text-secondary)' }}>$</span>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ position: 'absolute', left: '8px', color: 'var(--color-text-secondary)', fontSize: '0.7rem', pointerEvents: 'none' }}>NT$</span>
                                     <input
                                         type="text"
                                         className="form-input"
-                                        style={{ padding: '0.4rem', fontSize: '0.85rem', width: '100%', textAlign: 'right' }}
+                                        style={{ padding: '0.4rem', paddingLeft: '2.1rem', fontSize: '0.85rem', width: '100%', textAlign: 'right' }}
                                         value={item.amount ? Number(item.amount).toLocaleString() : ''}
                                         onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
                                         onChange={e => {

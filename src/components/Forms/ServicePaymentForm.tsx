@@ -7,6 +7,18 @@ import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
 
+function formatNumberWithCommas(value: string | number) {
+    const val = typeof value === 'number' ? String(value) : value;
+    const digits = val.replace(/[^\d]/g, "");
+    if (!digits) return "";
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function parseAmountToNumber(value: string) {
+    const digits = value.replace(/[^\d]/g, "");
+    return digits ? Number(digits) : 0;
+}
+
 export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const router = useRouter();
     const { addClaim, updateClaim, claims } = useApp();
@@ -249,7 +261,18 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                             </div>
                             <div className="form-group">
                                 <label>應付金額 {requiredStar}</label>
-                                <input type="number" required className="form-input" value={formData.amount} onChange={e => setFormData({ ...formData, amount: parseInt(e.target.value) || '' })} />
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.9rem', pointerEvents: 'none' }}>NT$</span>
+                                    <input
+                                        type="text"
+                                        required
+                                        inputMode="numeric"
+                                        className="form-input"
+                                        style={{ paddingLeft: '2.5rem', textAlign: 'right' }}
+                                        value={formatNumberWithCommas(formData.amount)}
+                                        onChange={e => setFormData({ ...formData, amount: parseAmountToNumber(e.target.value) })}
+                                    />
+                                </div>
                             </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
