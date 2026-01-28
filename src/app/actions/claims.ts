@@ -117,7 +117,14 @@ export async function createClaim(data: CreateClaimInput) {
         console.log('Claim ID:', newClaim.id);
 
         revalidatePath('/');
-        return { success: true, data: newClaim };
+        return {
+            success: true,
+            data: {
+                ...newClaim,
+                date: newClaim.date.toISOString().split('T')[0],
+                datePaid: newClaim.datePaid?.toISOString().split('T')[0],
+            }
+        };
     } catch (error: any) {
         console.error('--- createClaim Error ---');
         console.error(error);

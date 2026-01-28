@@ -1,5 +1,7 @@
 'use client';
 
+import { Claim, ClaimHistory } from '@/types';
+import { ClaimStatus, ClaimType } from '@/types/prisma';
 import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -560,7 +562,7 @@ export default function ApplicationDetailPage() {
                 <div className="card" style={{ marginTop: '1.5rem' }}>
                     <div style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 500 }}>歷史紀錄</div>
                     <div className="history-timeline" style={{ position: 'relative', paddingLeft: '1rem' }}>
-                        {claim.history.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item, idx) => (
+                        {(claim.history as ClaimHistory[]).sort((a: ClaimHistory, b: ClaimHistory) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item: ClaimHistory, idx: number) => (
                             <div key={idx} style={{ display: 'flex', gap: '1rem', paddingBottom: idx === claim.history!.length - 1 ? 0 : '1.5rem', position: 'relative' }}>
                                 {idx !== claim.history!.length - 1 && <div style={{ position: 'absolute', left: '7px', top: '24px', bottom: 0, width: '2px', backgroundColor: '#e5e7eb' }} />}
                                 <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', marginTop: '4px', flexShrink: 0, zIndex: 1 }} />

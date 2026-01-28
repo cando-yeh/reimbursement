@@ -1,10 +1,10 @@
 export interface Vendor {
     id: string;
     name: string;
-    serviceContent?: string;
-    bankCode?: string;
-    bankAccount?: string;
-    isFloatingAccount?: boolean;
+    serviceContent?: string | null;
+    bankCode?: string | null;
+    bankAccount?: string | null;
+    isFloatingAccount?: boolean | null;
 }
 
 export interface ExpenseItem {
@@ -29,40 +29,13 @@ export interface Claim {
     status: 'draft' | 'pending_approval' | 'pending_finance' | 'approved' | 'paid' | 'pending_evidence' | 'pending_finance_review' | 'completed' | 'rejected' | 'cancelled';
     description: string; // Main title/summary of the claim
     amount: number; // Total amount
-    paymentDetails?: {
-        transactionContent: string;
-        payerNotes?: string;
-        invoiceStatus: 'obtained' | 'not_yet' | 'unable';
-        invoiceNumber?: string;
-        invoiceDate?: string;
-        invoiceFile?: string;
-        invoiceUrl?: string; // For session preview
-        // For non-fixed vendor accounts
-        bankCode?: string;
-        bankAccount?: string;
-    };
+    paymentDetails?: any;
 
     // Items
-    items: ExpenseItem[];
+    items: any[];
 
     // Service Payment Specific Details (勞務報酬單)
-    serviceDetails?: {
-        idNumber: string;          // 身分證字號
-        email: string;             // 電子信箱
-        registeredAddress: string; // 戶籍地址
-        servicePeriodStart: string; // 勞務期間起
-        servicePeriodEnd: string;   // 勞務期間訖
-        bankName: string;           // 銀行名稱
-        bankCode: string;           // 銀行代號
-        bankAccount: string;        // 銀行帳號
-        // 附件 (Base64 或檔名)
-        idFrontImage?: string;
-        idBackImage?: string;
-        bankBookImage?: string;
-        idFrontUrl?: string; // For session preview
-        idBackUrl?: string;  // For session preview
-        bankBookUrl?: string; // For session preview
-    };
+    serviceDetails?: any;
 
     applicant?: {
         name: string;
@@ -72,7 +45,7 @@ export interface Claim {
     datePaid?: string; // Optional, set when status becomes 'paid'
     evidenceFiles?: string[]; // Array of file paths/base64 for post-payment evidence
     noReceiptReason?: string; // Reason for any "no receipt" claim items
-    history?: ClaimHistory[];
+    history?: any;
 }
 
 export interface ClaimHistory {
