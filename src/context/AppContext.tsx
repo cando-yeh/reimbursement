@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
+import { updateUser as updateUserAction, deleteUser as deleteUserAction } from '@/app/actions/users';
 
 interface AppContextType {
   vendors: Vendor[];
@@ -258,15 +259,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    // Optimistic update
     setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
     if (currentUser?.id === id) {
       setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     }
+    // Server update
+    await updateUserAction(id, updates);
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
+    // Optimistic update
     setAvailableUsers(prev => prev.filter(u => u.id !== id));
+
+    // Server update
+    const result = await deleteUserAction(id);
+    if (!result.success) {
+      console.error('Failed to delete user from DB:', result.error);
+      alert('刪除失敗，請重試');
+      // Revert could be here, but simple alert is okay for now
+    }
+
     if (currentUser?.id === id) logout();
   };
 
