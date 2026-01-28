@@ -127,7 +127,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 finalInvoiceUrl = await uploadFile(
                     attachments[0],
                     invoiceDate || new Date().toISOString().split('T')[0],
-                    currentUser.name,
+                    selectedVendor?.name || '未知廠商',
                     expenseCategory || '未分類',
                     amount || 0,
                     0
@@ -184,7 +184,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 finalInvoiceUrl = await uploadFile(
                     attachments[0],
                     invoiceDate || new Date().toISOString().split('T')[0],
-                    currentUser.name,
+                    selectedVendor?.name || '未知廠商',
                     expenseCategory,
                     amount,
                     0

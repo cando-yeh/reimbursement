@@ -6,7 +6,7 @@ import { createClient } from './supabase/client';
  * 
  * @param file The file to upload
  * @param dateString YYYY-MM-DD format string for folder classification
- * @param applicantName Name of the applicant
+ * @param payeeName Name of the payee (vendor or employee)
  * @param category Expense category
  * @param amount Expense amount
  * @param index Sequence index (starting from 0)
@@ -15,7 +15,7 @@ import { createClient } from './supabase/client';
 export async function uploadFile(
     file: File,
     dateString: string,
-    applicantName: string,
+    payeeName: string,
     category: string,
     amount: number,
     index: number
@@ -37,11 +37,11 @@ export async function uploadFile(
         yearMonth = `${year}${month}`;
     }
 
-    // 2. Generate semantic filename: Name_Category_Amount_Index.ext
+    // 2. Generate semantic filename: Payee_Category_Amount_Index.ext
     const fileExt = file.name.split('.').pop();
-    const safeName = applicantName.replace(/[/\\?%*:|"<>]/g, '-'); // Basic sanitization
+    const safePayee = payeeName.replace(/[/\\?%*:|"<>]/g, '-'); // Basic sanitization
     const safeCategory = category.replace(/[/\\?%*:|"<>]/g, '-');
-    const fileName = `${safeName}_${safeCategory}_${amount}_${index}.${fileExt}`;
+    const fileName = `${safePayee}_${safeCategory}_${amount}_${index}.${fileExt}`;
     const filePath = `${yearMonth}/${fileName}`;
 
     // 3. Upload to 'receipts' bucket
