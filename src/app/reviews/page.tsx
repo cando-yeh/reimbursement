@@ -144,7 +144,16 @@ function ReviewDashboardInner() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '1px' }}>
+            <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                padding: '0.5rem',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: '2.5rem',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
+            }}>
                 <TabButton active={activeTab === 'claim_approvals'} onClick={() => handleTabChange('claim_approvals')} label="請款審核" count={claimApprovals.length} badge={claimApprovals.length} />
 
                 {isFinance && (

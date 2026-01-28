@@ -39,15 +39,15 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
     };
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem' }}>
-            <div className="vendor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', padding: '1.5rem 0', borderBottom: '1px solid var(--color-border)' }}>
+        <div className="container" style={{ padding: '2rem' }}>
+            <div className="vendor-header" style={{ marginBottom: '2.5rem' }}>
                 <div>
-                    <h1 className="heading-lg" style={{ marginBottom: '0.5rem', fontSize: '2rem' }}>我的請款</h1>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}>管理您的申請單、待傳檔案與審核狀態</p>
+                    <h1 className="heading-lg" style={{ marginBottom: '0.25rem' }}>我的請款</h1>
+                    <p className="vendor-subtitle">管理您的申請單、待傳檔案與審核狀態</p>
                 </div>
-                <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(var(--color-primary-rgb), 0.2)' }}>
-                    <Plus size={20} />
-                    <span>新增申請單</span>
+                <Link href="/applications/new" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
+                    <Plus size={20} style={{ marginRight: '4px' }} />
+                    新增申請單
                 </Link>
             </div>
 
