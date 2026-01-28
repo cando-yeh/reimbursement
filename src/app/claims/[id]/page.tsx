@@ -160,12 +160,12 @@ export default function ApplicationDetailPage() {
                 <div className="detail-actions">
                     <div>
                         <div className="detail-title-group">
-                            <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id}</h1>
+                            <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id.substring(0, 10)}...</h1>
                         </div>
                         <p className="reimburse-subtitle">建立日期 {claim.date}</p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
                         {claim.status === 'draft' && (
                             <>
                                 <button onClick={handleDelete} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger-bg)', backgroundColor: 'var(--color-danger-bg)' }}>
