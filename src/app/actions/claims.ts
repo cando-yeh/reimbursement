@@ -192,6 +192,19 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
             amount = data.items.reduce((sum, item) => sum + item.amount, 0);
         }
 
+        // Add history record if resubmitting
+        const currentHistory = (currentClaim.history as unknown as ClaimHistory[]) || [];
+        let newHistory = [...currentHistory];
+
+        if (data.status && (data.status === 'pending_approval' || data.status === 'pending_finance') && currentClaim.status !== data.status) {
+            newHistory.push({
+                timestamp: new Date().toISOString(),
+                actorId: dbUser.id,
+                actorName: dbUser.name,
+                action: 'submitted',
+            });
+        }
+
         await prisma.claim.update({
             where: { id },
             data: {
@@ -201,6 +214,7 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
                 status: data.status as ClaimStatus | undefined,
                 date: data.date ? new Date(data.date) : undefined,
                 items: data.items ? (data.items as any) : undefined,
+                history: newHistory as any,
                 updatedAt: new Date()
             } as any
         });

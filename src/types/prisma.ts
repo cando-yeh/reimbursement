@@ -7,7 +7,8 @@ export const ClaimStatus = {
     pending_evidence: 'pending_evidence',
     pending_finance_review: 'pending_finance_review',
     completed: 'completed',
-    rejected: 'rejected'
+    rejected: 'rejected',
+    cancelled: 'cancelled'
 } as const;
 
 export type ClaimStatus = (typeof ClaimStatus)[keyof typeof ClaimStatus];

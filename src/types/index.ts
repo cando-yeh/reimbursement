@@ -26,7 +26,7 @@ export interface Claim {
 
     // Header Info
     date: string; // Submission Date
-    status: 'draft' | 'pending_approval' | 'pending_finance' | 'approved' | 'paid' | 'pending_evidence' | 'pending_finance_review' | 'completed' | 'rejected';
+    status: 'draft' | 'pending_approval' | 'pending_finance' | 'approved' | 'paid' | 'pending_evidence' | 'pending_finance_review' | 'completed' | 'rejected' | 'cancelled';
     description: string; // Main title/summary of the claim
     amount: number; // Total amount
     paymentDetails?: {

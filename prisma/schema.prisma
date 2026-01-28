@@ -48,6 +48,7 @@ enum ClaimStatus {
   pending_finance_review
   completed
   rejected
+  cancelled
 }
 
 enum ClaimType {

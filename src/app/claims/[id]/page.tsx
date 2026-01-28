@@ -19,6 +19,7 @@ const formatAction = (action: string) => {
         case 'draft': return '建立草稿';
         case 'status_change_to_pending_finance_review': return '已補件 (待財務確認)';
         case 'paid': return '已付款';
+        case 'status_change_to_cancelled': return '撤銷申請';
         default: return action;
     }
 };
@@ -144,6 +145,14 @@ export default function ApplicationDetailPage() {
         if (id) updateClaimStatus(id, newStatus);
     };
 
+    const handleCancel = () => {
+        if (!claim || !id) return;
+        if (confirm('確定要撤銷此申請單嗎？撤銷後將無法再進行任何操作。')) {
+            updateClaimStatus(id, 'cancelled');
+            router.push('/');
+        }
+    };
+
     const handleDelete = () => {
         if (id && confirm('您確定要刪除此申請單嗎？')) {
             deleteClaim(id);
@@ -185,13 +194,18 @@ export default function ApplicationDetailPage() {
                         )}
 
                         {claim.status === 'rejected' && currentUser?.id === claim.applicantId && (
-                            <button onClick={() => {
-                                if (claim.type === 'service') router.push(`/applications/service/${claim.id}`);
-                                else if (claim.type === 'payment') router.push(`/payment-request/${claim.id}`);
-                                else router.push(`/reimburse/${claim.id}`);
-                            }} className="btn btn-primary">
-                                <Edit2 size={18} /> 重新編輯
-                            </button>
+                            <>
+                                <button onClick={() => {
+                                    if (claim.type === 'service') router.push(`/applications/service/${claim.id}`);
+                                    else if (claim.type === 'payment') router.push(`/payment-request/${claim.id}`);
+                                    else router.push(`/reimburse/${claim.id}`);
+                                }} className="btn btn-primary">
+                                    <Edit2 size={18} /> 重新編輯
+                                </button>
+                                <button onClick={handleCancel} className="btn" style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', backgroundColor: 'transparent' }}>
+                                    <XCircle size={18} /> 撤銷申請
+                                </button>
+                            </>
                         )}
 
                         {currentUser?.id === claim.applicantId && (claim.status === 'pending_approval' || claim.status === 'pending_finance') && (
@@ -242,6 +256,12 @@ export default function ApplicationDetailPage() {
                         {claim.status === 'rejected' && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-danger)', fontWeight: '600', whiteSpace: 'nowrap' }}>
                                 <XCircle size={20} /> 已退回
+                            </div>
+                        )}
+
+                        {claim.status === 'cancelled' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-secondary)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <XCircle size={20} /> 已撤銷
                             </div>
                         )}
 
