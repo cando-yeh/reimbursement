@@ -34,11 +34,7 @@ interface AppContextType {
 }
 
 export const MOCK_USERS: User[] = [
-  { id: 'u1', name: 'User A', roleName: '一般員工', permissions: ['general'], email: 'user.a@company.com', approverId: 'u2' },
-  { id: 'u2', name: 'User B', roleName: '一般員工', permissions: ['general'], email: 'user.b@company.com', approverId: 'u3' },
-  { id: 'u3', name: 'User C', roleName: '財務', permissions: ['general', 'finance_audit'], email: 'finance.c@company.com', approverId: 'u2' },
-  { id: 'u4', name: '管理者', roleName: '一般員工 (管理員)', permissions: ['general', 'user_management'], email: 'admin.d@company.com', approverId: 'u2' },
-  { id: 'u5', name: 'Cando Yeh', roleName: '財務 + 管理者', permissions: ['general', 'finance_audit', 'user_management'], email: 'cando.yeh@gmail.com', approverId: 'u2' },
+  { id: 'u5', name: 'Cando Yeh', roleName: '系統管理員', permissions: ['general', 'finance_audit', 'user_management'], email: 'cando.yeh@gmail.com' },
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -91,7 +87,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (savedUsers) {
         setAvailableUsers(JSON.parse(savedUsers));
       } else {
-        // Only keep MOCK_USERS during development or as fallback
+        // No initial users, start with empty or the dev admin
         setAvailableUsers(MOCK_USERS);
       }
 
