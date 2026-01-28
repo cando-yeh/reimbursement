@@ -20,7 +20,6 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
             alignItems: 'center',
             gap: '0.5rem',
             background: 'none',
-            border: 'none',
             borderTop: 'none',
             borderLeft: 'none',
             borderRight: 'none',

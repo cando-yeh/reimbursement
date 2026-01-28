@@ -221,8 +221,15 @@ export default function ApplicationDetailPage() {
                         )}
 
                         {claim.status === 'approved' && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                                <CheckCircle size={20} /> 待付款
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                {currentUser?.permissions.includes('finance_audit') && (
+                                    <button onClick={handleReject} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger)', backgroundColor: 'transparent' }}>
+                                        <X size={18} /> 退回
+                                    </button>
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                    <CheckCircle size={20} /> 待付款
+                                </div>
                             </div>
                         )}
 

@@ -58,13 +58,13 @@ enum ClaimType {
 
 model Claim {
   id              String      @id @default(uuid())
-  type            ClaimType   // changed from String
+  type            String   // changed back to String to match DB
   payee           String
   payeeId         String?
   applicantId     String
   applicant       User        @relation(fields: [applicantId], references: [id])
   date            DateTime    @default(now())
-  status          ClaimStatus // changed from String
+  status          String // changed back to String to match DB
   description     String
   amount          Float
   paymentDetails  Json?       // transactionContent, payerNotes, invoiceStatus, etc.

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Save, X, Building, CreditCard, FileText } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
 import { Vendor } from '@/types';
-import { createVendorRequest } from '@/app/actions/vendors';
+import { useApp } from '@/context/AppContext';
 
 interface VendorFormProps {
     initialData?: Partial<Vendor>; // For edit mode
@@ -15,6 +15,7 @@ interface VendorFormProps {
 
 export default function VendorForm({ initialData, mode, vendorId }: VendorFormProps) {
     const router = useRouter();
+    const { requestAddVendor, requestUpdateVendor } = useApp();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -34,20 +35,24 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
         try {
             if (!formData.name) throw new Error('請輸入廠商名稱');
 
-            const payload = {
-                type: mode === 'add' ? 'add' : 'update',
-                vendorId: vendorId, // undefined if add
-                data: formData
-            };
+            let success = false;
 
-            const result = await createVendorRequest(payload);
-
-            if (result.success) {
-                alert(mode === 'add' ? '新增申請已提交，待審核。' : '更新申請已提交，待審核。');
-                router.push('/vendors');
-                router.refresh(); // Refresh server components
+            if (mode === 'add') {
+                success = await requestAddVendor(formData);
             } else {
-                throw new Error(result.error || '提交失敗');
+                if (!vendorId) throw new Error('缺少廠商 ID');
+                success = await requestUpdateVendor(vendorId, formData);
+            }
+
+            if (success) {
+                // Alert is handled in context
+                router.push('/vendors');
+                // router.refresh(); // Context update is enough for client state, but refresh might be needed for other server components? 
+                // Context handles fetching fresh data.
+            } else {
+                // Error alert handled in context? 
+                // Context requestAddVendor alerts on failure.
+                // So we just stay here.
             }
         } catch (err: any) {
             console.error(err);

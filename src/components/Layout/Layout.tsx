@@ -51,15 +51,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
     const [isEditingName, setIsEditingName] = React.useState(false);
     const [tempName, setTempName] = React.useState('');
-    const { currentUser, switchUser, logout, isAuthenticated, availableUsers, claims, vendorRequests, updateUser } = useApp();
+    const { currentUser, switchUser, logout, isAuthenticated, availableUsers, claims, vendorRequests, updateUser, isAuthLoading } = useApp();
     const router = useRouter();
     const pathname = usePathname();
 
     React.useEffect(() => {
-        if (!isAuthenticated && pathname !== '/login') {
-            router.push('/login');
+        if (!isAuthLoading) {
+            if (!isAuthenticated && pathname !== '/login') {
+                router.push('/login');
+            } else if (isAuthenticated && pathname === '/login') {
+                router.push('/');
+            }
         }
-    }, [isAuthenticated, router, pathname]);
+    }, [isAuthLoading, isAuthenticated, router, pathname]);
 
     React.useEffect(() => {
         if (currentUser) {
@@ -72,7 +76,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         return <>{children}</>;
     }
 
-    if (!currentUser) return null;
+    if (isAuthLoading || !currentUser) return null;
 
     const handleSaveName = () => {
         if (tempName.trim()) {
@@ -82,11 +86,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     };
 
     const hasPermission = (permission: string) => {
-        return currentUser.permissions.includes(permission as any);
+        return currentUser.permissions?.includes(permission as any) || false;
     };
 
-    const isFinance = currentUser.permissions.includes('finance_audit');
-    const isManager = availableUsers.some(u => u.approverId === currentUser.id);
+    const isFinance = hasPermission('finance_audit') || currentUser.roleName.includes('財務');
+    const isManager = hasPermission('user_management') || currentUser.roleName.includes('管理者') || availableUsers.some(u => u.approverId === currentUser.id);
 
     const pendingEvidenceCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'pending_evidence').length;
     const returnedCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'rejected').length;

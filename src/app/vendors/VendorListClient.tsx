@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
 import Pagination from '@/components/Common/Pagination';
-import { createVendorRequest } from '@/app/actions/vendors';
+import { useApp } from '@/context/AppContext';
 
 interface VendorListClientProps {
     initialVendors: any[];
@@ -14,6 +14,7 @@ interface VendorListClientProps {
 }
 
 export default function VendorListClient({ initialVendors, initialRequests, currentUser }: VendorListClientProps) {
+    const { requestDeleteVendor } = useApp();
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -48,18 +49,14 @@ export default function VendorListClient({ initialVendors, initialRequests, curr
 
     const handleDeleteRequest = async (vendorId: string) => {
         if (window.confirm('確定要申請刪除此廠商嗎？')) {
-            const result = await createVendorRequest({
-                type: 'delete',
-                vendorId: vendorId,
-                data: {}
-            });
-            if (result.success) {
-                alert('刪除申請已提交審核。');
-                // In a real app, we might want to refresh via router.refresh() 
-                // or update local state optimistically.
-                window.location.reload();
-            } else {
-                alert('提交失敗');
+            const success = await requestDeleteVendor(vendorId);
+            if (success) {
+                // message handled in context
+                window.location.reload(); // Still might want reload to update server list? 
+                // But context has new requests.
+                // VendorListClient uses `initialRequests` prop OR context?
+                // It uses props. So reload is needed for THIS page listing until we refactor it to use context too.
+                // But context update ensures Reviews page (Dashboard) is correct.
             }
         }
     };

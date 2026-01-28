@@ -49,9 +49,10 @@ const ClaimTable = ({
     }
 
     const getApplicantName = (claim: Claim) => {
-        if (!availableUsers) return '-';
+        if (claim.applicant?.name) return claim.applicant.name;
+        if (!availableUsers) return claim.applicantId || '-';
         const user = availableUsers.find((u: any) => u.id === claim.applicantId);
-        return user ? user.name : claim.applicantId;
+        return user ? user.name : (claim.applicantId || '-');
     };
 
     return (
@@ -97,6 +98,7 @@ const ClaimTable = ({
                                         type="checkbox"
                                         checked={selectedIds?.includes(claim.id)}
                                         onChange={() => onSelectChange && onSelectChange(claim.id)}
+                                        onClick={(e) => e.stopPropagation()}
                                     />
                                 </td>
                             )}

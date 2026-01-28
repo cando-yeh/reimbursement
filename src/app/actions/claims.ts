@@ -61,32 +61,28 @@ export async function getClaims(filters?: { status?: string }) {
 }
 
 export async function createClaim(data: CreateClaimInput) {
-    const user = await getCurrentUser();
-    if (!user) {
-        return { success: false, error: '請先登入' };
-    }
-
-    // In real app, we should fetch the User record from our own DB table using user.email
-    // For now, we assume user exists or we just use the Auth ID if logic permits.
-    // However, our schema says applicantId references User.id. 
-    // We MUST find the local user ID.
-    const dbUser = await prisma.user.findUnique({
-        where: { email: user.email || '' }
-    });
-
-    // Fallback logic for "Google User" who might not be in DB yet (if we didn't strictly sync)
-    // But for foreign key constraint, we need a valid ID. 
-    // If dbUser is null, this will fail.
-    if (!dbUser) {
-        return { success: false, error: '找不到使用者資料 (請聯絡管理員)' };
-    }
-
-    const calculatedAmount = data.items.reduce((sum, item) => sum + item.amount, 0);
-
-    // Initial Status Logic
-    const initialStatus = dbUser.approverId ? 'pending_approval' : 'pending_finance';
-
     try {
+        console.log('--- createClaim Input ---');
+        console.log(JSON.stringify(data, null, 2));
+
+        const user = await getCurrentUser();
+        if (!user) {
+            return { success: false, error: '請先登入' };
+        }
+
+        const dbUser = await prisma.user.findUnique({
+            where: { email: user.email || '' }
+        });
+
+        if (!dbUser) {
+            return { success: false, error: '找不到使用者資料 (請聯絡管理員)' };
+        }
+
+        const calculatedAmount = (data.items || []).reduce((sum, item) => sum + item.amount, 0);
+
+        // Initial Status Logic
+        const initialStatus = dbUser.approverId ? 'pending_approval' : 'pending_finance';
+
         const newClaim = await prisma.claim.create({
             data: {
                 type: data.type as ClaimType,
@@ -97,10 +93,10 @@ export async function createClaim(data: CreateClaimInput) {
                 status: (data.status || initialStatus) as ClaimStatus,
                 description: data.description,
                 amount: data.amount || calculatedAmount,
-                items: data.items as any, // Prisma handles JSON
+                items: (data.items || []) as any, // Prisma handles JSON
                 paymentDetails: data.paymentDetails ? (data.paymentDetails as any) : undefined,
                 serviceDetails: data.serviceDetails ? (data.serviceDetails as any) : undefined,
-                evidenceFiles: data.evidenceFiles,
+                evidenceFiles: data.evidenceFiles || [], // Default to empty array if undefined
                 noReceiptReason: data.noReceiptReason,
                 history: [
                     {
@@ -113,10 +109,14 @@ export async function createClaim(data: CreateClaimInput) {
             }
         });
 
+        console.log('--- createClaim Success ---');
+        console.log('Claim ID:', newClaim.id);
+
         revalidatePath('/');
         return { success: true, data: newClaim };
     } catch (error: any) {
-        console.error('Create Claim Error:', error);
+        console.error('--- createClaim Error ---');
+        console.error(error);
         return { success: false, error: '建立申請單失敗: ' + error.message };
     }
 }
@@ -173,7 +173,12 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
         const currentClaim = await prisma.claim.findUnique({ where: { id } });
         if (!currentClaim) return { success: false, error: 'Claim not found' };
 
-        if (currentClaim.applicantId !== dbUser.id && dbUser.roleName !== '財務' && dbUser.roleName !== '管理者') {
+        const isPrivileged =
+            (dbUser.permissions && (dbUser.permissions.includes('finance_audit') || dbUser.permissions.includes('user_management'))) ||
+            dbUser.roleName.includes('財務') ||
+            dbUser.roleName.includes('管理者');
+
+        if (currentClaim.applicantId !== dbUser.id && !isPrivileged) {
             return { success: false, error: 'You do not have permission to edit this claim' };
         }
 

@@ -49,7 +49,12 @@ export default async function Dashboard({
   // 3. Approvers? In the pending items they should see subordinates' claims, 
   //    but for "My Claims" (this page), it usually only shows their own submissions.
 
-  const isPrivileged = dbUser.roleName === '財務' || dbUser.roleName === '管理者';
+  // Check based on permissions or role name containing key terms
+  const isPrivileged =
+    (dbUser.permissions && (dbUser.permissions.includes('finance_audit') || dbUser.permissions.includes('user_management'))) ||
+    dbUser.roleName.includes('財務') ||
+    dbUser.roleName.includes('管理者');
+
   const myClaims = isPrivileged ? allClaims : allClaims.filter(c => c.applicantId === dbUser.id);
 
   const drafts = myClaims.filter(c => c.status === 'draft');

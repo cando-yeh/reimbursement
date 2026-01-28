@@ -12,21 +12,11 @@ import VendorRequestTable from '@/components/Common/VendorRequestTable';
 import PaymentRecordTable from '@/components/Common/PaymentRecordTable';
 import VendorRequestDetailModal from '@/components/Common/VendorRequestDetailModal';
 
-function ReviewDashboardContent() {
-    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = useApp();
+function ReviewDashboardInner() {
+    // 1. Hooks - MUST BE AT THE TOP AND UNCONDITIONAL
+    const app = useApp();
     const router = useRouter();
     const searchParams = useSearchParams();
-
-    // Initial tab logic
-    const currentTab = searchParams.get('tab') || 'claim_approvals';
-    const validTabs = ['claim_approvals', 'pending_payment', 'pending_evidence', 'vendor_approvals', 'payment_records', 'all_applications'];
-    const activeTab = validTabs.includes(currentTab) ? currentTab : 'claim_approvals';
-
-    const handleTabChange = (tab: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('tab', tab);
-        router.push(`/reviews?${params.toString()}`);
-    };
 
     // Filters for All Applications
     const [filterApplicant, setFilterApplicant] = useState('');
@@ -47,18 +37,31 @@ function ReviewDashboardContent() {
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
-    // Clear selection and reset page when switching tabs
+    // Derived values from searchParams
+    const currentTab = searchParams.get('tab') || 'claim_approvals';
+    const validTabs = ['claim_approvals', 'pending_payment', 'pending_evidence', 'vendor_approvals', 'payment_records', 'all_applications'];
+    const activeTab = validTabs.includes(currentTab) ? currentTab : 'claim_approvals';
+
+    // Effect to reset state on tab change
     useEffect(() => {
         setSelectedClaimIds([]);
         setSelectionError(null);
         setCurrentPage(1);
     }, [activeTab]);
 
-    if (!currentUser) return null;
+    // 2. Early return - MUST BE AFTER ALL HOOKS
+    if (!app.currentUser) return null;
 
-    // Permissions
+    // 3. Destructure and logic
+    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = app;
     const isFinance = currentUser.permissions.includes('finance_audit');
     const isManager = availableUsers.some(u => u.approverId === currentUser.id);
+
+    const handleTabChange = (tab: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', tab);
+        router.push(`/reviews?${params.toString()}`);
+    };
 
     // Filter Logic
     const claimApprovals = claims.filter(c => {
@@ -397,7 +400,7 @@ function ReviewDashboardContent() {
 export default function ReviewDashboard() {
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <ReviewDashboardContent />
+            <ReviewDashboardInner />
         </Suspense>
     );
 }

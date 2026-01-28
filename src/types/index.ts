@@ -64,6 +64,11 @@ export interface Claim {
         bankBookUrl?: string; // For session preview
     };
 
+    applicant?: {
+        name: string;
+        email?: string;
+        roleName?: string;
+    };
     datePaid?: string; // Optional, set when status becomes 'paid'
     evidenceFiles?: string[]; // Array of file paths/base64 for post-payment evidence
     noReceiptReason?: string; // Reason for any "no receipt" claim items
