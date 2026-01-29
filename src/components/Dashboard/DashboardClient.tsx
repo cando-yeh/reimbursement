@@ -9,7 +9,7 @@ import TabButton from '@/components/Common/TabButton'; // Ensure this component 
 import PageHeader from '@/components/Common/PageHeader';
 import TabContainer from '@/components/Common/TabContainer';
 import { Claim, User, Payment } from '@/types';
-import { deleteClaim } from '@/app/actions/claims';
+import { useApp } from '@/context/AppContext';
 
 interface DashboardData {
     drafts: Claim[];
@@ -29,6 +29,7 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ activeTab, data, payments, availableUsers }: DashboardClientProps) {
     const router = useRouter();
+    const { deleteClaim } = useApp();
 
     const handleTabChange = (tab: string) => {
         router.push(`/?tab=${tab}`);
