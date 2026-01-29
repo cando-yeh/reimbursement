@@ -10,7 +10,7 @@ import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadClo
 
 const formatAction = (action: string) => {
     switch (action) {
-        case 'submitted': return '送出申請 (待主管審核)';
+        case 'submitted': return '送出申請';
         case 'status_change_to_pending_approval': return '重新提交 (待審核)';
         case 'status_change_to_pending_finance': return '主管核准 (待財務審核)';
         case 'status_change_to_approved': return '財務核准 (待付款)';
