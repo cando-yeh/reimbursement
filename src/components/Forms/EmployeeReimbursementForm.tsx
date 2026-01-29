@@ -9,6 +9,22 @@ import { EXPENSE_CATEGORIES } from '@/utils/constants';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
 import { uploadFile, deleteFile } from '@/utils/storage';
 
+interface ExpenseItemWithAttachment {
+    id: string;
+    date: string;
+    amount: number;
+    description: string;
+    category?: string;
+    invoiceNumber?: string;
+    noReceipt: boolean;
+    receiptFile: File | null;
+    existingReceiptName?: string;
+    fileUrl?: string;
+}
+
+import FormSection from '@/components/Common/FormSection';
+import PageHeader from '@/components/Common/PageHeader';
+
 export default function EmployeeReimbursementForm({ editId }: { editId?: string }) {
     const { claims, currentUser, addClaim, updateClaim, vendors, vendorRequests } = useApp();
     const router = useRouter();
