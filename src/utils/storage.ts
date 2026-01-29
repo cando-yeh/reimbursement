@@ -1,5 +1,7 @@
 import { createClient } from './supabase/client';
 
+import { EXPENSE_CATEGORY_MAP } from './constants';
+
 /**
  * Compresses an image file before upload.
  */
@@ -85,16 +87,19 @@ export async function uploadFile(
 
     // 2. Generate semantic filename: Payee_Category_Amount_Index.ext
     const fileExt = file.name.split('.').pop();
+    // Use English category mapping if available, otherwise fallback to sanitized original
+    const englishCategory = EXPENSE_CATEGORY_MAP[category] || category;
+
     // Strict sanitization: remove non-ASCII characters to prevent S3 invalid key errors
     const safePayee = payeeName.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
-    const safeCategory = category.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
+    const safeCategory = englishCategory.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
     const fileName = `${safePayee}_${safeCategory}_${amount}_${index}.${fileExt}`;
     const filePath = `${yearMonth}/${fileName}`;
 
     // 3. Upload to 'receipts' bucket
     const { error } = await supabase.storage
         .from('receipts')
-        .upload(filePath, fileToUpload);
+        .upload(filePath, fileToUpload, { upsert: true });
 
     if (error) {
         console.error('Upload Error:', error);
@@ -107,4 +112,34 @@ export async function uploadFile(
         .getPublicUrl(filePath);
 
     return publicUrl;
+}
+
+/**
+ * Deletes a file from Supabase Storage.
+ * @param publicUrl The public URL of the file to delete
+ */
+export async function deleteFile(publicUrl: string) {
+    if (!publicUrl) return;
+
+    try {
+        const supabase = createClient();
+
+        // Extract the file path from the public URL
+        // URL format: .../storage/v1/object/public/receipts/YYYYMM/filename.ext
+        const pathParts = publicUrl.split('/receipts/');
+        if (pathParts.length < 2) return;
+
+        const filePath = pathParts[1];
+
+        const { error } = await supabase.storage
+            .from('receipts')
+            .remove([filePath]);
+
+        if (error) {
+            console.error('Delete Error:', error);
+            // Don't throw, just log. Deletion failure shouldn't block main flow.
+        }
+    } catch (e) {
+        console.error('Delete Exception:', e);
+    }
 }

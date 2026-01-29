@@ -55,3 +55,18 @@ export const EXPENSE_CATEGORIES = [
     '租金支出',
     '文具用品'
 ];
+
+export const EXPENSE_CATEGORY_MAP: Record<string, string> = {
+    '保險費': 'Insurance',
+    '旅費': 'Travel',
+    '廣告費': 'Advertising',
+    '交際費': 'Entertainment',
+    '捐贈': 'Donation',
+    '宜睿票券': 'Edenred_Ticket',
+    '郵電費': 'Postage_Telecom',
+    '職工福利': 'Employee_Welfare',
+    '軟體使用費': 'Software_License',
+    '雜項購置': 'Miscellaneous',
+    '租金支出': 'Rent',
+    '文具用品': 'Stationery'
+};

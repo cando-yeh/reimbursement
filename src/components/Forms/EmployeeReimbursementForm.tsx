@@ -7,23 +7,7 @@ import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X, Loader2 } from 'lucide-react';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
-import { uploadFile } from '@/utils/storage';
-
-interface ExpenseItemWithAttachment {
-    id: string;
-    date: string;
-    amount: number;
-    description: string;
-    category?: string;
-    invoiceNumber?: string;
-    noReceipt: boolean;
-    receiptFile: File | null;
-    existingReceiptName?: string;
-    fileUrl?: string;
-}
-
-import FormSection from '@/components/Common/FormSection';
-import PageHeader from '@/components/Common/PageHeader';
+import { uploadFile, deleteFile } from '@/utils/storage';
 
 export default function EmployeeReimbursementForm({ editId }: { editId?: string }) {
     const { claims, currentUser, addClaim, updateClaim, vendors, vendorRequests } = useApp();
@@ -32,6 +16,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
         { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
     ]);
+    const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
     const [noReceiptReason, setNoReceiptReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -172,6 +157,11 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     ...claimData,
                     status: status || 'pending_finance'
                 });
+            }
+
+            // Process file deletions
+            if (filesToDelete.length > 0) {
+                await Promise.all(filesToDelete.map(url => deleteFile(url))).catch(e => console.error(e));
             }
 
             router.push(action === 'draft' ? '/?tab=drafts' : '/');
@@ -328,6 +318,9 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                             </div>
                                             <button
                                                 onClick={() => {
+                                                    if (item.fileUrl) {
+                                                        setFilesToDelete(prev => [...prev, item.fileUrl!]);
+                                                    }
                                                     handleItemChange(item.id, 'existingReceiptName', undefined);
                                                     handleItemChange(item.id, 'fileUrl', undefined);
                                                 }}
