@@ -70,8 +70,8 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                 action={headerAction}
             />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
-                <TabContainer style={{ marginBottom: 0, borderBottom: 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
+                <TabContainer style={{ marginBottom: 0, borderBottom: 'none', flex: 1, minWidth: 0 }}>
                     <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={counts?.drafts} badge={counts?.drafts} />
                     <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={counts?.evidence} badge={counts?.evidence} />
                     <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={counts?.returned} badge={counts?.returned} />
@@ -80,13 +80,13 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                     <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={counts?.closed} />
                 </TabContainer>
 
-                <div style={{ position: 'relative', minWidth: '250px' }}>
+                <div style={{ position: 'relative', width: '280px', flexShrink: 0 }}>
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                     <input
                         type="text"
                         placeholder="搜尋說明、對象或編號..."
                         className="form-input"
-                        style={{ paddingLeft: '2.5rem', borderRadius: 'var(--radius-md)' }}
+                        style={{ paddingLeft: '2.5rem', borderRadius: 'var(--radius-md)', width: '100%', backgroundColor: 'white' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
