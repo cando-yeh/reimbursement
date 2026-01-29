@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
-import { updateUser as updateUserAction, deleteUser as deleteUserAction } from '@/app/actions/users';
+import { updateUser as updateUserAction, deleteUser as deleteUserAction, getDBUsers } from '@/app/actions/users';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims } from '@/app/actions/claims';
 
 interface AppContextType {
@@ -131,29 +131,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Avoid redundant updates
-      setCurrentUser(prevUser => {
-        if (prevUser?.id === sessionUser.id || (prevUser?.email && prevUser.email === sessionUser.email)) {
-          return prevUser;
-        }
+      // 1. First, check what we have in memory
+      const users = availableUsersRef.current;
+      const foundUser = users.find(u => u.id === sessionUser.id || (u.email && u.email.toLowerCase() === sessionUser.email?.toLowerCase()));
 
-        // Find existing user or create mock profile
-        const users = availableUsersRef.current;
-        let foundUser = users.find(u => u.id === sessionUser.id || u.email === sessionUser.email);
+      if (foundUser) {
+        // If found in memory, use it
+        setCurrentUser(foundUser);
+      } else {
+        // If NOT in memory, set a minimal user and trigger DB sync immediately
+        const minimalUser: User = {
+          id: sessionUser.id,
+          name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown',
+          email: sessionUser.email || '',
+          roleName: '讀取中...',
+          permissions: ['general'],
+        };
+        setCurrentUser(minimalUser);
+      }
 
-        if (!foundUser) {
-          foundUser = {
-            id: sessionUser.id,
-            name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown',
-            email: sessionUser.email || '',
-            roleName: '一般員工',
-            permissions: ['general'],
-          };
-          setAvailableUsers(prev => [...prev.filter(u => u.id !== foundUser!.id), foundUser!]);
-        }
-
-        return foundUser;
-      });
+      // 2. Always trigger a fresh DB sync on identity change/login
+      fetchDBUsers();
     };
 
     // Check initial session
@@ -170,12 +168,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         handleAuthChange(session.user);
         // Only redirect if on login page and not already navigating
-        if (window.location.pathname === '/login') {
+        if (typeof window !== 'undefined' && window.location.pathname === '/login') {
           router.refresh();
           router.push('/');
         }
       } else if (event === 'SIGNED_OUT') {
-        handleAuthChange(null);
+        setCurrentUser(null);
         router.refresh();
         router.push('/login');
       }
@@ -184,14 +182,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]); // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
+  }, [router]);
+  // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
 
   // 5. Fetch Users from DB
   const fetchDBUsers = async () => {
-    if (!currentUser) return;
     try {
-      const { data, error } = await supabase.from('User').select('*');
-      if (!error && data && data.length > 0) {
+      const { data, success } = await getDBUsers();
+      if (success && data && data.length > 0) {
         setAvailableUsers(prev => {
           const dbUsers = data as User[];
           const userMap = new Map();
@@ -199,7 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           dbUsers.forEach(u => userMap.set(u.id, u));
           dbUsers.forEach(u => {
             if (u.email) {
-              const existingByEmail = Array.from(userMap.values()).find(ex => ex.email === u.email);
+              const existingByEmail = Array.from(userMap.values()).find((ex: any) => ex.email === u.email);
               if (existingByEmail && existingByEmail.id !== u.id) {
                 userMap.delete(existingByEmail.id);
                 userMap.set(u.id, u);
@@ -209,21 +207,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return Array.from(userMap.values());
         });
 
-        if (currentUser?.email) {
-          const dbUser = (data as User[]).find(u => u.email === currentUser.email);
-          if (dbUser) {
-            // Check if we need to update the current user state
-            // We update if the ID changed (migration) OR if role/permissions/name changed
-            const hasChanges =
-              dbUser.id !== currentUser.id ||
-              dbUser.roleName !== currentUser.roleName ||
-              JSON.stringify(dbUser.permissions) !== JSON.stringify(currentUser.permissions) ||
-              dbUser.name !== currentUser.name;
+        const authData = await supabase.auth.getUser();
+        const currentEmail = authData.data.user?.email;
 
-            if (hasChanges) {
-              console.log('--- AppContext: Syncing currentUser with DB ---', dbUser.roleName);
-              setCurrentUser(dbUser);
-            }
+        if (currentEmail) {
+          const dbUser = (data as User[]).find(u => u.email?.toLowerCase() === currentEmail.toLowerCase());
+
+          if (dbUser) {
+            setCurrentUser(prevUser => {
+              if (!prevUser) return dbUser;
+              const hasChanges =
+                dbUser.id !== prevUser.id ||
+                dbUser.roleName !== prevUser.roleName ||
+                JSON.stringify(dbUser.permissions) !== JSON.stringify(prevUser.permissions) ||
+                dbUser.name !== prevUser.name;
+
+              if (hasChanges) {
+                console.log('--- AppContext: Syncing currentUser with DB ---', dbUser.roleName);
+                return dbUser;
+              }
+              return prevUser;
+            });
           }
         }
       }
@@ -233,8 +237,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    fetchDBUsers();
-  }, [currentUser?.id]); // Only refetch when the actual identity changes, not just any property
+    // Only fetch users if not on login page
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      fetchDBUsers();
+    }
+  }, [isAuthenticated]);
 
   // --- App Actions ---
 
@@ -639,7 +646,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const fetchVendors = async () => {
     console.log('Fetching vendors...');
-    setIsVendorsLoading(true);
+    // Only show full loading state if we have no data
+    if (vendors.length === 0) {
+      setIsVendorsLoading(true);
+    }
+
     try {
       const { success, data } = await getVendors();
       if (success && data) {

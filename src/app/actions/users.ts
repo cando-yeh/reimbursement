@@ -74,3 +74,26 @@ export async function deleteUser(userId: string) {
         return { success: false, error: 'Delete failed: ' + error.message };
     }
 }
+
+export async function getDBUsers() {
+    try {
+        const users = await prisma.user.findMany({
+            orderBy: { name: 'asc' }
+        });
+        return { success: true, data: users };
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return { success: false, error: 'Failed to fetch users' };
+    }
+}
+
+export async function getDBUserByEmail(email: string) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase() }
+        });
+        return { success: true, data: user };
+    } catch (error) {
+        return { success: false, error: 'Failed' };
+    }
+}
