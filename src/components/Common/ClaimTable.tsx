@@ -12,6 +12,7 @@ interface ClaimTableProps {
     selectedIds?: string[];
     onSelectChange?: (id: string) => void;
     payments?: Payment[];
+    loading?: boolean;
 }
 
 const ClaimTable = ({
@@ -24,7 +25,8 @@ const ClaimTable = ({
     selectable,
     selectedIds,
     onSelectChange,
-    payments
+    payments,
+    loading
 }: ClaimTableProps) => {
     // Helper to get approver name for a claim
     const getApproverName = (claim: Claim) => {
@@ -74,7 +76,17 @@ const ClaimTable = ({
                 </tr>
             </thead>
             <tbody>
-                {claims.length === 0 ? (
+                {loading ? (
+                    <tr>
+                        <td
+                            colSpan={8 + (selectable ? 1 : 0) + (showApprover ? 1 : 0) + (payments ? 1 : 0) + (renderActions ? 1 : 0)}
+                            style={{ textAlign: 'center', padding: '2rem' }}
+                        >
+                            <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+                            <div style={{ marginTop: '0.5rem', color: 'var(--color-text-muted)' }}>載入中...</div>
+                        </td>
+                    </tr>
+                ) : claims.length === 0 ? (
                     <tr>
                         <td
                             colSpan={8 + (selectable ? 1 : 0) + (showApprover ? 1 : 0) + (payments ? 1 : 0) + (renderActions ? 1 : 0)}

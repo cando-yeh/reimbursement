@@ -8,13 +8,13 @@ import PageSkeleton from '@/components/Common/PageSkeleton';
 
 // Client Component
 export default function Dashboard() {
-  const { currentUser, claims, availableUsers, payments, isAuthLoading } = useApp();
+  const { currentUser, claims, availableUsers, payments, isAuthLoading, isDataLoading } = useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Auth Redirection is now handled in AppContext/Layout, 
   // but we can do a quick check here too or just show skeleton.
-  if (isAuthLoading) {
+  if (isAuthLoading || isDataLoading) {
     return <PageSkeleton />;
   }
 

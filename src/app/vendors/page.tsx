@@ -6,7 +6,7 @@ import { useApp } from '@/context/AppContext';
 import PageSkeleton from '@/components/Common/PageSkeleton';
 
 export default function VendorListPage() {
-    const { vendors, vendorRequests, currentUser, isAuthLoading, fetchVendors } = useApp();
+    const { vendors, vendorRequests, currentUser, isAuthLoading, isVendorsLoading, fetchVendors } = useApp();
 
     React.useEffect(() => {
         if (currentUser) {
@@ -14,7 +14,7 @@ export default function VendorListPage() {
         }
     }, [currentUser?.id]);
 
-    if (isAuthLoading) {
+    if (isAuthLoading || isVendorsLoading) {
         return <PageSkeleton />;
     }
 

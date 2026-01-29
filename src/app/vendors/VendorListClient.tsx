@@ -103,7 +103,14 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                         </tr>
                     </thead>
                     <tbody>
-                        {paginatedVendors.map((vendor: any) => {
+                        {useApp().isVendorsLoading ? (
+                            <tr>
+                                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>
+                                    <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+                                    <div style={{ marginTop: '0.5rem', color: 'var(--color-text-muted)' }}>載入中...</div>
+                                </td>
+                            </tr>
+                        ) : paginatedVendors.map((vendor: any) => {
                             const pendingRequest = getPendingAction(vendor.id);
 
                             return (
@@ -175,7 +182,7 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                                 </tr>
                             );
                         })}
-                        {displayVendors.length === 0 && (
+                        {!useApp().isVendorsLoading && displayVendors.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="empty-state">
                                     {searchTerm ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}

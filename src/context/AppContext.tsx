@@ -35,6 +35,8 @@ interface AppContextType {
   deleteUser: (id: string) => Promise<void>;
   refreshUsers: () => Promise<void>;
   isAuthLoading: boolean;
+  isDataLoading: boolean;
+  isVendorsLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -54,6 +56,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [isVendorsLoading, setIsVendorsLoading] = useState(false);
 
   const [isInitialized, setIsInitialized] = useState(false);
   const availableUsersRef = useRef<User[]>([]);
@@ -78,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUser) return;
 
       console.time('fetchServerData');
+      setIsDataLoading(true);
       try {
         const [claimsResult, requestsResult] = await Promise.all([
           getClaims(),
@@ -102,6 +107,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Error fetching server data:', error);
+      } finally {
+        setIsDataLoading(false);
       }
       console.timeEnd('fetchServerData');
     };
@@ -625,9 +632,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const fetchVendors = async () => {
     console.log('Fetching vendors...');
-    const { success, data } = await getVendors();
-    if (success && data) {
-      setVendors(data);
+    setIsVendorsLoading(true);
+    try {
+      const { success, data } = await getVendors();
+      if (success && data) {
+        setVendors(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    } finally {
+      setIsVendorsLoading(false);
     }
   };
 
@@ -658,7 +672,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateUser,
       deleteUser,
       refreshUsers: fetchDBUsers,
-      isAuthLoading
+      isAuthLoading,
+      isDataLoading,
+      isVendorsLoading
     }}>
       {children}
     </AppContext.Provider>
