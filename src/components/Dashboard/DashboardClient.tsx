@@ -17,11 +17,11 @@ interface DashboardData {
     returned: Claim[];
     inReview: Claim[];
     pendingPayment: Claim[];
-    completed: Claim[];
+    closed: Claim[];
 }
 
 interface DashboardClientProps {
-    activeTab: 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'completed';
+    activeTab: 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed';
     data: DashboardData;
     payments: Payment[];
     availableUsers: User[];
@@ -62,7 +62,7 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
                 <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={data.returned.length} badge={data.returned.length} />
                 <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={data.inReview.length} />
                 <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={data.pendingPayment.length} />
-                <TabButton active={activeTab === 'completed'} onClick={() => handleTabChange('completed')} label="已完成" count={data.completed.length} />
+                <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={data.closed.length} />
             </TabContainer>
 
             {/* Content Areas */}
@@ -140,11 +140,11 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
                 </div>
             )}
 
-            {activeTab === 'completed' && (
+            {activeTab === 'closed' && (
                 <div className="card vendor-table-container">
                     <ClaimTable
-                        claims={data.completed}
-                        emptyMessage="無已完成項目"
+                        claims={data.closed}
+                        emptyMessage="無已結束項目"
                         onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
                         payments={payments}
                         availableUsers={availableUsers}

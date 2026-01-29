@@ -24,8 +24,8 @@ export default function Dashboard() {
   }
 
   const currentTab = searchParams.get('tab');
-  const activeTab = (currentTab && ['drafts', 'evidence', 'returned', 'in_review', 'pending_payment', 'completed'].includes(currentTab))
-    ? currentTab as 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'completed'
+  const activeTab = (currentTab && ['drafts', 'evidence', 'returned', 'in_review', 'pending_payment', 'closed'].includes(currentTab))
+    ? currentTab as 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed'
     : 'drafts';
 
   // Filter Logic:
@@ -40,12 +40,12 @@ export default function Dashboard() {
     ['pending_approval', 'pending_finance', 'pending_finance_review'].includes(c.status)
   );
   const pendingPayment = myClaims.filter(c => c.status === 'approved');
-  const completed = myClaims.filter(c => c.status === 'completed');
+  const closed = myClaims.filter(c => ['completed', 'cancelled'].includes(c.status));
 
   return (
     <DashboardClient
       activeTab={activeTab}
-      data={{ drafts, pendingEvidence, returned, inReview, pendingPayment, completed }}
+      data={{ drafts, pendingEvidence, returned, inReview, pendingPayment, closed }}
       payments={payments}
       availableUsers={availableUsers}
     />

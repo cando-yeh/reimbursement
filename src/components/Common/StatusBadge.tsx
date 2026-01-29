@@ -11,7 +11,8 @@ const STATUS_MAP: Record<string, string> = {
     'approved': '待付款',
     'paid': '已付款',
     'completed': '已完成',
-    'rejected': '已退件'
+    'rejected': '已退件',
+    'cancelled': '已取消'
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
