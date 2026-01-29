@@ -136,7 +136,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     description: item.description,
                     category: item.category!,
                     invoiceNumber: item.invoiceNumber,
-                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || '附件'),
+                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || ''),
                     fileUrl: fileUrl
                 };
             }));
