@@ -84,9 +84,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.time('fetchServerData');
       setIsDataLoading(true);
       try {
-        const [claimsResult, requestsResult] = await Promise.all([
+        const [claimsResult, requestsResult, vendorsResult] = await Promise.all([
           getClaims(),
-          getVendorRequests()
+          getVendorRequests(),
+          getVendors()
         ]);
 
         // 1. Claims
@@ -94,7 +95,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setClaims(claimsResult.data);
         }
 
-        // 2. Vendors (Lazy loaded now)
+        // 2. Vendors
+        if (vendorsResult.success && vendorsResult.data) {
+          setVendors(vendorsResult.data);
+        }
 
         // 3. Vendor Requests
         if (requestsResult.success && requestsResult.data) {
