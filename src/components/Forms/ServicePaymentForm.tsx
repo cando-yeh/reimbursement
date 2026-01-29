@@ -53,23 +53,23 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
     useEffect(() => {
         if (editId) {
             const claim = claims.find(c => c.id === editId);
-            if (claim && claim.serviceDetails) {
+            if (claim) {
                 setFormData({
-                    payeeName: claim.payee,
-                    idNumber: claim.serviceDetails.idNumber,
-                    email: claim.serviceDetails.email,
-                    registeredAddress: claim.serviceDetails.registeredAddress,
-                    description: claim.description,
-                    servicePeriodStart: claim.serviceDetails.servicePeriodStart,
-                    servicePeriodEnd: claim.serviceDetails.servicePeriodEnd,
-                    amount: claim.amount,
-                    bankCode: claim.serviceDetails.bankCode,
-                    bankAccount: claim.serviceDetails.bankAccount,
+                    payeeName: claim.payee || '',
+                    idNumber: claim.serviceDetails?.idNumber || '',
+                    email: claim.serviceDetails?.email || '',
+                    registeredAddress: claim.serviceDetails?.registeredAddress || '',
+                    description: claim.description || '',
+                    servicePeriodStart: claim.serviceDetails?.servicePeriodStart || new Date().toISOString().split('T')[0],
+                    servicePeriodEnd: claim.serviceDetails?.servicePeriodEnd || new Date().toISOString().split('T')[0],
+                    amount: claim.amount || '',
+                    bankCode: claim.serviceDetails?.bankCode || '',
+                    bankAccount: claim.serviceDetails?.bankAccount || '',
                 });
                 setFileUrls({
-                    idFront: claim.serviceDetails.idFrontUrl || '',
-                    idBack: claim.serviceDetails.idBackUrl || '',
-                    bankBook: claim.serviceDetails.bankBookUrl || ''
+                    idFront: claim.serviceDetails?.idFrontUrl || '',
+                    idBack: claim.serviceDetails?.idBackUrl || '',
+                    bankBook: claim.serviceDetails?.bankBookUrl || ''
                 });
             }
         }
@@ -111,6 +111,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                 amount: amountNum,
                 date: formData.servicePeriodStart,
                 description: formData.description,
+                category: '勞務費',
             }],
             serviceDetails: {
                 idNumber: formData.idNumber,

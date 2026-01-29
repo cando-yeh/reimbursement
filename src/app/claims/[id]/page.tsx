@@ -108,7 +108,7 @@ export default function ApplicationDetailPage() {
             } else if (claim.status === 'pending_finance_review') {
                 updateClaimStatus(id, 'completed');
             }
-            router.push('/reviews?tab=claim_approvals');
+            router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
         }
     };
 
@@ -131,7 +131,7 @@ export default function ApplicationDetailPage() {
         }
         setShowRejectModal(false);
         setRejectReason('');
-        router.push('/reviews?tab=claim_approvals');
+        router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
     };
 
     if (!claim) {
