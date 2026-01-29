@@ -3,8 +3,9 @@ import { getVendor } from '@/app/actions/vendors';
 import VendorForm from '@/components/Forms/VendorForm';
 import { notFound } from 'next/navigation';
 
-export default async function VendorEditPage({ params }: { params: { id: string } }) {
-    const { success, data: vendor } = await getVendor(params.id);
+export default async function VendorEditPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const { success, data: vendor } = await getVendor(id);
 
     if (!success || !vendor) {
         notFound();
@@ -19,7 +20,7 @@ export default async function VendorEditPage({ params }: { params: { id: string 
 
     return (
         <div className="container" style={{ padding: '2rem' }}>
-            <VendorForm mode="edit" initialData={formattedVendor || undefined} vendorId={params.id} />
+            <VendorForm mode="edit" initialData={formattedVendor || undefined} vendorId={id} />
         </div>
     );
 }

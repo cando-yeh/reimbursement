@@ -88,7 +88,7 @@ export default function UserManagementPage() {
                     <thead>
                         <tr>
                             <th>姓名</th>
-                            <th>角色</th>
+                            <th style={{ textAlign: 'center' }}>角色</th>
                             <th>管理者</th>
                             <th>核准人</th>
                             <th>操作</th>
@@ -111,7 +111,7 @@ export default function UserManagementPage() {
                                             <div style={{ fontWeight: 500 }}>{user.name}</div>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td style={{ textAlign: 'center' }}>
                                         {isEditing ? (
                                             <select
                                                 className="form-input"

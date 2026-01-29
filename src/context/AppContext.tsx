@@ -522,8 +522,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const approveVendorRequest = async (requestId: string) => {
+    // 1. Optimistic Update
+    const request = vendorRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    // Mark request as approved
+    setVendorRequests(prev => prev.map(r =>
+      r.id === requestId ? { ...r, status: 'approved' } : r
+    ));
+
+    // Update Vendors list optimistically based on request type
+    if (request.type === 'add' && request.data) {
+      setVendors(prev => [...prev, { ...request.data, id: `temp-${Date.now()}` } as Vendor]);
+    } else if (request.type === 'update' && request.vendorId && request.data) {
+      setVendors(prev => prev.map(v =>
+        v.id === request.vendorId ? { ...v, ...request.data } as Vendor : v
+      ));
+    } else if (request.type === 'delete' && request.vendorId) {
+      setVendors(prev => prev.filter(v => v.id !== request.vendorId));
+    }
+
+    // 2. Server Action
     const result = await approveVendorRequestAction(requestId, 'approve');
+
     if (result?.success) {
+      // Background re-sync
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
         setVendorRequests(rData.map((r: any) => ({
@@ -533,15 +556,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
-      // Crucial: Refresh the actual vendors list so they appear in the UI
       await fetchVendors();
-      alert('審核已核准');
+    } else {
+      // Revert if failed (simplest is to re-fetch everything)
+      await fetchVendors();
+      const { success: rSuccess, data: rData } = await getVendorRequests();
+      if (rSuccess && rData) {
+        setVendorRequests(rData.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
+      }
+      alert('審核失敗');
     }
   };
 
   const rejectVendorRequest = async (requestId: string) => {
+    // 1. Optimistic Update
+    setVendorRequests(prev => prev.map(r =>
+      r.id === requestId ? { ...r, status: 'rejected' } : r
+    ));
+
+    // 2. Server Action
     const result = await approveVendorRequestAction(requestId, 'reject');
+
     if (result?.success) {
+      // Background re-sync
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
         setVendorRequests(rData.map((r: any) => ({
@@ -551,9 +593,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalData: r.originalData as any
         })));
       }
-      // Refresh to ensure consistency if any status changed
       await fetchVendors();
-      alert('審核已駁回');
+    } else {
+      // Revert
+      const { success: rSuccess, data: rData } = await getVendorRequests();
+      if (rSuccess && rData) {
+        setVendorRequests(rData.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data as any,
+          originalData: r.originalData as any
+        })));
+      }
+      alert('審核失敗');
     }
   };
 
