@@ -224,7 +224,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 dbUser.id !== prevUser.id ||
                 dbUser.roleName !== prevUser.roleName ||
                 JSON.stringify(dbUser.permissions) !== JSON.stringify(prevUser.permissions) ||
-                dbUser.name !== prevUser.name;
+                dbUser.name !== prevUser.name ||
+                dbUser.approverId !== prevUser.approverId;
 
               if (hasChanges) {
                 console.log('--- AppContext: Syncing currentUser with DB ---', dbUser.roleName);
