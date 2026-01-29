@@ -8,6 +8,8 @@ import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X, Loader2 } from '
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
 import { uploadFile, deleteFile } from '@/utils/storage';
+import { useToast } from '@/context/ToastContext';
+import ConfirmModal from '@/components/Common/ConfirmModal';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -35,6 +37,10 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
     const [noReceiptReason, setNoReceiptReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+    const [submitType, setSubmitType] = useState<'submit' | 'draft'>('submit');
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const { showToast } = useToast();
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
@@ -90,30 +96,41 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
         const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
 
         if (validItems.length === 0) {
-            alert('請至少新增一筆有效的費用明細（需填寫費用類別、說明，且金額大於 0）。');
+            showToast('請至少新增一筆有效的費用明細', 'error');
             return;
         }
 
         const invalidAmountItems = items.filter(i => (Number(i.amount) <= 0 || isNaN(Number(i.amount))));
         if (invalidAmountItems.length > 0) {
-            alert('金額必須大於 0。');
+            showToast('金額必須大於 0', 'error');
             return;
         }
 
         if (action === 'submit') {
             const missingReceipts = validItems.filter(i => !i.noReceipt && !i.receiptFile && !i.existingReceiptName && !i.fileUrl);
             if (missingReceipts.length > 0) {
-                alert('請為所有項目上傳憑證，或勾選「無憑證」。');
+                showToast('請為所有項目上傳憑證，或勾選「無憑證」', 'error');
                 return;
             }
             const hasNoReceiptItems = validItems.some(i => i.noReceipt);
             if (hasNoReceiptItems && noReceiptReason.trim() === '') {
-                alert('請填寫無憑證原因。');
+                showToast('請填寫無憑證原因', 'error');
                 return;
             }
+
+            // Show confirmation modal for submission
+            setSubmitType('submit');
+            setShowConfirmSubmit(true);
+            return;
         }
 
+        // Just execute draft immediately
+        executeSubmit('draft');
+    };
+
+    const executeSubmit = async (action: 'submit' | 'draft') => {
         setIsSubmitting(true);
+        const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
 
         try {
             // Process uploads
@@ -123,7 +140,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     fileUrl = await uploadFile(
                         item.receiptFile,
                         item.date,
-                        currentUser.name,
+                        currentUser!.name,
                         item.category!,
                         item.amount,
                         index
@@ -131,7 +148,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 }
 
                 return {
-                    id: item.id, // Or generate new ID if needed, but keeping frontend ID is fine if safe
+                    id: item.id,
                     date: item.date,
                     amount: item.amount,
                     description: item.description,
@@ -149,7 +166,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 description: generatedDescription,
                 date: new Date().toISOString().split('T')[0],
                 type: 'employee' as const, // literal type
-                payee: currentUser.name,
+                payee: currentUser!.name,
                 // payeeId: currentUser.id, // Optional, depending on schema
                 status: status || 'pending_finance',
                 noReceiptReason: validItems.some(i => i.noReceipt) ? noReceiptReason : undefined,
@@ -161,7 +178,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 // Update
                 const updateStatus = action === 'draft'
                     ? 'draft'
-                    : (currentUser.approverId ? 'pending_approval' : 'pending_finance');
+                    : (currentUser!.approverId ? 'pending_approval' : 'pending_finance');
 
                 updateClaim(editId, {
                     ...claimData,
@@ -180,12 +197,14 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 await Promise.all(filesToDelete.map(url => deleteFile(url))).catch(e => console.error(e));
             }
 
+            showToast(action === 'draft' ? '草稿已儲存' : '申請已提交', 'success');
             router.push(action === 'draft' ? '/?tab=drafts' : '/');
         } catch (error: any) {
             console.error(error);
-            alert('提交失敗: ' + error.message);
+            showToast('提交失敗: ' + error.message, 'error');
         } finally {
             setIsSubmitting(false);
+            setShowConfirmSubmit(false);
         }
     };
 
@@ -315,12 +334,30 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                         <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>-</span>
                                     ) : item.receiptFile ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                                            <div title={item.receiptFile.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Image size={24} style={{ color: 'var(--color-primary)', cursor: 'pointer' }} />
+                                            <div
+                                                title={item.receiptFile.name}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '6px',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid var(--color-border)',
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={() => window.open(URL.createObjectURL(item.receiptFile!), '_blank')}
+                                            >
+                                                <img
+                                                    src={URL.createObjectURL(item.receiptFile)}
+                                                    alt="preview"
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
                                             </div>
                                             <button
                                                 onClick={() => handleItemChange(item.id, 'receiptFile', null)}
-                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px' }}
+                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px', zIndex: 1 }}
                                                 title="移除憑證"
                                                 disabled={isSubmitting}
                                             >
@@ -329,8 +366,32 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                         </div>
                                     ) : (item.existingReceiptName || item.fileUrl) ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                                            <div title={item.existingReceiptName || '附件'} style={{ cursor: 'pointer' }}>
-                                                <Image size={24} style={{ color: 'var(--color-primary)' }} />
+                                            <div
+                                                title={item.existingReceiptName || '附件'}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '6px',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid var(--color-border)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    backgroundColor: 'var(--color-bg)'
+                                                }}
+                                                onClick={() => window.open(item.fileUrl || '#', '_blank')}
+                                            >
+                                                {item.fileUrl ? (
+                                                    <img
+                                                        src={item.fileUrl}
+                                                        alt="preview"
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        onError={(e) => {
+                                                            (e.target as any).src = "https://placehold.co/40x40?text=File";
+                                                        }}
+                                                    />
+                                                ) : <Image size={24} style={{ color: 'var(--color-primary)' }} />}
                                             </div>
                                             <button
                                                 onClick={() => {
@@ -340,7 +401,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                                     handleItemChange(item.id, 'existingReceiptName', undefined);
                                                     handleItemChange(item.id, 'fileUrl', undefined);
                                                 }}
-                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px' }}
+                                                style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px', zIndex: 1 }}
                                                 title="移除憑證"
                                                 disabled={isSubmitting}
                                             >
@@ -460,6 +521,15 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     </button>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={showConfirmSubmit}
+                title="確認提交申請"
+                message={`您確定要提交這筆共 NT$ ${calculateTotal().toLocaleString()} 的報銷申請嗎？提交後將進入審核流程。`}
+                confirmText="確認提交"
+                onConfirm={() => executeSubmit('submit')}
+                onCancel={() => setShowConfirmSubmit(false)}
+            />
         </div>
     );
 }

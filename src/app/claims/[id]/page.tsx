@@ -6,6 +6,8 @@ import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { useToast } from '@/context/ToastContext';
+import ConfirmModal from '@/components/Common/ConfirmModal';
 import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle } from 'lucide-react';
 
 const formatAction = (action: string) => {
@@ -45,10 +47,30 @@ export default function ApplicationDetailPage() {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
 
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'danger' | 'warning' | 'info';
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'warning',
+        onConfirm: () => { }
+    });
+
+    const { showToast } = useToast();
+
+    const openConfirm = (title: string, message: string, type: 'danger' | 'warning' | 'info', onConfirm: () => void) => {
+        setModalConfig({ isOpen: true, title, message, type, onConfirm });
+    };
+
     const handleSubmitEvidence = () => {
         if (!claim || !id) return;
         if (!evidenceInvoiceNumber.trim() || !evidenceInvoiceDate || !evidenceFile) {
-            alert('請填寫發票號碼、發票日期並上傳憑證檔案');
+            showToast('請填寫發票號碼、發票日期並上傳憑證檔案', 'error');
             return;
         }
 
@@ -84,6 +106,7 @@ export default function ApplicationDetailPage() {
         setEvidenceInvoiceNumber('');
         setEvidenceInvoiceDate('');
         setEvidenceFile(null);
+        showToast('補件憑證已提交', 'success');
         router.push('/?tab=in_review');
     };
 
@@ -101,16 +124,23 @@ export default function ApplicationDetailPage() {
 
     const handleApprove = () => {
         if (!claim || !id) return;
-        if (confirm('確定要核准此申請單嗎？')) {
-            if (claim.status === 'pending_approval') {
-                updateClaimStatus(id, 'pending_finance');
-            } else if (claim.status === 'pending_finance') {
-                updateClaimStatus(id, 'approved');
-            } else if (claim.status === 'pending_finance_review') {
-                updateClaimStatus(id, 'completed');
+
+        openConfirm(
+            '確認核准申請',
+            '您確定要核准此申請單嗎？核准後將進入下一個審核階段。',
+            'info',
+            () => {
+                if (claim.status === 'pending_approval') {
+                    updateClaimStatus(id, 'pending_finance');
+                } else if (claim.status === 'pending_finance') {
+                    updateClaimStatus(id, 'approved');
+                } else if (claim.status === 'pending_finance_review') {
+                    updateClaimStatus(id, 'completed');
+                }
+                showToast('核准成功', 'success');
+                router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
             }
-            router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
-        }
+        );
     };
 
     const handleReject = () => {
@@ -121,7 +151,7 @@ export default function ApplicationDetailPage() {
     const handleSubmitReject = () => {
         if (!claim || !id) return;
         if (!rejectReason.trim()) {
-            alert('請填寫退回理由');
+            showToast('請填寫退回理由', 'error');
             return;
         }
 
@@ -132,6 +162,7 @@ export default function ApplicationDetailPage() {
         }
         setShowRejectModal(false);
         setRejectReason('');
+        showToast('申請已退回', 'warning');
         router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
     };
 
@@ -150,16 +181,30 @@ export default function ApplicationDetailPage() {
 
     const handleCancel = () => {
         if (!claim || !id) return;
-        if (confirm('確定要撤銷此申請單嗎？撤銷後將無法再進行任何操作。')) {
-            updateClaimStatus(id, 'cancelled');
-            router.push('/');
-        }
+        openConfirm(
+            '確認撤銷申請',
+            '確定要撤銷此申請單嗎？撤銷後將無法再進行任何操作。',
+            'danger',
+            () => {
+                updateClaimStatus(id, 'cancelled');
+                showToast('申請已撤銷', 'info');
+                router.push('/');
+            }
+        );
     };
 
     const handleDelete = () => {
-        if (id && confirm('您確定要刪除此申請單嗎？')) {
-            deleteClaim(id);
-            router.push('/');
+        if (id) {
+            openConfirm(
+                '確認刪除申請',
+                '您確定要刪除此申請單嗎？此動作無法復原。',
+                'danger',
+                () => {
+                    deleteClaim(id);
+                    showToast('申請已刪除', 'info');
+                    router.push('/');
+                }
+            );
         }
     };
 
@@ -384,7 +429,7 @@ export default function ApplicationDetailPage() {
                             <button className="btn btn-primary" onClick={() => {
                                 if (!claim || !id) return;
                                 if (!noReceiptDate || !noReceiptReason.trim()) {
-                                    alert('請填寫交易日期和無憑證原因');
+                                    showToast('請填寫交易日期和無憑證原因', 'error');
                                     return;
                                 }
                                 const updateData: any = { status: 'pending_finance_review' };
@@ -405,6 +450,7 @@ export default function ApplicationDetailPage() {
                                 setShowNoReceiptModal(false);
                                 setNoReceiptDate('');
                                 setNoReceiptReason('');
+                                showToast('無憑證申報已完成', 'info');
                                 router.push('/?tab=in_review');
                             }}>提交</button>
                         </div>
@@ -591,6 +637,18 @@ export default function ApplicationDetailPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={modalConfig.isOpen}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onConfirm={() => {
+                    modalConfig.onConfirm();
+                    setModalConfig(prev => ({ ...prev, isOpen: false }));
+                }}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }

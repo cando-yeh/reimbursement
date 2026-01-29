@@ -2,11 +2,14 @@
 
 import React from 'react';
 import { AppProvider } from '@/context/AppContext';
+import { ToastProvider } from '@/context/ToastContext';
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
     return (
-        <AppProvider>
-            {children}
-        </AppProvider>
+        <ToastProvider>
+            <AppProvider>
+                {children}
+            </AppProvider>
+        </ToastProvider>
     );
 }

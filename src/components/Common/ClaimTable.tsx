@@ -97,62 +97,73 @@ const ClaimTable = ({
                         </td>
                     </tr>
                 ) : (
-                    claims.map((claim: Claim) => (
-                        <tr
-                            key={claim.id}
-                            onClick={() => onRowClick && onRowClick(claim)}
-                            style={{ cursor: onRowClick ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
-                        >
-                            {selectable && (
+                    claims.map((claim: Claim) => {
+                        const hasNoReceipt = !!claim.noReceiptReason;
+                        const isPendingEvidence = claim.status === 'pending_evidence';
+                        const rowStyle: React.CSSProperties = {
+                            cursor: onRowClick ? 'pointer' : 'default',
+                            transition: 'background-color 0.2s',
+                            backgroundColor: hasNoReceipt ? 'rgba(245, 158, 11, 0.05)' : isPendingEvidence ? 'rgba(239, 68, 68, 0.03)' : undefined
+                        };
+
+                        return (
+                            <tr
+                                key={claim.id}
+                                onClick={() => onRowClick && onRowClick(claim)}
+                                style={rowStyle}
+                                className={hasNoReceipt ? 'has-no-receipt' : ''}
+                            >
+                                {selectable && (
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds?.includes(claim.id)}
+                                            onChange={() => onSelectChange && onSelectChange(claim.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </td>
+                                )}
+                                <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
+                                <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{claim.date}</td>
+                                <td style={{ whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
                                 <td>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds?.includes(claim.id)}
-                                        onChange={() => onSelectChange && onSelectChange(claim.id)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                        {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
+                                    </span>
                                 </td>
-                            )}
-                            <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{claim.id.slice(0, 8)}</td>
-                            <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{claim.date}</td>
-                            <td style={{ whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
-                            <td>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                    {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
-                                </span>
-                            </td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                                {getApplicantName(claim)}
-                            </td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                                <div>{claim.payee}</div>
-                            </td>
-                            {showApprover && (
-                                <td style={{ fontWeight: 500 }}>
-                                    {getApproverName(claim)}
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                    {getApplicantName(claim)}
                                 </td>
-                            )}
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                                {claim.description}
-                            </td>
-                            <td>
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 600, gap: '0.25rem' }}>
-                                    <span>$</span>
-                                    <span>{claim.amount.toLocaleString()}</span>
-                                </div>
-                            </td>
-                            {payments && (
-                                <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                                    {getPaymentDate(claim)}
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                    <div>{claim.payee}</div>
                                 </td>
-                            )}
-                            {renderActions && (
-                                <td onClick={(e) => e.stopPropagation()}>
-                                    {renderActions(claim)}
+                                {showApprover && (
+                                    <td style={{ fontWeight: 500 }}>
+                                        {getApproverName(claim)}
+                                    </td>
+                                )}
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                    {claim.description}
                                 </td>
-                            )}
-                        </tr>
-                    ))
+                                <td>
+                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 600, gap: '0.25rem' }}>
+                                        <span>$</span>
+                                        <span>{claim.amount.toLocaleString()}</span>
+                                    </div>
+                                </td>
+                                {payments && (
+                                    <td style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                        {getPaymentDate(claim)}
+                                    </td>
+                                )}
+                                {renderActions && (
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                        {renderActions(claim)}
+                                    </td>
+                                )}
+                            </tr>
+                        );
+                    })
                 )}
             </tbody>
         </table>
