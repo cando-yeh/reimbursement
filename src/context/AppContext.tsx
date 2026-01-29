@@ -6,18 +6,21 @@ import { createClient } from '@/utils/supabase/client';
 import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
 import { updateUser as updateUserAction, deleteUser as deleteUserAction, getDBUsers } from '@/app/actions/users';
-import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims } from '@/app/actions/claims';
+import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims, getMyClaimCounts as getMyClaimCountsAction } from '@/app/actions/claims';
 
 interface AppContextType {
   vendors: Vendor[];
   claims: Claim[];
   vendorRequests: VendorRequest[];
   payments: Payment[];
-  fetchVendors: () => Promise<void>;
+  fetchVendors: (params?: { page?: number; pageSize?: number }) => Promise<{ data: Vendor[], pagination: any } | null>;
+  fetchClaims: (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => Promise<{ data: Claim[], pagination: any } | null>;
+  fetchVendorRequests: (params?: { page?: number; pageSize?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
   updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
   updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
   deleteClaim: (id: string) => Promise<void>;
+  getMyClaimCounts: (applicantId: string) => Promise<{ drafts: number, evidence: number, returned: number, inReview: number, pendingPayment: number, closed: number } | null>;
   addPayment: (payee: string, claimIds: string[], paymentDate: string) => Payment;
   cancelPayment: (paymentId: string) => void;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => Promise<boolean>;
@@ -76,49 +79,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isInitialLoad.current = false;
   }, []);
 
-  // 6. Fetch Claims & Vendors from Server when User is authenticated
-  useEffect(() => {
-    const fetchServerData = async () => {
-      if (!currentUser) return;
-
-      console.time('fetchServerData');
-      setIsDataLoading(true);
-      try {
-        const [claimsResult, requestsResult, vendorsResult] = await Promise.all([
-          getClaims(),
-          getVendorRequests(),
-          getVendors()
-        ]);
-
-        // 1. Claims
-        if (claimsResult.success && claimsResult.data) {
-          setClaims(claimsResult.data);
-        }
-
-        // 2. Vendors
-        if (vendorsResult.success && vendorsResult.data) {
-          setVendors(vendorsResult.data);
-        }
-
-        // 3. Vendor Requests
-        if (requestsResult.success && requestsResult.data) {
-          setVendorRequests(requestsResult.data.map((r: any) => ({
-            ...r,
-            timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-            data: r.data,
-            originalData: r.originalData
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching server data:', error);
-      } finally {
-        setIsDataLoading(false);
+  // 6. Targeted Fetch Functions
+  const fetchClaims = async (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => {
+    setIsDataLoading(true);
+    try {
+      const result = await getClaims(filters);
+      if (result.success && result.data) {
+        setClaims(result.data);
+        return { data: result.data, pagination: result.pagination };
       }
-      console.timeEnd('fetchServerData');
-    };
+      return null;
+    } catch (error) {
+      console.error('Error fetching claims:', error);
+      return null;
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
 
-    fetchServerData();
-  }, [currentUser]);
+  const fetchVendors = async (params?: { page?: number; pageSize?: number }) => {
+    setIsVendorsLoading(true);
+    try {
+      const result = await getVendors(params);
+      if (result.success && result.data) {
+        setVendors(result.data);
+        return { data: result.data, pagination: result.pagination };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      return null;
+    } finally {
+      setIsVendorsLoading(false);
+    }
+  };
+
+  const fetchVendorRequests = async (params?: { page?: number; pageSize?: number }) => {
+    try {
+      const result = await getVendorRequests(params);
+      if (result.success && result.data) {
+        const formattedRequests = result.data.map((r: any) => ({
+          ...r,
+          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+          data: r.data,
+          originalData: r.originalData
+        }));
+        setVendorRequests(formattedRequests);
+        return { data: formattedRequests, pagination: result.pagination };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching vendor requests:', error);
+      return null;
+    }
+  };
 
   // 3. Keep track of Auth status separately
   useEffect(() => {
@@ -389,6 +403,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await deleteClaimAction(id);
   };
 
+  const getMyClaimCounts = async (applicantId: string) => {
+    const result = await getMyClaimCountsAction(applicantId);
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return null;
+  };
+
   const addPayment = (payee: string, claimIds: string[], paymentDate: string): Payment => {
     const selectedClaims = claims.filter(c => claimIds.includes(c.id));
     const totalAmount = selectedClaims.reduce((sum, c) => sum + c.amount, 0);
@@ -649,24 +671,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchVendors = async () => {
-    console.log('Fetching vendors...');
-    // Only show full loading state if we have no data
-    if (vendors.length === 0) {
-      setIsVendorsLoading(true);
-    }
-
-    try {
-      const { success, data } = await getVendors();
-      if (success && data) {
-        setVendors(data);
-      }
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-    } finally {
-      setIsVendorsLoading(false);
-    }
-  };
 
   return (
     <AppContext.Provider value={{
@@ -675,10 +679,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vendorRequests,
       payments,
       fetchVendors,
+      fetchClaims,
+      fetchVendorRequests,
       addClaim,
       updateClaim,
       updateClaimStatus,
       deleteClaim,
+      getMyClaimCounts,
       addPayment,
       cancelPayment,
       requestAddVendor,

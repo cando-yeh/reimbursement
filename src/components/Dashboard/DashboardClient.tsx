@@ -11,24 +11,20 @@ import TabContainer from '@/components/Common/TabContainer';
 import { Claim, User, Payment } from '@/types';
 import { useApp } from '@/context/AppContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
-
-interface DashboardData {
-    drafts: Claim[];
-    pendingEvidence: Claim[];
-    returned: Claim[];
-    inReview: Claim[];
-    pendingPayment: Claim[];
-    closed: Claim[];
-}
+import Pagination from '@/components/Common/Pagination';
+import PageSkeleton from '@/components/Common/PageSkeleton';
 
 interface DashboardClientProps {
     activeTab: 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed';
-    data: DashboardData;
+    data: Claim[];
+    pagination: any;
+    counts: any;
     payments: Payment[];
     availableUsers: User[];
+    isLoading?: boolean;
 }
 
-export default function DashboardClient({ activeTab, data, payments, availableUsers }: DashboardClientProps) {
+export default function DashboardClient({ activeTab, data, pagination, counts, payments, availableUsers, isLoading }: DashboardClientProps) {
     const router = useRouter();
     const { deleteClaim } = useApp();
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -45,7 +41,11 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
     };
 
     const handleTabChange = (tab: string) => {
-        router.push(`/?tab=${tab}`);
+        router.push(`/?tab=${tab}&page=1`);
+    };
+
+    const handlePageChange = (page: number) => {
+        router.push(`/?tab=${activeTab}&page=${page}`);
     };
 
     const handleDeleteDraft = async () => {
@@ -72,12 +72,12 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
                 <TabContainer style={{ marginBottom: 0, borderBottom: 'none' }}>
-                    <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={data.drafts.length} badge={data.drafts.length} />
-                    <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={data.pendingEvidence.length} badge={data.pendingEvidence.length} />
-                    <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={data.returned.length} badge={data.returned.length} />
-                    <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={data.inReview.length} />
-                    <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={data.pendingPayment.length} />
-                    <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={data.closed.length} />
+                    <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={counts?.drafts} badge={counts?.drafts} />
+                    <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={counts?.evidence} badge={counts?.evidence} />
+                    <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={counts?.returned} badge={counts?.returned} />
+                    <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={counts?.inReview} />
+                    <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={counts?.pendingPayment} />
+                    <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={counts?.closed} />
                 </TabContainer>
 
                 <div style={{ position: 'relative', minWidth: '250px' }}>
@@ -94,17 +94,23 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
             </div>
 
             {/* Content Areas */}
-            {activeTab === 'drafts' && (
+            {isLoading ? (
+                <PageSkeleton />
+            ) : (
                 <div className="card vendor-table-container">
                     <ClaimTable
-                        claims={filterClaims(data.drafts)}
-                        emptyMessage={searchQuery ? "找不到相符的草稿" : "目前沒有草稿"}
+                        claims={filterClaims(data)}
+                        emptyMessage={searchQuery ? "找不到相符的項目" : "目前沒有相關項目"}
                         onRowClick={(claim: Claim) => {
-                            if (claim.type === 'service') router.push(`/applications/service/${claim.id}`);
-                            else if (claim.type === 'payment') router.push(`/payment-request/${claim.id}`);
-                            else router.push(`/reimburse/${claim.id}`);
+                            if (activeTab === 'drafts') {
+                                if (claim.type === 'service') router.push(`/applications/service/${claim.id}`);
+                                else if (claim.type === 'payment') router.push(`/payment-request/${claim.id}`);
+                                else router.push(`/reimburse/${claim.id}`);
+                            } else {
+                                router.push(`/claims/${claim.id}`);
+                            }
                         }}
-                        renderActions={(claim: Claim) => (
+                        renderActions={activeTab === 'drafts' ? (claim: Claim) => (
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                 <button
                                     className="btn btn-ghost"
@@ -117,71 +123,22 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
                                     <Trash2 size={14} />
                                 </button>
                             </div>
-                        )}
+                        ) : undefined}
                         availableUsers={availableUsers}
                     />
-                </div>
-            )}
 
-            {activeTab === 'evidence' && (
-                <div className="card vendor-table-container">
-                    <ClaimTable
-                        claims={filterClaims(data.pendingEvidence)}
-                        emptyMessage={searchQuery ? "找不到相符的待補件項目" : "目前無須補件"}
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
-                        payments={payments}
-                        availableUsers={availableUsers}
-                    />
-                </div>
-            )}
-
-            {activeTab === 'returned' && (
-                <div className="card vendor-table-container">
-                    <ClaimTable
-                        claims={filterClaims(data.returned)}
-                        emptyMessage={searchQuery ? "找不到相符的退回項目" : "目前無退回項目"}
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
-                        availableUsers={availableUsers}
-                    />
-                </div>
-            )}
-
-            {activeTab === 'in_review' && (
-                <div className="card vendor-table-container">
-                    <ClaimTable
-                        claims={filterClaims(data.inReview)}
-                        emptyMessage={searchQuery ? "找不到相符的審核中項目" : "目前無審核中的申請"}
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
-                        availableUsers={availableUsers}
-                    />
-                </div>
-            )}
-
-            {activeTab === 'pending_payment' && (
-                <div className="card vendor-table-container">
-                    <ClaimTable
-                        claims={filterClaims(data.pendingPayment)}
-                        emptyMessage={searchQuery ? "找不到相符的待付款項目" : "目前無待付款的申請"}
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
-                        availableUsers={availableUsers}
-                    />
-                </div>
-            )}
-
-            {activeTab === 'closed' && (
-                <div className="card vendor-table-container">
-                    <ClaimTable
-                        claims={filterClaims(data.closed)}
-                        emptyMessage={searchQuery ? "找不到相符的已結束項目" : "目前暫無紀錄"}
-                        onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
-                        payments={payments}
-                        availableUsers={availableUsers}
-                    />
+                    {pagination && (
+                        <Pagination
+                            currentPage={pagination.currentPage}
+                            totalPages={pagination.totalPages}
+                            onPageChange={handlePageChange}
+                        />
+                    )}
                 </div>
             )}
 
             {/* Empty State Illustration for Global Search or Initial State */}
-            {!searchQuery && Object.values(data).every(arr => arr.length === 0) && (
+            {!searchQuery && !isLoading && data.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 0', textAlign: 'center' }}>
                     <div style={{ padding: '2rem', backgroundColor: 'var(--color-bg)', borderRadius: '50%', marginBottom: '1.5rem', color: 'var(--color-text-muted)' }}>
                         <FileX size={64} />

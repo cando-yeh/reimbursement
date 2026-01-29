@@ -1,3 +1,4 @@
+import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
@@ -9,83 +10,66 @@ interface PaginationProps {
 export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
     if (totalPages <= 1) return null;
 
+    const getPages = () => {
+        const pages = [];
+        const maxVisible = 5;
+
+        let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
+
+        if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+        return pages;
+    };
+
     return (
         <div style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.5rem'
+            marginTop: '2rem',
+            marginBottom: '1rem'
         }}>
             <button
-                onClick={() => onPageChange(currentPage - 1)}
+                className="btn btn-ghost"
+                style={{ padding: '0.5rem', minWidth: 'auto' }}
                 disabled={currentPage === 1}
-                style={{
-                    padding: '0.5rem',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '6px',
-                    backgroundColor: currentPage === 1 ? 'var(--color-bg)' : 'white',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === 1 ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
+                onClick={() => onPageChange(currentPage - 1)}
             >
                 <ChevronLeft size={18} />
             </button>
 
-            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        style={{
-                            padding: '0.5rem 0.75rem',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '6px',
-                            backgroundColor: currentPage === page ? 'var(--color-primary)' : 'white',
-                            color: currentPage === page ? 'white' : 'var(--color-text)',
-                            cursor: 'pointer',
-                            fontWeight: currentPage === page ? 600 : 400,
-                            fontSize: '0.875rem',
-                            minWidth: '36px'
-                        }}
-                    >
-                        {page}
-                    </button>
-                ))}
-            </div>
+            {getPages().map(page => (
+                <button
+                    key={page}
+                    className={`btn ${page === currentPage ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{
+                        minWidth: '2.5rem',
+                        height: '2.5rem',
+                        padding: 0,
+                        backgroundColor: page === currentPage ? 'var(--color-primary)' : 'transparent',
+                        color: page === currentPage ? 'white' : 'var(--color-text)'
+                    }}
+                    onClick={() => onPageChange(page)}
+                >
+                    {page}
+                </button>
+            ))}
 
             <button
-                onClick={() => onPageChange(currentPage + 1)}
+                className="btn btn-ghost"
+                style={{ padding: '0.5rem', minWidth: 'auto' }}
                 disabled={currentPage === totalPages}
-                style={{
-                    padding: '0.5rem',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '6px',
-                    backgroundColor: currentPage === totalPages ? 'var(--color-bg)' : 'white',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === totalPages ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
+                onClick={() => onPageChange(currentPage + 1)}
             >
                 <ChevronRight size={18} />
             </button>
         </div>
     );
-}
-
-// Helper hook for pagination
-export function usePagination<T>(items: T[], itemsPerPage: number = 10) {
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-
-    const getPageItems = (currentPage: number) => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return items.slice(startIndex, startIndex + itemsPerPage);
-    };
-
-    return { totalPages, getPageItems };
 }

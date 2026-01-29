@@ -11,12 +11,32 @@ import { revalidatePath } from 'next/cache';
 // Local helper removed in favor of imported getCurrentUser
 
 
-export async function getVendors() {
+export async function getVendors(params?: { page?: number; pageSize?: number }) {
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 10;
+    const skip = (page - 1) * pageSize;
+
     try {
-        const vendors = await prisma.vendor.findMany({
-            orderBy: { name: 'asc' },
-        });
-        return { success: true, data: vendors };
+        const [totalCount, vendors] = await Promise.all([
+            prisma.vendor.count({ where: { status: { not: 'deleted' } } }),
+            prisma.vendor.findMany({
+                where: { status: { not: 'deleted' } },
+                orderBy: { name: 'asc' },
+                skip,
+                take: pageSize,
+            })
+        ]);
+
+        return {
+            success: true,
+            data: vendors,
+            pagination: {
+                totalCount,
+                totalPages: Math.ceil(totalCount / pageSize),
+                currentPage: page,
+                pageSize
+            }
+        };
     } catch (error) {
         console.error('Error fetching vendors:', error);
         return { success: false, error: 'Failed to fetch vendors' };
@@ -55,13 +75,31 @@ export async function createVendorRequest(data: any) { // data: Partial<Vendor> 
     }
 }
 
-export async function getVendorRequests() {
-    // Usually for Finance or Admin
+export async function getVendorRequests(params?: { page?: number; pageSize?: number }) {
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 10;
+    const skip = (page - 1) * pageSize;
+
     try {
-        const requests = await prisma.vendorRequest.findMany({
-            orderBy: { timestamp: 'desc' },
-        });
-        return { success: true, data: requests };
+        const [totalCount, requests] = await Promise.all([
+            prisma.vendorRequest.count(),
+            prisma.vendorRequest.findMany({
+                orderBy: { timestamp: 'desc' },
+                skip,
+                take: pageSize,
+            })
+        ]);
+
+        return {
+            success: true,
+            data: requests,
+            pagination: {
+                totalCount,
+                totalPages: Math.ceil(totalCount / pageSize),
+                currentPage: page,
+                pageSize
+            }
+        };
     } catch (error) {
         console.error('Error fetching vendor requests:', error);
         return { success: false, error: 'Failed to fetch requests' };

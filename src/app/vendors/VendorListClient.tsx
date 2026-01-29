@@ -3,21 +3,22 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BANK_LIST } from '@/utils/constants';
 import Pagination from '@/components/Common/Pagination';
 import PageHeader from '@/components/Common/PageHeader';
 import { useApp } from '@/context/AppContext';
 
 interface VendorListClientProps {
-    initialVendors: any[];
-    initialRequests: any[];
     currentUser: any;
+    pagination: any;
+    isLoading: boolean;
 }
 
-export default function VendorListClient({ currentUser }: { currentUser: any }) {
+export default function VendorListClient({ currentUser, pagination, isLoading }: VendorListClientProps) {
     const { vendors, vendorRequests, requestDeleteVendor } = useApp();
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
+    const router = useRouter();
 
     const canManageVendors = currentUser && (currentUser.permissions.includes('general') || currentUser.permissions.includes('finance_audit'));
 
@@ -42,11 +43,9 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
         );
     }
 
-    const ITEMS_PER_PAGE = 10;
-    const paginatedVendors = displayVendors.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
+    const handlePageChange = (page: number) => {
+        router.push(`/vendors?page=${page}`);
+    };
 
     const handleDeleteRequest = async (vendorId: string) => {
         if (window.confirm('確定要申請刪除此廠商嗎？')) {
@@ -87,9 +86,9 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                         />
                     </div>
                     <Pagination
-                        currentPage={currentPage}
-                        totalPages={Math.ceil(displayVendors.length / ITEMS_PER_PAGE)}
-                        onPageChange={setCurrentPage}
+                        currentPage={pagination?.currentPage || 1}
+                        totalPages={pagination?.totalPages || 1}
+                        onPageChange={handlePageChange}
                     />
                 </div>
                 <table className="vendor-table">
@@ -103,14 +102,14 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                         </tr>
                     </thead>
                     <tbody>
-                        {useApp().isVendorsLoading ? (
+                        {isLoading ? (
                             <tr>
                                 <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>
                                     <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
                                     <div style={{ marginTop: '0.5rem', color: 'var(--color-text-muted)' }}>載入中...</div>
                                 </td>
                             </tr>
-                        ) : paginatedVendors.map((vendor: any) => {
+                        ) : displayVendors.map((vendor: any) => {
                             const pendingRequest = getPendingAction(vendor.id);
 
                             return (
@@ -182,7 +181,7 @@ export default function VendorListClient({ currentUser }: { currentUser: any }) 
                                 </tr>
                             );
                         })}
-                        {!useApp().isVendorsLoading && displayVendors.length === 0 && (
+                        {!isLoading && displayVendors.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="empty-state">
                                     {searchTerm ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}

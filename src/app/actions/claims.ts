@@ -13,25 +13,42 @@ export async function getCurrentUser() {
     return user;
 }
 
-export async function getClaims(filters?: { status?: string }) {
+export async function getClaims(filters?: {
+    status?: string;
+    applicantId?: string;
+    page?: number;
+    pageSize?: number;
+}) {
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 10;
+    const skip = (page - 1) * pageSize;
+
     const whereClause: any = {};
     if (filters?.status) {
         whereClause.status = filters.status as ClaimStatus;
     }
+    if (filters?.applicantId) {
+        whereClause.applicantId = filters.applicantId;
+    }
 
     try {
-        // Fetch raw data
-        const rawClaims = await (prisma.claim as any).findMany({
-            where: whereClause,
-            orderBy: { date: 'desc' },
-            include: {
-                applicant: {
-                    select: { name: true, email: true, roleName: true }
-                },
-                lineItems: true,
-                history: true
-            }
-        });
+        // Fetch count and data in parallel
+        const [totalCount, rawClaims] = await Promise.all([
+            (prisma.claim as any).count({ where: whereClause }),
+            (prisma.claim as any).findMany({
+                where: whereClause,
+                orderBy: { date: 'desc' },
+                skip: skip,
+                take: pageSize,
+                include: {
+                    applicant: {
+                        select: { name: true, email: true, roleName: true }
+                    },
+                    lineItems: true,
+                    history: true
+                }
+            })
+        ]);
 
         // Safe Cast JSON fields
         const claims: Claim[] = rawClaims.map((c: any) => ({
@@ -51,7 +68,16 @@ export async function getClaims(filters?: { status?: string }) {
             datePaid: c.datePaid?.toISOString().split('T')[0],
         }));
 
-        return { success: true, data: claims };
+        return {
+            success: true,
+            data: claims,
+            pagination: {
+                totalCount,
+                totalPages: Math.ceil(totalCount / pageSize),
+                currentPage: page,
+                pageSize
+            }
+        };
     } catch (error: any) {
         console.error('Error fetching claims:', error);
         return { success: false, error: '無法取得申請單資料' };
@@ -154,7 +180,7 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
             note: note
         };
 
-        const updatedClaim = await prisma.claim.update({
+        const updatedClaim = await (prisma.claim as any).update({
             where: { id },
             data: {
                 status: newStatus as ClaimStatus,
@@ -350,5 +376,31 @@ export async function deleteClaim(id: string) {
     } catch (error: any) {
         console.error('Delete Claim Error:', error);
         return { success: false, error: error.message };
+    }
+}
+
+export async function getMyClaimCounts(applicantId: string) {
+    try {
+        const [drafts, evidence, returned, inReview, pendingPayment, closed] = await Promise.all([
+            (prisma.claim as any).count({ where: { applicantId, status: 'draft' } }),
+            (prisma.claim as any).count({ where: { applicantId, status: 'pending_evidence' } }),
+            (prisma.claim as any).count({ where: { applicantId, status: 'rejected' } }),
+            (prisma.claim as any).count({
+                where: {
+                    applicantId,
+                    status: { in: ['pending_approval', 'pending_finance', 'pending_finance_review'] }
+                }
+            }),
+            (prisma.claim as any).count({ where: { applicantId, status: 'approved' } }),
+            (prisma.claim as any).count({ where: { applicantId, status: { in: ['completed', 'cancelled'] } } }),
+        ]);
+
+        return {
+            success: true,
+            data: { drafts, evidence, returned, inReview, pendingPayment, closed }
+        };
+    } catch (error) {
+        console.error('Error fetching claim counts:', error);
+        return { success: false, error: '無法取得統計數據' };
     }
 }

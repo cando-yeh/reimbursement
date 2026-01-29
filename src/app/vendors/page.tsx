@@ -3,18 +3,33 @@
 import React from 'react';
 import VendorListClient from './VendorListClient';
 import { useApp } from '@/context/AppContext';
+import { useSearchParams } from 'next/navigation';
 import PageSkeleton from '@/components/Common/PageSkeleton';
 
 export default function VendorListPage() {
-    const { vendors, vendorRequests, currentUser, isAuthLoading, isVendorsLoading, fetchVendors } = useApp();
+    const { currentUser, isAuthLoading, isVendorsLoading, fetchVendors, fetchVendorRequests } = useApp();
+    const searchParams = useSearchParams();
+    const currentPage = parseInt(searchParams.get('page') || '1');
+    const [pagination, setPagination] = React.useState<any>(null);
 
     React.useEffect(() => {
         if (currentUser) {
-            fetchVendors();
-        }
-    }, [currentUser?.id]);
+            const loadData = async () => {
+                const res = await fetchVendors({ page: currentPage, pageSize: 10 });
+                if (res) setPagination(res.pagination);
 
-    if (isAuthLoading || isVendorsLoading) {
+                // Fetch vendor requests for finance/admin roles
+                const isFinance = currentUser.permissions?.includes('finance_audit') ||
+                    currentUser.roleName?.includes('財務');
+                if (isFinance) {
+                    await fetchVendorRequests({ page: 1, pageSize: 50 }); // Fetch recent requests
+                }
+            };
+            loadData();
+        }
+    }, [currentUser?.id, currentPage]);
+
+    if (isAuthLoading || (isVendorsLoading && !pagination)) {
         return <PageSkeleton />;
     }
 
@@ -25,6 +40,8 @@ export default function VendorListPage() {
     return (
         <VendorListClient
             currentUser={currentUser}
+            pagination={pagination}
+            isLoading={isVendorsLoading}
         />
     );
 }

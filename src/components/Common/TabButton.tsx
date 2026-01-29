@@ -2,7 +2,7 @@ interface TabButtonProps {
     active: boolean;
     onClick: () => void;
     label: string;
-    count: number;
+    count?: number;
     badge?: number;
 }
 
@@ -43,7 +43,7 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
                 {badge > 99 ? '99+' : badge}
             </span>
         ) : (
-            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
+            count !== undefined && <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
         )}
     </button>
 );
