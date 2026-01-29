@@ -57,7 +57,7 @@ export default function DashboardClient({ activeTab, data, payments, availableUs
             />
 
             <TabContainer>
-                <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={data.drafts.length} />
+                <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={data.drafts.length} badge={data.drafts.length} />
                 <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={data.pendingEvidence.length} badge={data.pendingEvidence.length} />
                 <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={data.returned.length} badge={data.returned.length} />
                 <TabButton active={activeTab === 'in_review'} onClick={() => handleTabChange('in_review')} label="審核中" count={data.inReview.length} />

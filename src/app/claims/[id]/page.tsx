@@ -84,6 +84,7 @@ export default function ApplicationDetailPage() {
         setEvidenceInvoiceNumber('');
         setEvidenceInvoiceDate('');
         setEvidenceFile(null);
+        router.push('/?tab=in_review');
     };
 
     const canApprove = (() => {
@@ -404,6 +405,7 @@ export default function ApplicationDetailPage() {
                                 setShowNoReceiptModal(false);
                                 setNoReceiptDate('');
                                 setNoReceiptReason('');
+                                router.push('/?tab=in_review');
                             }}>提交</button>
                         </div>
                     </div>

@@ -38,8 +38,15 @@ function PendingItemsInner() {
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
+    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = app;
+
+    if (!currentUser) return null;
+
+    const isFinance = currentUser.permissions.includes('finance_audit') || currentUser.roleName.includes('財務');
+    const isManager = availableUsers.some(u => u.approverId === currentUser.id);
+
     // Derived values from searchParams
-    const currentTab = searchParams.get('tab') || 'my_pending';
+    const currentTab = searchParams.get('tab') || (isManager ? 'manager_approvals' : isFinance ? 'finance_review' : 'all_applications');
     const activeTab = currentTab;
 
     // Effect to reset state on tab change
@@ -48,12 +55,6 @@ function PendingItemsInner() {
         setSelectionError(null);
         setCurrentPage(1);
     }, [activeTab]);
-
-    if (!app.currentUser) return null;
-
-    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = app;
-    const isFinance = currentUser.permissions.includes('finance_audit') || currentUser.roleName.includes('財務');
-    const isManager = availableUsers.some(u => u.approverId === currentUser.id);
 
     const handleTabChange = (tab: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -142,19 +143,11 @@ function PendingItemsInner() {
     return (
         <div className="container" style={{ padding: '2rem' }}>
             <PageHeader
-                title="待辦事項"
-                subtitle="統籌您的個人待辦、審核任務與申請進度"
+                title="申請審核"
+                subtitle="處理主管與財務審核任務"
             />
 
             <TabContainer>
-                <TabButton
-                    active={activeTab === 'my_pending'}
-                    onClick={() => handleTabChange('my_pending')}
-                    label="個人待處理"
-                    count={myPendingClaims.length}
-                    badge={myPendingClaims.length}
-                />
-
                 {isManager && (
                     <TabButton
                         active={activeTab === 'manager_approvals'}
@@ -170,7 +163,7 @@ function PendingItemsInner() {
                         <TabButton
                             active={activeTab === 'finance_review'}
                             onClick={() => handleTabChange('finance_review')}
-                            label="財務初審"
+                            label="財務審核"
                             count={financeReviewClaims.length}
                             badge={financeReviewClaims.length}
                         />
@@ -190,13 +183,6 @@ function PendingItemsInner() {
                         />
                     </>
                 )}
-
-                <TabButton
-                    active={activeTab === 'my_applications'}
-                    onClick={() => handleTabChange('my_applications')}
-                    label="我的申請單"
-                    count={myApplications.length}
-                />
 
                 {(isFinance || currentUser.permissions.includes('user_management')) && (
                     <TabButton
@@ -220,7 +206,7 @@ function PendingItemsInner() {
             {/* Render Tab Content */}
             <div className="card vendor-table-container">
                 {/* Filters for applicable tabs */}
-                {(activeTab === 'my_applications' || activeTab === 'all_applications') && (
+                {(activeTab === 'all_applications') && (
                     <div style={{ display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap' }}>
                         {activeTab === 'all_applications' && (
                             <select
@@ -271,22 +257,6 @@ function PendingItemsInner() {
                 )}
 
                 {/* Main Content Area */}
-                {activeTab === 'my_pending' && (
-                    <ClaimTable
-                        claims={myPendingClaims}
-                        emptyMessage="目前無需要您處理的案件"
-                        onRowClick={(claim) => {
-                            if (claim.status === 'draft') {
-                                if (claim.type === 'service') router.push(`/applications/service/${claim.id}`);
-                                else if (claim.type === 'payment') router.push(`/payment-request/${claim.id}`);
-                                else router.push(`/reimburse/${claim.id}`);
-                            } else {
-                                router.push(`/claims/${claim.id}`);
-                            }
-                        }}
-                        availableUsers={availableUsers}
-                    />
-                )}
 
                 {activeTab === 'manager_approvals' && (
                     <ClaimTable
@@ -332,21 +302,6 @@ function PendingItemsInner() {
                     />
                 )}
 
-                {activeTab === 'my_applications' && (
-                    <>
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={Math.ceil(myApplications.length / ITEMS_PER_PAGE)}
-                            onPageChange={setCurrentPage}
-                        />
-                        <ClaimTable
-                            claims={myApplications.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
-                            onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
-                            availableUsers={availableUsers}
-                            emptyMessage="尚無申請紀錄"
-                        />
-                    </>
-                )}
 
                 {activeTab === 'all_applications' && (
                     <>

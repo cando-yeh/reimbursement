@@ -131,8 +131,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const pendingPaymentCount = isFinance ? claims.filter(c => c.status === 'approved').length : 0;
     const vendorApprovalsCount = isFinance ? vendorRequests.filter(r => r.status === 'pending').length : 0;
 
-    // Total tasks requiring action from the current user
-    const pendingItemsCount = draftCount + returnedCount + pendingEvidenceCount + claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
+    const myClaimsBadgeCount = draftCount + returnedCount + pendingEvidenceCount;
+    const reviewBadgeCount = claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
 
     return (
         <div className="app-container">
@@ -158,8 +158,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <nav className="sidebar-nav">
                     {hasPermission('general') && (
                         <>
-                            <NavItem to="/" icon={ClipboardList} label="首頁" />
-                            <NavItem to="/reviews" icon={ShieldCheck} label="待辦事項" badge={pendingItemsCount} />
+                            <NavItem to="/" icon={ClipboardList} label="我的請款" badge={myClaimsBadgeCount} />
+                            {(isManager || isFinance) && (
+                                <NavItem to="/reviews" icon={ShieldCheck} label="申請審核" badge={reviewBadgeCount} />
+                            )}
                             <NavItem to="/vendors" icon={Building2} label="廠商列表" />
                         </>
                     )}
