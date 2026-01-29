@@ -168,15 +168,16 @@ export default function ApplicationDetailPage() {
                 <button onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
                     <ArrowLeft size={16} /> 回前頁
                 </button>
-                <div className="detail-actions">
+                <div className="detail-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                     <div>
                         <div className="detail-title-group">
                             <h1 className="heading-lg" style={{ whiteSpace: 'nowrap' }}>申請單 #{claim.id.substring(0, 10)}</h1>
                         </div>
-                        <p className="reimburse-subtitle">建立日期 {claim.date}</p>
+                        <p className="reimburse-subtitle" style={{ marginTop: '0.25rem' }}>建立日期 {claim.date}</p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {/* Status/Actions will be here */}
                         {claim.status === 'draft' && (
                             <>
                                 <button onClick={handleDelete} className="btn" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger-bg)', backgroundColor: 'var(--color-danger-bg)' }}>

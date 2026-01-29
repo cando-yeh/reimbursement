@@ -156,32 +156,25 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 amount: calculateTotal()
             };
 
-            let result;
             if (editId) {
                 // Update
                 const updateStatus = action === 'draft'
                     ? 'draft'
                     : (currentUser.approverId ? 'pending_approval' : 'pending_finance');
 
-                // Use Server Action directly but enable revalidation
-                result = await updateClaimAction(editId, {
+                updateClaim(editId, {
                     ...claimData,
                     status: updateStatus
                 });
             } else {
                 // Create
-                result = await createClaimAction({
+                addClaim({
                     ...claimData,
                     status: status || 'pending_finance'
                 });
             }
 
-            if (!result.success) {
-                alert(result.error);
-                return;
-            }
-
-            router.push(action === 'draft' ? '/?tab=drafts' : (editId ? '/reviews?tab=claim_approvals' : '/?tab=in_review'));
+            router.push(action === 'draft' ? '/?tab=drafts' : '/');
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);
