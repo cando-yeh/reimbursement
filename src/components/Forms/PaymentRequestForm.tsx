@@ -380,8 +380,20 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                             </div>
                                         )}
                                         {existingInvoiceFile && attachments.length === 0 && (
-                                            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 500 }}>
-                                                📄 已上傳: {existingInvoiceFile}
+                                            <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: 500 }}>
+                                                <span>📄 已上傳: {existingInvoiceFile}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setExistingInvoiceFile(undefined);
+                                                        setInvoiceUrl(undefined);
+                                                    }}
+                                                    style={{ color: 'var(--color-danger)', border: 'none', background: 'none', cursor: 'pointer', display: 'flex' }}
+                                                    title="移除現有檔案"
+                                                >
+                                                    <X size={14} />
+                                                </button>
                                             </div>
                                         )}
                                     </div>

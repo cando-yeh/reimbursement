@@ -219,6 +219,27 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
             });
         }
 
+        // Identify files to delete (orphaned by this update)
+        const oldEvidenceFiles = currentClaim.evidenceFiles || [];
+        const oldItems = (currentClaim.items as any) || [];
+        const oldFileUrls = [
+            ...oldEvidenceFiles,
+            ...oldItems.map((i: any) => i.fileUrl).filter(Boolean)
+        ];
+
+        const newEvidenceFiles = data.evidenceFiles || [];
+        const newItems = (data.items as any) || [];
+        const newFileUrls = [
+            ...(data.evidenceFiles ? newEvidenceFiles : oldEvidenceFiles),
+            ...(data.items ? newItems.map((i: any) => i.fileUrl).filter(Boolean) : oldItems.map((i: any) => i.fileUrl).filter(Boolean))
+        ];
+
+        const urlsToDelete = oldFileUrls.filter(url => !newFileUrls.includes(url));
+        if (urlsToDelete.length > 0) {
+            // Non-blocking but logged
+            deleteFilesFromStorage(urlsToDelete);
+        }
+
         const updatedClaim = await prisma.claim.update({
             where: { id },
             data: {
@@ -248,12 +269,60 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
     }
 }
 
+// --- Storage Helpers ---
+async function deleteFilesFromStorage(urls: string[]) {
+    if (!urls || urls.length === 0) return;
+
+    try {
+        const supabase = await createClient();
+        const pathsToDelete = urls.map(url => {
+            const parts = url.split('/receipts/');
+            return parts.length > 1 ? parts[1] : null;
+        }).filter(Boolean) as string[];
+
+        if (pathsToDelete.length > 0) {
+            const { error } = await supabase.storage
+                .from('receipts')
+                .remove(pathsToDelete);
+
+            if (error) {
+                console.error('Error deleting files from storage:', error);
+            }
+        }
+    } catch (error) {
+        console.error('Exception in deleteFilesFromStorage:', error);
+    }
+}
+
 export async function deleteClaim(id: string) {
     try {
+        // 1. Get the claim to find file URLs
+        const claim = await prisma.claim.findUnique({
+            where: { id },
+            select: { evidenceFiles: true, items: true }
+        });
+
+        if (claim) {
+            // 2. Extract all URLs
+            const urls: string[] = [...(claim.evidenceFiles || [])];
+            const items = (claim.items as any) || [];
+            items.forEach((item: any) => {
+                if (item.fileUrl) urls.push(item.fileUrl);
+            });
+
+            // 3. Delete from storage
+            if (urls.length > 0) {
+                await deleteFilesFromStorage(urls);
+            }
+        }
+
+        // 4. Delete from DB
         await prisma.claim.delete({ where: { id } });
+
         revalidatePath('/');
         return { success: true };
     } catch (error: any) {
+        console.error('Delete Claim Error:', error);
         return { success: false, error: error.message };
     }
 }

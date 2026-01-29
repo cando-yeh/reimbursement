@@ -93,7 +93,9 @@ export async function uploadFile(
     // Strict sanitization: remove non-ASCII characters to prevent S3 invalid key errors
     const safePayee = payeeName.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
     const safeCategory = englishCategory.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
-    const fileName = `${safePayee}_${safeCategory}_${amount}_${index}.${fileExt}`;
+    // Generate unique suffix to prevent collisions and RLS errors
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const fileName = `${safePayee}_${safeCategory}_${amount}_${index}_${uniqueSuffix}.${fileExt}`;
     const filePath = `${yearMonth}/${fileName}`;
 
     // 3. Upload to 'receipts' bucket
