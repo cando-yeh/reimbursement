@@ -85,8 +85,9 @@ export async function uploadFile(
 
     // 2. Generate semantic filename: Payee_Category_Amount_Index.ext
     const fileExt = file.name.split('.').pop();
-    const safePayee = payeeName.replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
-    const safeCategory = category.replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
+    // Strict sanitization: remove non-ASCII characters to prevent S3 invalid key errors
+    const safePayee = payeeName.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
+    const safeCategory = category.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_').replace(/[/\\?%*:|"<>]/g, '-');
     const fileName = `${safePayee}_${safeCategory}_${amount}_${index}.${fileExt}`;
     const filePath = `${yearMonth}/${fileName}`;
 
