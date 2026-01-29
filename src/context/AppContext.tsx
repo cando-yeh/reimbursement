@@ -293,22 +293,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ? claimData.amount
       : (claimData.items || []).reduce((sum, item) => sum + item.amount, 0);
 
-    // 2. Optimistic Update (Optional but tricky with ID generation, skipping for simpler consistency)
-    // Or we can generate a temp ID. Let's rely on server response for now to get real ID.
+    // 2. Optimistic Update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticClaim: Claim = {
+      ...claimData,
+      id: tempId,
+      amount: calculatedAmount,
+      status: claimData.status || 'draft', // Default to draft if not specified, though usually specified
+      items: (claimData.items || []) as any,
+      date: claimData.date || new Date().toISOString().split('T')[0],
+      applicantId: currentUser?.id || 'unknown', // Should exist
+      history: []
+    } as any; // Cast as any because some optional fields might be missing in strict type but fine for UI
+
+    setClaims(prev => [optimisticClaim, ...prev]);
 
     // 3. Server Action
     const result = await createClaimAction({
       ...claimData,
       amount: calculatedAmount,
       status: claimData.status as any,
-      // We need to ensure types match for items (ExpenseItem[])
       items: claimData.items as any
     });
 
     if (result.success && result.data) {
-      setClaims(prev => [result.data as Claim, ...prev]);
+      // Replace optimistic claim with real one
+      setClaims(prev => prev.map(c => c.id === tempId ? (result.data as Claim) : c));
       return result.data as Claim;
     } else {
+      // Revert optimistic update
+      setClaims(prev => prev.filter(c => c.id !== tempId));
       alert('建立申請單失敗: ' + result.error);
       return null;
     }

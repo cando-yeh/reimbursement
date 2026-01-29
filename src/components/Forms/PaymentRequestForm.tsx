@@ -159,8 +159,8 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
                 }
             };
-            if (editId) await updateClaim(editId, newClaim);
-            else await addClaim(newClaim as any);
+            if (editId) updateClaim(editId, newClaim);
+            else addClaim(newClaim as any);
             router.push('/?tab=drafts');
         } catch (error: any) {
             console.error(error);
@@ -216,9 +216,9 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
                 }
             };
-            if (editId) await updateClaim(editId, newClaim);
-            else await addClaim(newClaim as any);
-            router.push('/?tab=in_review');
+            if (editId) updateClaim(editId, newClaim);
+            else addClaim(newClaim as any);
+            router.push('/');
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);

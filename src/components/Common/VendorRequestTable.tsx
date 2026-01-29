@@ -18,7 +18,7 @@ const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) =
         </thead>
         <tbody>
             {requests.length === 0 ? (
-                <tr><td colSpan={5} className="empty-state">無廠商異動申請</td></tr>
+                <tr><td colSpan={5} className="empty-state" style={{ textAlign: 'center' }}>無廠商異動申請</td></tr>
             ) : (
                 requests.map((req: any) => (
                     <tr
