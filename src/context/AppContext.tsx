@@ -14,8 +14,8 @@ interface AppContextType {
   vendorRequests: VendorRequest[];
   payments: Payment[];
   fetchVendors: () => Promise<void>;
-  addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => Promise<Claim | null>;
-  updateClaim: (id: string, data: Partial<Claim>, note?: string) => Promise<void>;
+  addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
+  updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
   updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
   deleteClaim: (id: string) => Promise<void>;
   addPayment: (payee: string, claimIds: string[], paymentDate: string) => Payment;
@@ -294,24 +294,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (currentUser?.id === id) logout();
   };
 
-  const addClaim = async (claimData: Omit<Claim, 'id' | 'amount' | 'status'> & { amount?: number; status?: Claim['status'] }) => {
+  const addClaim = async (claimData: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => {
     // 1. Calculate amount if needed (for server action input)
     const calculatedAmount = claimData.amount !== undefined
       ? claimData.amount
-      : (claimData.items || []).reduce((sum, item) => sum + item.amount, 0);
+      : (claimData.items || []).reduce((sum: number, item: any) => sum + item.amount, 0);
 
     // 2. Optimistic Update
     const tempId = `temp-${Date.now()}`;
+    const itemsForOptimistic = (claimData.items || []) as any[];
     const optimisticClaim: Claim = {
       ...claimData,
       id: tempId,
       amount: calculatedAmount,
-      status: claimData.status || 'draft', // Default to draft if not specified, though usually specified
-      items: (claimData.items || []) as any,
+      status: claimData.status || 'draft',
+      lineItems: itemsForOptimistic.map(i => ({ ...i, date: i.date || new Date().toISOString().split('T')[0] })),
       date: claimData.date || new Date().toISOString().split('T')[0],
-      applicantId: currentUser?.id || 'unknown', // Should exist
+      applicantId: currentUser?.id || 'unknown',
       history: []
-    } as any; // Cast as any because some optional fields might be missing in strict type but fine for UI
+    } as any;
 
     setClaims(prev => [optimisticClaim, ...prev]);
 
@@ -320,7 +321,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...claimData,
       amount: calculatedAmount,
       status: claimData.status as any,
-      items: claimData.items as any
+      lineItems: claimData.items || []
     });
 
     if (result.success && result.data) {
@@ -335,20 +336,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateClaim = async (id: string, data: Partial<Claim>, note?: string) => {
+  const updateClaim = async (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => {
     // 1. Optimistic Update
-    setClaims(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+    const { items: _, ...restData } = data;
+    setClaims(prev => prev.map(c => c.id === id ? {
+      ...c,
+      ...restData,
+      lineItems: data.items ? data.items.map(i => ({ ...i })) : c.lineItems
+    } : c));
 
     // 2. Server Action
-    const result = await updateClaimAction(id, data);
+    const result = await updateClaimAction(id, {
+      ...restData,
+      lineItems: data.items
+    });
 
     // 3. Sync with actual server data (handles history/timestamps)
     if (result.success && result.data) {
-      setClaims(prev => prev.map(c => c.id === id ? result.data as Claim : c));
+      setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
     } else if (!result.success) {
       console.error('Update Claim Failed:', result.error);
-      // Re-sync from server to revert optimistic change if really needed, 
-      // but let's assume success for now or the next refresh will fix it.
     }
   };
 
@@ -361,7 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 3. Sync
     if (result.success && result.data) {
-      setClaims(prev => prev.map(c => c.id === id ? result.data as Claim : c));
+      setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
     }
   };
 

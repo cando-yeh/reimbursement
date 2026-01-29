@@ -65,8 +65,8 @@ export default function ApplicationDetailPage() {
                 invoiceFile: evidenceFile.name,
                 invoiceUrl: URL.createObjectURL(evidenceFile)
             };
-        } else if (claim.items && claim.items.length > 0) {
-            updateData.items = claim.items.map(item => {
+        } else if (claim.lineItems && claim.lineItems.length > 0) {
+            updateData.lineItems = claim.lineItems.map(item => {
                 if (!item.notes || item.notes === '無憑證' || item.notes === '') {
                     return {
                         ...item,
@@ -394,8 +394,8 @@ export default function ApplicationDetailPage() {
                                         invoiceNumber: noReceiptReason.trim(),
                                         invoiceDate: noReceiptDate
                                     };
-                                } else if (claim.items && claim.items.length > 0) {
-                                    updateData.items = claim.items.map(item => {
+                                } else if (claim.lineItems && claim.lineItems.length > 0) {
+                                    updateData.lineItems = claim.lineItems.map(item => {
                                         if (!item.notes || item.notes === '') return { ...item, notes: '無憑證' };
                                         return item;
                                     });
@@ -515,17 +515,17 @@ export default function ApplicationDetailPage() {
                                                 ) : claim.paymentDetails.invoiceStatus === 'not_yet' ? <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span> : <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span>}
                                             </td>
                                         </tr>
-                                    ) : claim.items && claim.items.length > 0 ? (
-                                        claim.items.map((item, idx) => (
+                                    ) : claim.lineItems && claim.lineItems.length > 0 ? (
+                                        claim.lineItems.map((item, idx) => (
                                             <tr key={item.id || idx}>
                                                 <td>{item.date}</td>
                                                 <td>{item.category && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{item.category}</span>}</td>
                                                 <td style={{ fontWeight: 500 }}>{item.description}</td>
                                                 <td style={{ fontWeight: 'bold' }}><div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}><span>$</span><span>{item.amount.toLocaleString()}</span></div></td>
                                                 <td>
-                                                    {(item as any).receiptFile || (item.notes && item.notes !== '無憑證' && item.notes !== '') ? (
-                                                        <button onClick={() => window.open((item as any).fileUrl || '#', '_blank')} className="btn-small">📄 查看</button>
-                                                    ) : (item as any).noReceipt || item.notes === '無憑證' ? <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span> : <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>}
+                                                    {item.fileUrl ? (
+                                                        <button onClick={() => window.open(item.fileUrl || '#', '_blank')} className="btn-small">📄 查看</button>
+                                                    ) : item.notes === '無憑證' ? <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>無</span> : <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>待補</span>}
                                                 </td>
                                             </tr>
                                         ))

@@ -2,15 +2,9 @@
 
 import { prisma } from '@/lib/prisma';
 import { ClaimStatus, ClaimType } from '@/types/prisma';
-import { Claim, ClaimHistory, ExpenseItem } from '@/types';
+import { Claim, ClaimHistory, ClaimItem } from '@/types';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
-
-// --- Types for Input ---
-// We omit system-managed fields
-type CreateClaimInput = Omit<Claim, 'id' | 'createdAt' | 'updatedAt' | 'datePaid' | 'history' | 'paymentId' | 'applicantId'> & {
-    amount?: number;
-};
 
 // --- Helpers ---
 export async function getCurrentUser() {
@@ -27,30 +21,34 @@ export async function getClaims(filters?: { status?: string }) {
 
     try {
         // Fetch raw data
-        const rawClaims = await prisma.claim.findMany({
+        const rawClaims = await (prisma.claim as any).findMany({
             where: whereClause,
             orderBy: { date: 'desc' },
             include: {
                 applicant: {
                     select: { name: true, email: true, roleName: true }
-                }
+                },
+                lineItems: true,
+                history: true
             }
         });
 
         // Safe Cast JSON fields
         const claims: Claim[] = rawClaims.map((c: any) => ({
             ...c,
-            // Cast JSON back to specific types
-            items: (c.items as unknown as ExpenseItem[]) || [],
-            history: (c.history as unknown as ClaimHistory[]) || [],
+            // Map lineItems from DB table
+            lineItems: (c.lineItems || []).map((li: any) => ({
+                ...li,
+                date: li.date.toISOString().split('T')[0]
+            })),
+            history: (c.history || []).map((h: any) => ({
+                ...h,
+                timestamp: h.timestamp.toISOString()
+            })),
             paymentDetails: c.paymentDetails ? (c.paymentDetails as any) : undefined,
             serviceDetails: c.serviceDetails ? (c.serviceDetails as any) : undefined,
-            // Ensure dates are strings for frontend consistency if needed, 
-            // BUT our Claim type says `date: string`. Prisma returns Date object.
-            // We need to convert Dates to strings to pass to Client Components if they expect strings.
             date: c.date.toISOString().split('T')[0],
             datePaid: c.datePaid?.toISOString().split('T')[0],
-            // Create a virtual user object from relation if needed, or rely on applicantId
         }));
 
         return { success: true, data: claims };
@@ -60,74 +58,78 @@ export async function getClaims(filters?: { status?: string }) {
     }
 }
 
-export async function createClaim(data: CreateClaimInput) {
+export async function createClaim(data: any) {
     try {
-        console.log('--- createClaim Input ---');
-        console.log(JSON.stringify(data, null, 2));
-
         const user = await getCurrentUser();
-        if (!user) {
-            return { success: false, error: '請先登入' };
-        }
+        if (!user) return { success: false, error: '請先登入' };
 
         const dbUser = await prisma.user.findUnique({
             where: { email: user.email || '' }
         });
 
-        if (!dbUser) {
-            return { success: false, error: '找不到使用者資料 (請聯絡管理員)' };
-        }
+        if (!dbUser) return { success: false, error: '找不到使用者資料' };
 
-        const calculatedAmount = (data.items || []).reduce((sum, item) => sum + item.amount, 0);
-
-        // Initial Status Logic
+        // Support both 'items' (from frontend) and 'lineItems'
+        const itemsToCreate = data.lineItems || data.items || [];
+        const calculatedAmount = itemsToCreate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
         const initialStatus = dbUser.approverId ? 'pending_approval' : 'pending_finance';
-
-        // Custom 8-char ID
         const id = Math.random().toString(36).substring(2, 10);
 
-        const newClaim = await prisma.claim.create({
+        const newClaim = await (prisma.claim as any).create({
             data: {
                 id: id,
                 type: data.type as ClaimType,
                 payee: data.payee,
                 payeeId: data.payeeId,
                 applicantId: dbUser.id,
-                date: new Date(data.date), // Convert string to Date
+                date: new Date(data.date),
                 status: (data.status || initialStatus) as ClaimStatus,
                 description: data.description,
                 amount: data.amount || calculatedAmount,
-                items: (data.items || []) as any, // Prisma handles JSON
+                lineItems: {
+                    create: itemsToCreate.map((item: any) => ({
+                        date: new Date(item.date),
+                        amount: item.amount,
+                        description: item.description,
+                        category: item.category,
+                        invoiceNumber: item.invoiceNumber,
+                        notes: item.notes,
+                        fileUrl: item.fileUrl
+                    }))
+                },
                 paymentDetails: data.paymentDetails ? (data.paymentDetails as any) : undefined,
                 serviceDetails: data.serviceDetails ? (data.serviceDetails as any) : undefined,
-                evidenceFiles: data.evidenceFiles || [], // Default to empty array if undefined
+                evidenceFiles: data.evidenceFiles || [],
                 noReceiptReason: data.noReceiptReason,
-                history: [
-                    {
-                        timestamp: new Date().toISOString(),
-                        actorId: dbUser.id,
-                        actorName: dbUser.name,
-                        action: (data.status === 'draft') ? 'draft' : 'submitted',
-                    }
-                ] as any
+                history: {
+                    create: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            actorId: dbUser.id,
+                            actorName: dbUser.name,
+                            action: (data.status === 'draft') ? 'draft' : 'submitted',
+                        }
+                    ]
+                }
+            },
+            include: {
+                lineItems: true,
+                history: true
             }
         });
-
-        console.log('--- createClaim Success ---');
-        console.log('Claim ID:', newClaim.id);
 
         revalidatePath('/');
         return {
             success: true,
             data: {
                 ...newClaim,
+                lineItems: newClaim.lineItems.map((li: any) => ({ ...li, date: li.date.toISOString().split('T')[0] })),
                 date: newClaim.date.toISOString().split('T')[0],
                 datePaid: newClaim.datePaid?.toISOString().split('T')[0],
             }
         };
     } catch (error: any) {
-        console.error('--- createClaim Error ---');
-        console.error(error);
+        console.error('Create Claim Error:', error);
         return { success: false, error: '建立申請單失敗: ' + error.message };
     }
 }
@@ -136,20 +138,15 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
     const user = await getCurrentUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
-    // Fetch DB User for name logging
-    const dbUser = await prisma.user.findUnique({
-        where: { email: user.email || '' }
-    });
+    const dbUser = await prisma.user.findUnique({ where: { email: user.email || '' } });
     const actorName = dbUser?.name || user.email || 'System';
     const actorId = dbUser?.id || user.id;
 
     try {
-        // 1. Get current history
-        const currentClaim = await prisma.claim.findUnique({ where: { id }, select: { history: true } });
+        const currentClaim = await prisma.claim.findUnique({ where: { id } });
         if (!currentClaim) return { success: false, error: 'Claim not found' };
 
-        const currentHistory = (currentClaim.history as unknown as ClaimHistory[]) || [];
-        const newHistoryItem: ClaimHistory = {
+        const newHistoryItem = {
             timestamp: new Date().toISOString(),
             actorId: actorId,
             actorName: actorName,
@@ -161,15 +158,23 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
             where: { id },
             data: {
                 status: newStatus as ClaimStatus,
-                history: [...currentHistory, newHistoryItem] as any
-            }
+                history: {
+                    create: newHistoryItem
+                }
+            },
+            include: { lineItems: true, history: true }
         });
 
         revalidatePath('/');
         return {
             success: true,
             data: {
-                ...updatedClaim,
+                ...(updatedClaim as any),
+                history: (updatedClaim as any).history.map((h: any) => ({ ...h, timestamp: h.timestamp.toISOString() })),
+                lineItems: (updatedClaim as any).lineItems.map((li: any) => ({ // Added (updatedClaim as any)
+                    ...li,
+                    date: li.date.toISOString().split('T')[0]
+                })),
                 date: updatedClaim.date.toISOString().split('T')[0],
                 datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
             }
@@ -180,15 +185,18 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
     }
 }
 
-export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
+export async function updateClaim(id: string, data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const dbUser = await prisma.user.findUnique({ where: { email: user.email || '' } });
-    if (!dbUser) return { success: false, error: 'User not found in DB' };
+    if (!dbUser) return { success: false, error: 'User not found' };
 
     try {
-        const currentClaim = await prisma.claim.findUnique({ where: { id } });
+        const currentClaim = await (prisma.claim as any).findUnique({
+            where: { id },
+            include: { lineItems: true }
+        });
         if (!currentClaim) return { success: false, error: 'Claim not found' };
 
         const isPrivileged =
@@ -197,50 +205,83 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
             dbUser.roleName.includes('管理者');
 
         if (currentClaim.applicantId !== dbUser.id && !isPrivileged) {
-            return { success: false, error: 'You do not have permission to edit this claim' };
+            return { success: false, error: 'Permission denied' };
         }
 
-        // Recalculate amount if items changed
+        const itemsToUpdate = data.lineItems || data.items;
         let amount = data.amount;
-        if (data.items) {
-            amount = data.items.reduce((sum, item) => sum + item.amount, 0);
+        if (itemsToUpdate) {
+            amount = itemsToUpdate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
         }
 
-        // Add history record if resubmitting
         const currentHistory = (currentClaim.history as unknown as ClaimHistory[]) || [];
         let newHistory = [...currentHistory];
 
         if (data.status && (data.status === 'pending_approval' || data.status === 'pending_finance') && currentClaim.status !== data.status) {
-            newHistory.push({
-                timestamp: new Date().toISOString(),
-                actorId: dbUser.id,
-                actorName: dbUser.name,
-                action: 'submitted',
+            await (prisma as any).claimHistory.create({
+                data: {
+                    claimId: id,
+                    timestamp: new Date().toISOString(),
+                    actorId: dbUser.id,
+                    actorName: dbUser.name,
+                    action: 'submitted',
+                }
             });
         }
 
-        // Identify files to delete (orphaned by this update)
-        const oldEvidenceFiles = currentClaim.evidenceFiles || [];
-        const oldItems = (currentClaim.items as any) || [];
-        const oldFileUrls = [
-            ...oldEvidenceFiles,
-            ...oldItems.map((i: any) => i.fileUrl).filter(Boolean)
-        ];
+        // Cleanup Storage 
+        if (itemsToUpdate || data.evidenceFiles) {
+            const oldFileUrls = [
+                ...(currentClaim.evidenceFiles || []),
+                ...currentClaim.lineItems.map((li: any) => li.fileUrl).filter(Boolean)
+            ] as string[];
 
-        const newEvidenceFiles = data.evidenceFiles || [];
-        const newItems = (data.items as any) || [];
-        const newFileUrls = [
-            ...(data.evidenceFiles ? newEvidenceFiles : oldEvidenceFiles),
-            ...(data.items ? newItems.map((i: any) => i.fileUrl).filter(Boolean) : oldItems.map((i: any) => i.fileUrl).filter(Boolean))
-        ];
+            const newFileUrls = [
+                ...(data.evidenceFiles || currentClaim.evidenceFiles || []),
+                ...(itemsToUpdate ? itemsToUpdate.map((i: any) => i.fileUrl).filter(Boolean) : currentClaim.lineItems.map((li: any) => li.fileUrl).filter(Boolean))
+            ] as string[];
 
-        const urlsToDelete = oldFileUrls.filter(url => !newFileUrls.includes(url));
-        if (urlsToDelete.length > 0) {
-            // Non-blocking but logged
-            deleteFilesFromStorage(urlsToDelete);
+            const urlsToDelete = oldFileUrls.filter(url => !newFileUrls.includes(url));
+            if (urlsToDelete.length > 0) {
+                deleteFilesFromStorage(urlsToDelete);
+            }
         }
 
-        const updatedClaim = await prisma.claim.update({
+        // Sync lineItems
+        if (itemsToUpdate) {
+            const newItemIds = itemsToUpdate
+                .map((i: any) => i.id)
+                .filter((id: string) => id && !id.startsWith('temp-') && id.length > 10);
+
+            await (prisma as any).claimItem.deleteMany({
+                where: {
+                    claimId: id,
+                    id: { notIn: newItemIds }
+                }
+            });
+
+            for (const item of itemsToUpdate) {
+                const itemData = {
+                    date: new Date(item.date),
+                    amount: item.amount,
+                    description: item.description,
+                    category: item.category,
+                    invoiceNumber: item.invoiceNumber,
+                    notes: item.notes,
+                    fileUrl: item.fileUrl,
+                    claimId: id
+                };
+
+                const isExisting = item.id && !item.id.startsWith('temp-') && item.id.length > 10;
+                if (isExisting) {
+                    await (prisma as any).claimItem.update({ where: { id: item.id }, data: itemData });
+                } else {
+                    await (prisma as any).claimItem.create({ data: itemData });
+                }
+            }
+        }
+
+        const updatedClaim = await (prisma.claim as any).update({
             where: { id },
             data: {
                 ...data,
@@ -248,17 +289,19 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
                 type: data.type as ClaimType | undefined,
                 status: data.status as ClaimStatus | undefined,
                 date: data.date ? new Date(data.date) : undefined,
-                items: data.items ? (data.items as any) : undefined,
-                history: newHistory as any,
-                updatedAt: new Date()
-            } as any
+                updatedAt: new Date(),
+                items: undefined
+            } as any,
+            include: { lineItems: true, history: true }
         });
 
         revalidatePath('/');
         return {
             success: true,
             data: {
-                ...updatedClaim,
+                ...(updatedClaim as any),
+                history: (updatedClaim as any).history.map((h: any) => ({ ...h, timestamp: h.timestamp.toISOString() })),
+                lineItems: (updatedClaim as any).lineItems.map((li: any) => ({ ...li, date: li.date.toISOString().split('T')[0] })),
                 date: updatedClaim.date.toISOString().split('T')[0],
                 datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
             }
@@ -269,10 +312,8 @@ export async function updateClaim(id: string, data: Partial<CreateClaimInput>) {
     }
 }
 
-// --- Storage Helpers ---
 async function deleteFilesFromStorage(urls: string[]) {
     if (!urls || urls.length === 0) return;
-
     try {
         const supabase = await createClient();
         const pathsToDelete = urls.map(url => {
@@ -281,44 +322,29 @@ async function deleteFilesFromStorage(urls: string[]) {
         }).filter(Boolean) as string[];
 
         if (pathsToDelete.length > 0) {
-            const { error } = await supabase.storage
-                .from('receipts')
-                .remove(pathsToDelete);
-
-            if (error) {
-                console.error('Error deleting files from storage:', error);
-            }
+            await supabase.storage.from('receipts').remove(pathsToDelete);
         }
     } catch (error) {
-        console.error('Exception in deleteFilesFromStorage:', error);
+        console.error('Storage Deletion Error:', error);
     }
 }
 
 export async function deleteClaim(id: string) {
     try {
-        // 1. Get the claim to find file URLs
-        const claim = await prisma.claim.findUnique({
+        const claim = await (prisma.claim as any).findUnique({
             where: { id },
-            select: { evidenceFiles: true, items: true }
+            include: { lineItems: true }
         });
 
         if (claim) {
-            // 2. Extract all URLs
-            const urls: string[] = [...(claim.evidenceFiles || [])];
-            const items = (claim.items as any) || [];
-            items.forEach((item: any) => {
-                if (item.fileUrl) urls.push(item.fileUrl);
-            });
-
-            // 3. Delete from storage
-            if (urls.length > 0) {
-                await deleteFilesFromStorage(urls);
-            }
+            const urls: string[] = [
+                ...(claim.evidenceFiles || []),
+                ...claim.lineItems.map((li: any) => li.fileUrl).filter(Boolean)
+            ] as string[];
+            if (urls.length > 0) await deleteFilesFromStorage(urls);
         }
 
-        // 4. Delete from DB
         await prisma.claim.delete({ where: { id } });
-
         revalidatePath('/');
         return { success: true };
     } catch (error: any) {

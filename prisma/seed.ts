@@ -119,16 +119,24 @@ async function main() {
                 amount: c.amount,
                 date: new Date(c.date),
                 status: c.status as any,
-                items: c.items,
+                lineItems: {
+                    create: c.items.map(item => ({
+                        date: new Date(item.date),
+                        amount: item.amount,
+                        description: item.description,
+                    }))
+                },
                 applicantId: c.applicantId,
-                history: [
-                    {
-                        timestamp: new Date().toISOString(),
-                        actorId: 'system',
-                        actorName: 'System',
-                        action: 'seeded',
-                    },
-                ],
+                history: {
+                    create: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            actorId: 'system',
+                            actorName: 'System',
+                            action: 'seeded',
+                        }
+                    ]
+                },
             },
         });
     }

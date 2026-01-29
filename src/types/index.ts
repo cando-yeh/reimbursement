@@ -17,6 +17,18 @@ export interface ExpenseItem {
     fileUrl?: string; // For session preview
 }
 
+export interface ClaimItem {
+    id: string;
+    claimId?: string;
+    date: string;
+    category?: string;
+    description: string;
+    amount: number;
+    invoiceNumber?: string;
+    fileUrl?: string;
+    notes?: string;
+}
+
 export interface Claim {
     id: string;
     type: string; // 'employee' | 'vendor' | 'service'
@@ -32,7 +44,7 @@ export interface Claim {
     paymentDetails?: any;
 
     // Items
-    items: any[];
+    lineItems: ClaimItem[];
 
     // Service Payment Specific Details (勞務報酬單)
     serviceDetails?: any;

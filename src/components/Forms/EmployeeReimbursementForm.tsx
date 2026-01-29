@@ -42,18 +42,18 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     useEffect(() => {
         if (editId) {
             const claim = claims.find(c => c.id === editId);
-            if (claim && claim.items) {
-                const loadedItems = claim.items.map(i => ({
+            if (claim && claim.lineItems) {
+                const loadedItems = claim.lineItems.map(i => ({
                     id: i.id,
                     date: i.date,
                     amount: i.amount,
                     description: i.description,
                     category: i.category || '',
-                    invoiceNumber: (i as any).invoiceNumber || '',
+                    invoiceNumber: i.invoiceNumber || '',
                     noReceipt: i.notes === '無憑證',
                     receiptFile: null,
                     existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined,
-                    fileUrl: (i as any).fileUrl || undefined
+                    fileUrl: i.fileUrl || undefined
                 }));
                 if (loadedItems.length > 0) setItems(loadedItems);
                 if (claim.noReceiptReason) setNoReceiptReason(claim.noReceiptReason);

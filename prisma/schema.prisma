@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -69,16 +70,44 @@ model Claim {
   description     String
   amount          Float
   paymentDetails  Json?       // transactionContent, payerNotes, invoiceStatus, etc.
-  items           Json        // ExpenseItem[]
+  lineItems       ClaimItem[]
   serviceDetails  Json?       // idNumber, email, bankName, etc.
   datePaid        DateTime?
   evidenceFiles   String[]
   noReceiptReason String?
-  history         Json        // ClaimHistory[]
+  history         ClaimHistory[]
   paymentId       String?
   payment         Payment?    @relation(fields: [paymentId], references: [id])
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+}
+
+model ClaimItem {
+  id              String   @id @default(uuid())
+  claimId         String
+  claim           Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  date            DateTime
+  category        String?
+  description     String
+  amount          Float
+  invoiceNumber   String?
+  fileUrl         String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ClaimHistory {
+  id        String   @id @default(uuid())
+  claimId   String
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  actorId   String
+  actorName String
+  action    String   // 'submitted', 'approved', 'paid', etc.
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VendorRequest {

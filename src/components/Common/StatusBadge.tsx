@@ -12,7 +12,7 @@ const STATUS_MAP: Record<string, string> = {
     'paid': '已付款',
     'completed': '已完成',
     'rejected': '已退件',
-    'cancelled': '已取消'
+    'cancelled': '已撤銷'
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
