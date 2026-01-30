@@ -83,6 +83,18 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                     <TabButton active={activeTab === 'pending_payment'} onClick={() => handleTabChange('pending_payment')} label="待付款" count={counts?.pendingPayment} />
                     <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={counts?.closed} />
                 </TabContainer>
+
+                <div style={{ position: 'relative', width: '200px', flexShrink: 0 }}>
+                    <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                    <input
+                        type="text"
+                        placeholder="搜尋..."
+                        className="form-input"
+                        style={{ paddingLeft: '2rem', borderRadius: 'var(--radius-md)', width: '100%', backgroundColor: 'white', border: '1px solid var(--color-border)', fontSize: '0.85rem', padding: '0.5rem 0.75rem 0.5rem 2rem' }}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
             </div>
 
             {/* Content Areas */}
@@ -90,19 +102,6 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                 <DashboardSkeleton />
             ) : (
                 <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem 1rem 0 1rem' }}>
-                        <div style={{ position: 'relative', width: '240px' }}>
-                            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                            <input
-                                type="text"
-                                placeholder="搜尋..."
-                                className="form-input"
-                                style={{ paddingLeft: '2rem', borderRadius: 'var(--radius-md)', width: '100%', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', fontSize: '0.875rem', padding: '0.5rem 0.75rem 0.5rem 2rem' }}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
                     <ClaimTable
                         claims={filterClaims(data)}
                         emptyMessage={searchQuery ? "找不到相符的項目" : "目前沒有相關項目"}
