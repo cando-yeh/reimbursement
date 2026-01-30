@@ -206,7 +206,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const requiredStar = <span style={{ color: 'var(--color-danger)' }}>*</span>;
 
     return (
-        <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
+        <div className="container" style={{ maxWidth: '850px' }}>
             <PageHeader
                 title="個人勞務"
                 subtitle="支付專業服務、稿費、講座或勞務報酬費用。"
@@ -229,17 +229,11 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <div className="form-group">
                                     <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>電子信箱 {requiredStar}</label>
-                                    <div className="input-wrapper-icon">
-                                        <Mail size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
-                                        <input type="email" required className="form-input has-icon" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                                    </div>
+                                    <input type="email" required className="form-input" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>戶籍地址 {requiredStar}</label>
-                                    <div className="input-wrapper-icon">
-                                        <MapPin size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
-                                        <input type="text" required className="form-input has-icon" placeholder="請輸入完整地址" value={formData.registeredAddress} onChange={e => setFormData({ ...formData, registeredAddress: e.target.value })} />
-                                    </div>
+                                    <input type="text" required className="form-input" placeholder="請輸入完整地址" value={formData.registeredAddress} onChange={e => setFormData({ ...formData, registeredAddress: e.target.value })} />
                                 </div>
                             </div>
                         </div>
@@ -293,10 +287,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                             </div>
                             <div className="form-group">
                                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>銀行帳號 {requiredStar}</label>
-                                <div className="input-wrapper-icon">
-                                    <CreditCard size={18} className="input-icon" style={{ top: '50%', transform: 'translateY(-50%)' }} />
-                                    <input type="text" required pattern="[0-9]*" inputMode="numeric" className="form-input has-icon" placeholder="例如：123456789012" value={formData.bankAccount} onChange={handleAccountChange} />
-                                </div>
+                                <input type="text" required pattern="[0-9]*" inputMode="numeric" className="form-input" placeholder="例如：123456789012" value={formData.bankAccount} onChange={handleAccountChange} />
                             </div>
                         </div>
                     </FormSection>
