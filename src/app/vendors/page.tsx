@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import VendorListClient from './VendorListClient';
 import { useApp } from '@/context/AppContext';
 import { useSearchParams } from 'next/navigation';
@@ -12,7 +12,7 @@ export default function VendorListPage() {
     const currentPage = parseInt(searchParams.get('page') || '1');
     const [pagination, setPagination] = React.useState<any>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (currentUser) {
             const loadData = async () => {
                 const res = await fetchVendors({ page: currentPage, pageSize: 10 });
@@ -27,7 +27,7 @@ export default function VendorListPage() {
             };
             loadData();
         }
-    }, [currentUser?.id, currentPage]);
+    }, [currentUser?.id, currentPage, fetchVendors, fetchVendorRequests]);
 
     if (isAuthLoading || (isVendorsLoading && !pagination)) {
         return <PageSkeleton />;

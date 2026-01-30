@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import DashboardClient from '@/components/Dashboard/DashboardClient';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -21,7 +21,7 @@ export default function Dashboard() {
     ? currentTab as 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed'
     : 'drafts';
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentUser) return;
 
     const fetchData = async () => {
@@ -56,7 +56,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [currentUser, activeTab, currentPage]);
+  }, [currentUser?.id, activeTab, currentPage, fetchClaims, getMyClaimCounts]);
 
   if (isAuthLoading || (isDataLoading && !claims.length)) {
     return <PageSkeleton />;

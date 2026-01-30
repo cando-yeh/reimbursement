@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
@@ -80,7 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 6. Targeted Fetch Functions
-  const fetchClaims = async (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => {
+  const fetchClaims = useCallback(async (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => {
     setIsDataLoading(true);
     try {
       const result = await getClaims(filters);
@@ -95,9 +95,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsDataLoading(false);
     }
-  };
+  }, []);
 
-  const fetchVendors = async (params?: { page?: number; pageSize?: number }) => {
+  const fetchVendors = useCallback(async (params?: { page?: number; pageSize?: number }) => {
     setIsVendorsLoading(true);
     try {
       const result = await getVendors(params);
@@ -112,9 +112,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsVendorsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchVendorRequests = async (params?: { page?: number; pageSize?: number }) => {
+  const fetchVendorRequests = useCallback(async (params?: { page?: number; pageSize?: number }) => {
     try {
       const result = await getVendorRequests(params);
       if (result.success && result.data) {
@@ -132,7 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching vendor requests:', error);
       return null;
     }
-  };
+  }, []);
 
   // 3. Keep track of Auth status separately
   useEffect(() => {
@@ -204,7 +204,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
 
   // 5. Fetch Users from DB
-  const fetchDBUsers = async () => {
+  const fetchDBUsers = useCallback(async () => {
     try {
       const { data, success } = await getDBUsers();
       if (success && data && data.length > 0) {
@@ -253,14 +253,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Failed to fetch users from DB:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Only fetch users if not on login page
     if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
       fetchDBUsers();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchDBUsers]);
 
   // --- App Actions ---
 
@@ -672,40 +672,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
 
+  const contextValue = useMemo(() => ({
+    vendors,
+    claims,
+    vendorRequests,
+    payments,
+    fetchVendors,
+    fetchClaims,
+    fetchVendorRequests,
+    addClaim,
+    updateClaim,
+    updateClaimStatus,
+    deleteClaim,
+    getMyClaimCounts,
+    addPayment,
+    cancelPayment,
+    requestAddVendor,
+    requestUpdateVendor,
+    requestDeleteVendor,
+    approveVendorRequest,
+    rejectVendorRequest,
+    currentUser,
+    isAuthenticated,
+    login,
+    logout,
+    switchUser,
+    availableUsers,
+    updateUser,
+    deleteUser,
+    refreshUsers: fetchDBUsers,
+    isAuthLoading,
+    isDataLoading,
+    isVendorsLoading
+  }), [
+    vendors, claims, vendorRequests, payments, fetchVendors, fetchClaims,
+    fetchVendorRequests, addClaim, updateClaim, updateClaimStatus, deleteClaim,
+    getMyClaimCounts, addPayment, cancelPayment, requestAddVendor,
+    requestUpdateVendor, requestDeleteVendor, approveVendorRequest,
+    rejectVendorRequest, currentUser, isAuthenticated, login, logout,
+    switchUser, availableUsers, updateUser, deleteUser, fetchDBUsers,
+    isAuthLoading, isDataLoading, isVendorsLoading
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      vendors,
-      claims,
-      vendorRequests,
-      payments,
-      fetchVendors,
-      fetchClaims,
-      fetchVendorRequests,
-      addClaim,
-      updateClaim,
-      updateClaimStatus,
-      deleteClaim,
-      getMyClaimCounts,
-      addPayment,
-      cancelPayment,
-      requestAddVendor,
-      requestUpdateVendor,
-      requestDeleteVendor,
-      approveVendorRequest,
-      rejectVendorRequest,
-      currentUser,
-      isAuthenticated,
-      login,
-      logout,
-      switchUser,
-      availableUsers,
-      updateUser,
-      deleteUser,
-      refreshUsers: fetchDBUsers,
-      isAuthLoading,
-      isDataLoading,
-      isVendorsLoading
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
