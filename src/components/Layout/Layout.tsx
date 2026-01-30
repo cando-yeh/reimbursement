@@ -59,6 +59,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
+    // Helper functions (safe to call with null currentUser)
+    const hasPermission = (permission: string) => {
+        return currentUser?.permissions?.includes(permission as any) || false;
+    };
+    const isFinance = hasPermission('finance_audit') || (currentUser?.roleName?.includes('財務') ?? false);
+    const isManager = hasPermission('user_management') || (currentUser?.roleName?.includes('管理者') ?? false) || availableUsers.some(u => u.approverId === currentUser?.id);
+
     // Authenticated state is handled by server-side layout redirect
     // and specific login page redirect logic to avoid flickering and loops.
 
@@ -87,6 +94,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         };
     }, [isProfileOpen]);
 
+    // Fetch badge counts from server (cached) - MUST be before conditional returns
+    useEffect(() => {
+        if (!currentUser) return;
+        getSidebarBadgeCounts({
+            userId: currentUser.id,
+            isFinance,
+            isManager,
+        }).then(result => {
+            if (result.success && result.data) {
+                setBadgeCounts({
+                    myClaimsBadge: result.data.myClaimsBadge,
+                    reviewBadge: result.data.reviewBadge,
+                });
+            }
+        });
+    }, [currentUser?.id, isFinance, isManager]);
+
     // Don't show layout on login page
     if (pathname === '/login') {
         return <>{children}</>;
@@ -114,30 +138,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             setIsEditingName(false);
         }
     };
-
-    const hasPermission = (permission: string) => {
-        return currentUser.permissions?.includes(permission as any) || false;
-    };
-
-    const isFinance = hasPermission('finance_audit') || currentUser.roleName.includes('財務');
-    const isManager = hasPermission('user_management') || currentUser.roleName.includes('管理者') || availableUsers.some(u => u.approverId === currentUser.id);
-
-    // Fetch badge counts from server (cached)
-    useEffect(() => {
-        if (!currentUser) return;
-        getSidebarBadgeCounts({
-            userId: currentUser.id,
-            isFinance,
-            isManager,
-        }).then(result => {
-            if (result.success && result.data) {
-                setBadgeCounts({
-                    myClaimsBadge: result.data.myClaimsBadge,
-                    reviewBadge: result.data.reviewBadge,
-                });
-            }
-        });
-    }, [currentUser?.id, isFinance, isManager]);
 
     const myClaimsBadgeCount = badgeCounts.myClaimsBadge;
     const reviewBadgeCount = badgeCounts.reviewBadge;
