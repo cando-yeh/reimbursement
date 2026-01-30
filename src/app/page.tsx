@@ -2,9 +2,15 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import DashboardClient from '@/components/Dashboard/DashboardClient';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import PageSkeleton from '@/components/Common/PageSkeleton';
+
+// Dynamic import for code splitting - DashboardClient loads lazily
+const DashboardClient = dynamic(() => import('@/components/Dashboard/DashboardClient'), {
+  loading: () => <PageSkeleton />,
+  ssr: false
+});
 
 // Client Component
 export default function Dashboard() {

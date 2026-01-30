@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
 import { Claim, Payment, VendorRequest } from '@/types';
 import { Search, Filter, AlertCircle, Clock, CheckCircle, FileText, Send } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Pagination from '@/components/Common/Pagination';
-import ClaimTable from '@/components/Common/ClaimTable';
 import TabButton from '@/components/Common/TabButton';
-import VendorRequestTable from '@/components/Common/VendorRequestTable';
-import PaymentRecordTable from '@/components/Common/PaymentRecordTable';
-import VendorRequestDetailModal from '@/components/Common/VendorRequestDetailModal';
 import PageHeader from '@/components/Common/PageHeader';
 import TabContainer from '@/components/Common/TabContainer';
+
+// Dynamic imports for heavy components
+const ClaimTable = dynamic(() => import('@/components/Common/ClaimTable'), { ssr: false });
+const VendorRequestTable = dynamic(() => import('@/components/Common/VendorRequestTable'), { ssr: false });
+const PaymentRecordTable = dynamic(() => import('@/components/Common/PaymentRecordTable'), { ssr: false });
+const VendorRequestDetailModal = dynamic(() => import('@/components/Common/VendorRequestDetailModal'), { ssr: false });
 
 function PendingItemsInner() {
     const app = useApp();

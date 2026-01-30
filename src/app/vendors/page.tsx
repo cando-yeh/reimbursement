@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import VendorListClient from './VendorListClient';
+import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
 import { useSearchParams } from 'next/navigation';
 import PageSkeleton from '@/components/Common/PageSkeleton';
+
+// Dynamic import for code splitting
+const VendorListClient = dynamic(() => import('./VendorListClient'), {
+    loading: () => <PageSkeleton />,
+    ssr: false
+});
 
 export default function VendorListPage() {
     const { currentUser, isAuthLoading, isVendorsLoading, fetchVendors, fetchVendorRequests } = useApp();
