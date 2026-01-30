@@ -103,7 +103,7 @@ export default function UserManagementPage() {
 
                             return (
                                 <tr key={user.id} style={currentUser && user.id === currentUser.id ? { backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)' } : {}}>
-                                    <td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '1rem', paddingLeft: '1rem' }}>
                                             <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
                                                 {user.name.charAt(0)}
@@ -144,7 +144,7 @@ export default function UserManagementPage() {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ color: 'var(--color-text-secondary)' }}>
+                                    <td style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                                         {isEditing ? (
                                             <select
                                                 className="form-input"

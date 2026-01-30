@@ -24,7 +24,8 @@ const TabButton = ({ active, onClick, label, count, badge }: TabButtonProps) => 
             fontSize: '0.9rem',
             cursor: 'pointer',
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            position: 'relative' // For precise badge positioning if needed
+            position: 'relative', // For precise badge positioning if needed
+            flexShrink: 0
         }}
     >
         {label}

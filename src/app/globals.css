@@ -384,7 +384,8 @@ textarea {
 .vendor-table-container {
   background: transparent;
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .activity-table,
@@ -409,6 +410,7 @@ textarea {
   letter-spacing: 0.05em;
   font-weight: 600;
   border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
 }
 
 .activity-table td,

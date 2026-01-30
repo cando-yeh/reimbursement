@@ -137,20 +137,6 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                 </div>
             )}
 
-            {/* Empty State Illustration for Global Search or Initial State */}
-            {!searchQuery && !isLoading && data.length === 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 0', textAlign: 'center' }}>
-                    <div style={{ padding: '2rem', backgroundColor: 'var(--color-bg)', borderRadius: '50%', marginBottom: '1.5rem', color: 'var(--color-text-muted)' }}>
-                        <FileX size={64} />
-                    </div>
-                    <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>開始您的第一筆請款</h3>
-                    <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>您目前沒有任何申請單或草稿紀錄。</p>
-                    <Link href="/applications/new" className="btn btn-primary">
-                        <Plus size={20} /> 現在就建立申請
-                    </Link>
-                </div>
-            )}
-
             <ConfirmModal
                 isOpen={!!idToDelete}
                 title="確定刪除草稿？"
