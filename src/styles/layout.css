@@ -140,8 +140,6 @@
 .main-content {
     flex: 1;
     padding: 3rem;
-    width: fit-content;
-    min-width: 100%;
 }
 
 /* Dashboard */

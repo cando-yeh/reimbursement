@@ -13,8 +13,7 @@
 
 /* Container */
 .container {
-    width: fit-content;
-    min-width: 100%;
+    width: 100%;
     margin: 0;
     padding: 0 2rem;
 }
@@ -31,7 +30,6 @@
     width: fit-content;
     min-width: 100%;
     overflow: hidden;
-    /* Ensure nested tables don't bleed over rounded corners */
 }
 
 .card:hover {
