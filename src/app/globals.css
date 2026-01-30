@@ -118,7 +118,6 @@ textarea {
   width: fit-content;
   min-width: 100%;
   margin: 0;
-  /* Align to the start of the main area */
   padding: 0 2rem;
 }
 
@@ -341,10 +340,9 @@ textarea {
 /* Main Content Area */
 .main-content {
   flex: 1;
-  /* margin-left: var(--sidebar-width); - No longer needed with sticky sidebar */
   padding: 3rem;
   width: fit-content;
-  min-width: 1000px;
+  min-width: 100%;
 }
 
 /* =========================================
@@ -394,7 +392,8 @@ textarea {
   background: transparent;
   border-radius: var(--radius-lg);
   /* overflow-x: auto; - Removed internal scrollbar */
-  max-width: 100%;
+  width: fit-content;
+  min-width: 100%;
 }
 
 .activity-table,
