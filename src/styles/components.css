@@ -15,7 +15,8 @@
 .container {
     width: 100%;
     margin: 0;
-    padding: 0 2rem;
+    padding: 2rem 3rem 2rem 2rem;
+    /* Give a bit more room on the right */
 }
 
 /* Card */

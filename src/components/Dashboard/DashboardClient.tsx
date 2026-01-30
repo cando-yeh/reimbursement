@@ -63,15 +63,15 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
     );
 
     return (
-        <div className="container" style={{ padding: '2rem' }}>
+        <div className="container">
             <PageHeader
                 title="我的請款"
                 subtitle="管理您的申請單、待傳檔案與審核狀態"
                 action={headerAction}
             />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
-                <TabContainer style={{ marginBottom: 0, borderBottom: 'none', flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1.5rem', flexWrap: 'nowrap' }}>
+                <TabContainer style={{ marginBottom: 0, borderBottom: 'none', flexShrink: 0 }}>
                     <TabButton active={activeTab === 'drafts'} onClick={() => handleTabChange('drafts')} label="草稿" count={counts?.drafts} badge={counts?.drafts} />
                     <TabButton active={activeTab === 'evidence'} onClick={() => handleTabChange('evidence')} label="待補件" count={counts?.evidence} badge={counts?.evidence} />
                     <TabButton active={activeTab === 'returned'} onClick={() => handleTabChange('returned')} label="已退回" count={counts?.returned} badge={counts?.returned} />
@@ -80,13 +80,13 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                     <TabButton active={activeTab === 'closed'} onClick={() => handleTabChange('closed')} label="已結束" count={counts?.closed} />
                 </TabContainer>
 
-                <div style={{ position: 'relative', width: '280px', flexShrink: 0 }}>
+                <div style={{ position: 'relative', width: '320px', flexShrink: 0, marginLeft: 'auto' }}>
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                     <input
                         type="text"
                         placeholder="搜尋說明、對象或編號..."
                         className="form-input"
-                        style={{ paddingLeft: '2.5rem', borderRadius: 'var(--radius-md)', width: '100%', backgroundColor: 'white' }}
+                        style={{ paddingLeft: '2.5rem', borderRadius: 'var(--radius-md)', width: '100%', backgroundColor: 'white', border: '1px solid var(--color-border)' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
