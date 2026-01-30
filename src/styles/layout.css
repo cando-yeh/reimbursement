@@ -9,6 +9,14 @@
     position: relative;
 }
 
+/* Container - fixed width, centered */
+.container {
+    max-width: 1020px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 1rem;
+}
+
 /* Sidebar */
 .sidebar {
     width: var(--sidebar-width);
