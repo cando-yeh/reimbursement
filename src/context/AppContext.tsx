@@ -142,7 +142,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // 4. Supabase Auth Integration (Stabilized)
   useEffect(() => {
     const handleAuthChange = async (sessionUser: any) => {
-      console.log('--- AppContext: handleAuthChange ---', sessionUser?.email);
 
       if (!sessionUser) {
         setCurrentUser(null);
@@ -168,8 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCurrentUser(minimalUser);
       }
 
-      // 2. Always trigger a fresh DB sync on identity change/login
-      fetchDBUsers();
+      // 2. Trigger DB sync, passing auth email to avoid re-fetching
+      fetchDBUsers(sessionUser.email);
     };
 
     // Check initial session
@@ -181,7 +180,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('--- AppContext: onAuthStateChange ---', event, session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user) {
         handleAuthChange(session.user);
@@ -203,8 +201,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [router]);
   // supabase is now static, availableUsers is used via functional update or closure (ref would be better but this is fine)
 
-  // 5. Fetch Users from DB
-  const fetchDBUsers = useCallback(async () => {
+  // 5. Fetch Users from DB (accepts optional authEmail to avoid redundant auth check)
+  const fetchDBUsers = useCallback(async (authEmail?: string) => {
     try {
       const { data, success } = await getDBUsers();
       if (success && data && data.length > 0) {
@@ -228,15 +226,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (prev.length === result.length && prev.every((u, i) => u.id === result[i].id)) {
             return prev;
           }
-          console.log('--- AppContext: Updated availableUsers ---');
           return result;
         });
 
-        const authData = await supabase.auth.getUser();
-        const currentEmail = authData.data.user?.email;
+        // Use passed authEmail if available, otherwise fetch from supabase
+        let currentEmail = authEmail;
+        if (!currentEmail) {
+          const authData = await supabase.auth.getUser();
+          currentEmail = authData.data.user?.email;
+        }
 
         if (currentEmail) {
-          const dbUser = (data as User[]).find(u => u.email?.toLowerCase() === currentEmail.toLowerCase());
+          const dbUser = (data as User[]).find(u => u.email?.toLowerCase() === currentEmail!.toLowerCase());
 
           if (dbUser) {
             setCurrentUser(prevUser => {
@@ -249,7 +250,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 dbUser.approverId !== prevUser.approverId;
 
               if (hasChanges) {
-                console.log('--- AppContext: Syncing currentUser with DB ---', dbUser.roleName);
                 return dbUser;
               }
               return prevUser;
@@ -265,7 +265,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Only fetch users if not on login page
     if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-      console.log('--- AppContext: useEffect triggering fetchDBUsers ---', { isAuthenticated });
       fetchDBUsers();
     }
   }, [isAuthenticated, fetchDBUsers]);
