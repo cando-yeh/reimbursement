@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import DashboardClient from '@/components/Dashboard/DashboardClient';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -21,6 +21,14 @@ export default function Dashboard() {
     ? currentTab as 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed'
     : 'drafts';
 
+  // Stabilize function references to prevent useEffect re-triggers
+  const fetchClaimsRef = useRef(fetchClaims);
+  const getMyClaimCountsRef = useRef(getMyClaimCounts);
+  useEffect(() => {
+    fetchClaimsRef.current = fetchClaims;
+    getMyClaimCountsRef.current = getMyClaimCounts;
+  });
+
   useEffect(() => {
     if (!currentUser) return;
 
@@ -28,7 +36,7 @@ export default function Dashboard() {
       setIsDataLoading(true);
 
       // 1. Fetch counts for tabs
-      const countsResult = await getMyClaimCounts(currentUser.id);
+      const countsResult = await getMyClaimCountsRef.current(currentUser.id);
       if (countsResult) setCounts(countsResult);
 
       // 2. Fetch specific claims for active tab
@@ -48,7 +56,7 @@ export default function Dashboard() {
         pageSize: 10
       };
 
-      const claimsResult = await fetchClaims(filter);
+      const claimsResult = await fetchClaimsRef.current(filter);
       if (claimsResult) {
         setPagination(claimsResult.pagination);
       }
@@ -56,7 +64,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [currentUser?.id, activeTab, currentPage, fetchClaims, getMyClaimCounts]);
+  }, [currentUser?.id, activeTab, currentPage]);
 
   if (isAuthLoading || (isDataLoading && !claims.length)) {
     return <PageSkeleton />;

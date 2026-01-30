@@ -1,7 +1,13 @@
 'use client';
 
-import EmployeeReimbursementForm from '@/components/Forms/EmployeeReimbursementForm';
+import { redirect } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function NewReimbursementPage() {
-    return <EmployeeReimbursementForm />;
+// Redirect /reimburse to /reimburse/new for consistency
+export default function ReimbursePage() {
+    useEffect(() => {
+        window.location.href = '/reimburse/new';
+    }, []);
+
+    return null;
 }

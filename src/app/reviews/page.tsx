@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Claim, Payment, VendorRequest } from '@/types';
 import { Search, Filter, AlertCircle, Clock, CheckCircle, FileText, Send } from 'lucide-react';
@@ -38,11 +38,30 @@ function PendingItemsInner() {
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
-    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest } = app;
+    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest, fetchClaims, fetchVendorRequests } = app;
+
+    // Stabilize function references to prevent useEffect re-triggers
+    const fetchClaimsRef = useRef(fetchClaims);
+    const fetchVendorRequestsRef = useRef(fetchVendorRequests);
+    useEffect(() => {
+        fetchClaimsRef.current = fetchClaims;
+        fetchVendorRequestsRef.current = fetchVendorRequests;
+    });
+
+    // Fetch data on mount
+    const isFinance = currentUser?.permissions?.includes('finance_audit') || currentUser?.roleName?.includes('財務');
+    useEffect(() => {
+        if (currentUser) {
+            // Fetch all claims for review (no specific applicant filter)
+            fetchClaimsRef.current({ pageSize: 100 });
+            if (isFinance) {
+                fetchVendorRequestsRef.current({ page: 1, pageSize: 50 });
+            }
+        }
+    }, [currentUser?.id, isFinance]);
 
     if (!currentUser) return null;
 
-    const isFinance = currentUser.permissions.includes('finance_audit') || currentUser.roleName.includes('財務');
     const isManager = availableUsers.some(u => u.approverId === currentUser.id);
 
     // Derived values from searchParams

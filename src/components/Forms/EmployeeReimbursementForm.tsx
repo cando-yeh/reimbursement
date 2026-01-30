@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
@@ -41,6 +41,38 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const [submitType, setSubmitType] = useState<'submit' | 'draft'>('submit');
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const { showToast } = useToast();
+
+    // Track object URLs for memory management
+    const objectUrlsRef = useRef<Map<string, string>>(new Map());
+
+    // Helper function to get or create object URL (prevents memory leaks)
+    const getObjectUrl = (itemId: string, file: File): string => {
+        const existingUrl = objectUrlsRef.current.get(itemId);
+        if (existingUrl) {
+            return existingUrl;
+        }
+        const newUrl = URL.createObjectURL(file);
+        objectUrlsRef.current.set(itemId, newUrl);
+        return newUrl;
+    };
+
+    // Cleanup object URLs on unmount
+    useEffect(() => {
+        return () => {
+            objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+            objectUrlsRef.current.clear();
+        };
+    }, []);
+
+    // Cleanup individual URL when file is removed
+    const handleRemoveFile = (itemId: string) => {
+        const url = objectUrlsRef.current.get(itemId);
+        if (url) {
+            URL.revokeObjectURL(url);
+            objectUrlsRef.current.delete(itemId);
+        }
+        handleItemChange(itemId, 'receiptFile', null);
+    };
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
@@ -347,16 +379,16 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                                     border: '1px solid var(--color-border)',
                                                     cursor: 'pointer'
                                                 }}
-                                                onClick={() => window.open(URL.createObjectURL(item.receiptFile!), '_blank')}
+                                                onClick={() => window.open(getObjectUrl(item.id, item.receiptFile!), '_blank')}
                                             >
                                                 <img
-                                                    src={URL.createObjectURL(item.receiptFile)}
+                                                    src={getObjectUrl(item.id, item.receiptFile)}
                                                     alt="preview"
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />
                                             </div>
                                             <button
-                                                onClick={() => handleItemChange(item.id, 'receiptFile', null)}
+                                                onClick={() => handleRemoveFile(item.id)}
                                                 style={{ position: 'absolute', top: '-8px', right: '-12px', background: 'var(--color-text-secondary)', borderRadius: '50%', border: '1px solid var(--color-surface)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', width: '16px', height: '16px', zIndex: 1 }}
                                                 title="移除憑證"
                                                 disabled={isSubmitting}

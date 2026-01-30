@@ -222,7 +222,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               }
             }
           });
-          return Array.from(userMap.values());
+
+          const result = Array.from(userMap.values());
+          // Only update if count or IDs changed to prevent shallow object comparison re-renders
+          if (prev.length === result.length && prev.every((u, i) => u.id === result[i].id)) {
+            return prev;
+          }
+          console.log('--- AppContext: Updated availableUsers ---');
+          return result;
         });
 
         const authData = await supabase.auth.getUser();
@@ -258,36 +265,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Only fetch users if not on login page
     if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      console.log('--- AppContext: useEffect triggering fetchDBUsers ---', { isAuthenticated });
       fetchDBUsers();
     }
   }, [isAuthenticated, fetchDBUsers]);
 
   // --- App Actions ---
 
-  const login = (userId: string) => {
+  const login = useCallback((userId: string) => {
     const user = availableUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUser(user);
       setIsAuthenticated(true);
       router.push('/');
     }
-  };
+  }, [availableUsers, router]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
     setIsAuthenticated(false);
     router.push('/login');
-  };
+  }, [router]);
 
-  const switchUser = (userId: string) => {
+  const switchUser = useCallback((userId: string) => {
     const user = availableUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUser(user);
     }
-  };
+  }, [availableUsers]);
 
-  const updateUser = async (id: string, updates: Partial<User>) => {
+  const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
     // Optimistic update
     setAvailableUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
     if (currentUser?.id === id) {
@@ -303,9 +311,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await fetchDBUsers();
     }
     return result;
-  };
+  }, [currentUser?.id, fetchDBUsers]);
 
-  const deleteUser = async (id: string) => {
+  const deleteUser = useCallback(async (id: string) => {
     // Optimistic update
     setAvailableUsers(prev => prev.filter(u => u.id !== id));
 
@@ -318,9 +326,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     if (currentUser?.id === id) logout();
-  };
+  }, [currentUser?.id, fetchDBUsers, logout]);
 
-  const addClaim = async (claimData: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => {
+  const addClaim = useCallback(async (claimData: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => {
     // 1. Calculate amount if needed (for server action input)
     const calculatedAmount = claimData.amount !== undefined
       ? claimData.amount
@@ -360,9 +368,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alert('建立申請單失敗: ' + result.error);
       return null;
     }
-  };
+  }, [currentUser?.id]);
 
-  const updateClaim = async (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => {
+  const updateClaim = useCallback(async (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => {
     // 1. Optimistic Update
     const { items: _, ...restData } = data;
     setClaims(prev => prev.map(c => c.id === id ? {
@@ -383,9 +391,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else if (!result.success) {
       console.error('Update Claim Failed:', result.error);
     }
-  };
+  }, []);
 
-  const updateClaimStatus = async (id: string, newStatus: Claim['status'], note?: string) => {
+  const updateClaimStatus = useCallback(async (id: string, newStatus: Claim['status'], note?: string) => {
     // 1. Optimistic Update
     setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
 
@@ -396,22 +404,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (result.success && result.data) {
       setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
     }
-  };
+  }, []);
 
-  const deleteClaim = async (id: string) => {
+  const deleteClaim = useCallback(async (id: string) => {
     setClaims(prev => prev.filter(c => c.id !== id));
     await deleteClaimAction(id);
-  };
+  }, []);
 
-  const getMyClaimCounts = async (applicantId: string) => {
+  const getMyClaimCounts = useCallback(async (applicantId: string) => {
     const result = await getMyClaimCountsAction(applicantId);
     if (result.success && result.data) {
       return result.data;
     }
     return null;
-  };
+  }, []);
 
-  const addPayment = (payee: string, claimIds: string[], paymentDate: string): Payment => {
+  const addPayment = useCallback((payee: string, claimIds: string[], paymentDate: string): Payment => {
     const selectedClaims = claims.filter(c => claimIds.includes(c.id));
     const totalAmount = selectedClaims.reduce((sum, c) => sum + c.amount, 0);
 
@@ -446,9 +454,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setPayments(prev => [newPayment, ...prev]);
     return newPayment;
-  };
+  }, [claims, currentUser?.id, currentUser?.name]);
 
-  const cancelPayment = (paymentId: string) => {
+  const cancelPayment = useCallback((paymentId: string) => {
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return;
 
@@ -457,9 +465,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ));
 
     setPayments(prev => prev.filter(p => p.id !== paymentId));
-  };
+  }, [payments]);
 
-  const requestAddVendor = async (vendor: Omit<Vendor, 'id'>) => {
+  const requestAddVendor = useCallback(async (vendor: Omit<Vendor, 'id'>) => {
     const tempId = `temp-${Date.now()}`;
     const optimisticRequest: any = {
       id: tempId,
@@ -493,9 +501,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alert('申請失敗: ' + result.error);
       return false;
     }
-  };
+  }, [currentUser?.id, currentUser?.name, fetchVendors]);
 
-  const requestUpdateVendor = async (id: string, data: Partial<Vendor>) => {
+  const requestUpdateVendor = useCallback(async (id: string, data: Partial<Vendor>) => {
     const existingVendor = vendors.find(v => v.id === id);
     const tempId = `temp-${Date.now()}`;
     const optimisticRequest: any = {
@@ -537,9 +545,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alert('申請失敗: ' + result.error);
       return false;
     }
-  };
+  }, [currentUser?.id, currentUser?.name, vendors]);
 
-  const requestDeleteVendor = async (id: string) => {
+  const requestDeleteVendor = useCallback(async (id: string) => {
     const vendor = vendors.find(v => v.id === id);
     const tempId = `temp-${Date.now()}`;
     const optimisticRequest: any = {
@@ -581,9 +589,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alert('申請失敗: ' + result.error);
       return false;
     }
-  };
+  }, [currentUser?.id, currentUser?.name, vendors]);
 
-  const approveVendorRequest = async (requestId: string) => {
+  const approveVendorRequest = useCallback(async (requestId: string) => {
     // 1. Optimistic Update
     const request = vendorRequests.find(r => r.id === requestId);
     if (!request) return;
@@ -633,9 +641,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       alert('審核失敗');
     }
-  };
+  }, [vendorRequests, fetchVendors]);
 
-  const rejectVendorRequest = async (requestId: string) => {
+  const rejectVendorRequest = useCallback(async (requestId: string) => {
     // 1. Optimistic Update
     setVendorRequests(prev => prev.map(r =>
       r.id === requestId ? { ...r, status: 'rejected' } : r
@@ -669,7 +677,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       alert('審核失敗');
     }
-  };
+  }, [fetchVendors]);
 
 
   const contextValue = useMemo(() => ({
