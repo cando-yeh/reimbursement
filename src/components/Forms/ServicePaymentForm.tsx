@@ -40,10 +40,14 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
         bankBook: ''
     });
 
+    const formInitializedRef = React.useRef(false);
+
     useEffect(() => {
+        if (formInitializedRef.current) return;
         if (editId) {
             const claim = claims.find(c => c.id === editId);
             if (claim) {
+                formInitializedRef.current = true;
                 setFormData({
                     payeeName: claim.payee || '',
                     idNumber: claim.serviceDetails?.idNumber || '',

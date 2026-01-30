@@ -44,10 +44,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const formInitializedRef = React.useRef(false);
+
     useEffect(() => {
+        if (formInitializedRef.current) return;
         if (editId) {
             const claim = claims.find(c => c.id === editId);
             if (claim && claim.type === 'payment') {
+                formInitializedRef.current = true;
                 setVendorId(claim.payeeId || "");
                 setAmountInput(formatNumberWithCommas(String(claim.amount)));
                 setDescription(claim.paymentDetails?.transactionContent || claim.description || "");

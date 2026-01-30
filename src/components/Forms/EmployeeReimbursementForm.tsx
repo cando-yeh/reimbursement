@@ -80,10 +80,14 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
 
+    const formInitializedRef = useRef(false);
+
     useEffect(() => {
+        if (formInitializedRef.current) return;
         if (editId) {
             const claim = claims.find(c => c.id === editId);
             if (claim && claim.lineItems) {
+                formInitializedRef.current = true;
                 const loadedItems = claim.lineItems.map(i => ({
                     id: i.id,
                     date: i.date,
