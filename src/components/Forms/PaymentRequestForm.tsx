@@ -5,37 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send, Loader2, CreditCard } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '@/utils/constants';
+import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
 import SearchableVendorSelect from '@/components/Common/SearchableVendorSelect';
 import { uploadFile } from '@/utils/storage';
 import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
-
-function formatNumberWithCommas(value: string) {
-    const digits = value.replace(/[^\d]/g, "");
-    if (!digits) return "";
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-function parseAmountToNumber(value: string) {
-    const digits = value.replace(/[^\d]/g, "");
-    return digits ? Number(digits) : 0;
-}
-
-function Field({ label, required, hint, children, error }: any) {
-    return (
-        <div className="form-group">
-            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>
-                    {label}
-                    {required && <span style={{ color: 'var(--color-danger)', marginLeft: '4px' }}>*</span>}
-                </span>
-            </label>
-            {children}
-            {error && <p style={{ color: 'var(--color-danger)', fontSize: '0.8rem', marginTop: '4px' }}>{error}</p>}
-            {!error && hint && <p className="form-hint" style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>{hint}</p>}
-        </div>
-    );
-}
+import Field from '@/components/Common/Field';
 
 export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const router = useRouter();

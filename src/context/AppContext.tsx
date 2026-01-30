@@ -7,6 +7,7 @@ import { Vendor, Claim, VendorRequest, User, Payment } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
 import { updateUser as updateUserAction, deleteUser as deleteUserAction, getDBUsers } from '@/app/actions/users';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims, getMyClaimCounts as getMyClaimCountsAction } from '@/app/actions/claims';
+import { formatVendorRequests } from '@/utils/vendorHelpers';
 
 interface AppContextType {
   vendors: Vendor[];
@@ -118,12 +119,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const result = await getVendorRequests(params);
       if (result.success && result.data) {
-        const formattedRequests = result.data.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data,
-          originalData: r.originalData
-        }));
+        const formattedRequests = formatVendorRequests(result.data);
         setVendorRequests(formattedRequests);
         return { data: formattedRequests, pagination: result.pagination };
       }
@@ -133,6 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return null;
     }
   }, []);
+
 
   // 3. Keep track of Auth status separately
   useEffect(() => {
@@ -485,12 +482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Background sync
       const { success, data } = await getVendorRequests();
       if (success && data) {
-        setVendorRequests(data.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(data));
       }
       await fetchVendors();
       return true;
@@ -530,12 +522,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Background sync
       const { success, data: reqs } = await getVendorRequests();
       if (success && reqs) {
-        setVendorRequests(reqs.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(reqs));
       }
       return true;
     } else {
@@ -574,12 +561,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Background sync
       const { success, data: reqs } = await getVendorRequests();
       if (success && reqs) {
-        setVendorRequests(reqs.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(reqs));
       }
       return true;
     } else {
@@ -618,12 +600,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Background re-sync
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
-        setVendorRequests(rData.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(rData));
       }
       await fetchVendors();
     } else {
@@ -631,12 +608,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await fetchVendors();
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
-        setVendorRequests(rData.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(rData));
       }
       alert('審核失敗');
     }
@@ -655,24 +627,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Background re-sync
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
-        setVendorRequests(rData.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(rData));
       }
       await fetchVendors();
     } else {
       // Revert
       const { success: rSuccess, data: rData } = await getVendorRequests();
       if (rSuccess && rData) {
-        setVendorRequests(rData.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp).toISOString().split('T')[0],
-          data: r.data as any,
-          originalData: r.originalData as any
-        })));
+        setVendorRequests(formatVendorRequests(rData));
       }
       alert('審核失敗');
     }

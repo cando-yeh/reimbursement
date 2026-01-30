@@ -6,20 +6,9 @@ import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Mail, MapPin, Upload, Image, ChevronDown, CreditCard } from 'lucide-react';
 import { BANK_LIST } from '@/utils/constants';
+import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
 import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
-
-function formatNumberWithCommas(value: string | number) {
-    const val = typeof value === 'number' ? String(value) : value;
-    const digits = val.replace(/[^\d]/g, "");
-    if (!digits) return "";
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-function parseAmountToNumber(value: string) {
-    const digits = value.replace(/[^\d]/g, "");
-    return digits ? Number(digits) : 0;
-}
 
 export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const router = useRouter();
