@@ -14,9 +14,9 @@
 /* Container */
 .container {
     width: 100%;
-    margin: 0;
-    padding: 2rem 3rem 2rem 2rem;
-    /* Give a bit more room on the right */
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
 }
 
 /* Card */

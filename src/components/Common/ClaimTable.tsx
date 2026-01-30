@@ -58,18 +58,18 @@ const ClaimTable = ({
     };
 
     return (
-        <table className="vendor-table" style={{ tableLayout: 'fixed', minWidth: '1200px', width: '100%' }}>
+        <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1280px', marginBottom: '1rem' }}>
             <thead>
                 <tr>
                     {selectable && <th style={{ width: '40px' }}></th>}
                     <th style={{ width: '100px' }}>申請編號</th>
                     <th style={{ width: '110px' }}>申請日期</th>
                     <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>類型</th>
+                    <th style={{ width: '110px', textAlign: 'center' }}>類型</th>
                     <th style={{ width: '120px', textAlign: 'center' }}>申請人</th>
                     <th style={{ width: '150px', textAlign: 'center' }}>付款對象</th>
                     {showApprover && <th style={{ width: '150px', textAlign: 'center' }}>審核者</th>}
-                    <th style={{ width: 'auto', minWidth: '200px' }}>說明</th>
+                    <th style={{ width: '250px' }}>說明</th>
                     <th style={{ width: '120px', textAlign: 'center' }}>金額</th>
                     {payments && <th style={{ width: '120px' }}>付款日期</th>}
                     {renderActions && <th style={{ width: '100px', textAlign: 'right' }}>操作</th>}
