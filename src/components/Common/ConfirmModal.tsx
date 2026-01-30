@@ -53,41 +53,41 @@ const ConfirmModal = ({
                 className="card"
                 style={{
                     width: '100%',
-                    maxWidth: '440px',
-                    padding: '2rem',
+                    maxWidth: '360px',
+                    padding: '1.5rem',
                     position: 'relative',
                     animation: 'modalFadeUp 0.3s ease-out'
                 }}
             >
                 <button
                     onClick={onCancel}
-                    style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '1rem', right: '1rem', color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
-                    <X size={20} />
+                    <X size={18} />
                 </button>
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                     <div style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '16px',
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
                         backgroundColor: colors.bg,
                         color: colors.primary,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginBottom: '1.5rem'
+                        marginBottom: '1rem'
                     }}>
-                        <AlertTriangle size={32} />
+                        <AlertTriangle size={24} />
                     </div>
 
-                    <h3 className="heading-md" style={{ marginBottom: '0.75rem', fontSize: '1.25rem' }}>{title}</h3>
-                    <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem', lineHeight: 1.5 }}>{message}</p>
+                    <h3 className="heading-md" style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>{title}</h3>
+                    <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5, fontSize: '0.9rem' }}>{message}</p>
 
-                    <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
                         <button
                             className="btn btn-ghost"
-                            style={{ flex: 1, border: '1px solid var(--color-border)' }}
+                            style={{ flex: 1, border: '1px solid var(--color-border)', padding: '0.625rem 1rem' }}
                             onClick={onCancel}
                         >
                             {cancelText}
@@ -96,6 +96,7 @@ const ConfirmModal = ({
                             className="btn btn-primary"
                             style={{
                                 flex: 1,
+                                padding: '0.625rem 1rem',
                                 backgroundColor: type === 'danger' ? 'var(--color-danger)' : undefined,
                                 backgroundImage: type === 'danger' ? 'none' : undefined,
                                 boxShadow: type === 'danger' ? '0 4px 12px rgba(239, 68, 68, 0.3)' : undefined
