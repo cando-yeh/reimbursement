@@ -209,7 +209,7 @@ export default function ApplicationDetailPage() {
     };
 
     return (
-        <div className="reimburse-container">
+        <div className="container">
             <header className="reimburse-header">
                 <button onClick={() => router.back()} className="btn btn-ghost" style={{ paddingLeft: 0, marginBottom: '0.5rem' }}>
                     <ArrowLeft size={16} /> 回前頁

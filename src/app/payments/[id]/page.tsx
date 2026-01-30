@@ -36,7 +36,7 @@ export default function PaymentDetailPage() {
     const relatedClaims = claims.filter(c => payment.claimIds.includes(c.id));
 
     return (
-        <div className="reimburse-container">
+        <div className="container">
             <header className="reimburse-header">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                     <div>

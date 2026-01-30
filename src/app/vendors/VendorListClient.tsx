@@ -65,14 +65,14 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
     );
 
     return (
-        <div className="container" style={{ padding: '2rem' }}>
+        <div className="container">
             <PageHeader
                 title="廠商列表"
                 subtitle="管理您的付款對象。"
                 action={headerAction || undefined}
             />
 
-            <div className="card card-flush vendor-table-container">
+            <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid var(--color-border)' }}>
                     <div className="search-field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, maxWidth: '300px' }}>
                         <Search size={18} color="var(--color-text-muted)" />
@@ -91,7 +91,7 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                         onPageChange={handlePageChange}
                     />
                 </div>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', minWidth: '1000px', width: '100%' }}>
+                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1080px' }}>
                     <thead>
                         <tr>
                             <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>

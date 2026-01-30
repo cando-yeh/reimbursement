@@ -163,7 +163,7 @@ function PendingItemsInner() {
     };
 
     return (
-        <div className="container" style={{ padding: '2rem' }}>
+        <div className="container">
             <PageHeader
                 title="申請審核"
                 subtitle="處理主管與財務審核任務"
@@ -226,7 +226,7 @@ function PendingItemsInner() {
             </TabContainer>
 
             {/* Render Tab Content */}
-            <div className="card vendor-table-container">
+            <div className="card vendor-table-container" style={{ overflowX: 'auto' }}>
                 {/* Filters for applicable tabs */}
                 {(activeTab === 'all_applications') && (
                     <div style={{ display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap' }}>

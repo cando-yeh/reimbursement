@@ -6,14 +6,15 @@ interface VendorRequestTableProps {
 }
 
 const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) => (
-    <table className="vendor-table">
+    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1280px', marginBottom: '1rem' }}>
         <thead>
             <tr>
-                <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>申請類型</th>
-                <th style={{ whiteSpace: 'nowrap' }}>廠商名稱</th>
-                <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>狀態</th>
-                <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>申請人</th>
-                <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>申請日期</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>申請類型</th>
+                <th style={{ width: '400px' }}>廠商名稱</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
+                <th style={{ width: '250px', textAlign: 'center' }}>申請人</th>
+                <th style={{ width: '150px', textAlign: 'center' }}>申請日期</th>
+                <th style={{ width: 'auto' }}></th>
             </tr>
         </thead>
         <tbody>

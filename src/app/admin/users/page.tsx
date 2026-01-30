@@ -75,7 +75,7 @@ export default function UserManagementPage() {
     if (!currentUser) return null;
 
     return (
-        <div className="container" style={{ padding: '2rem' }}>
+        <div className="container">
             <div className="vendor-header">
                 <div>
                     <h1 className="heading-lg">使用者管理</h1>
@@ -83,8 +83,8 @@ export default function UserManagementPage() {
                 </div>
             </div>
 
-            <div className="card card-flush" style={{ marginTop: '2rem' }}>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', minWidth: '800px', width: '100%' }}>
+            <div className="card card-flush vendor-table-container" style={{ marginTop: '2rem', overflowX: 'auto' }}>
+                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1000px' }}>
                     <thead>
                         <tr>
                             <th style={{ width: '250px' }}>姓名</th>
