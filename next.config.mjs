@@ -7,6 +7,18 @@ const nextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
+
+  // Performance optimizations
+  reactStrictMode: true,
+
+  // Optimize production builds
+  poweredByHeader: false,
+
+  // Enable experimental features for better performance
+  experimental: {
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: ['lucide-react'],
+  },
 };
 
 export default nextConfig;
