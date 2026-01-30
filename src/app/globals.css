@@ -198,7 +198,7 @@ textarea {
   display: flex;
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  /* Removed overflow-x: hidden to allow window scrolling */
 }
 
 .sidebar {
@@ -208,8 +208,12 @@ textarea {
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  position: fixed;
+  position: sticky;
+  /* Changed from fixed to sticky to support horizontal window scrolling */
+  top: 0;
   height: 100vh;
+  flex-shrink: 0;
+  /* Prevent sidebar from shrinking */
   z-index: 50;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
 }
@@ -333,9 +337,10 @@ textarea {
 /* Main Content Area */
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  /* margin-left: var(--sidebar-width); - No longer needed with sticky sidebar */
   padding: 3rem;
-  max-width: 100%;
+  min-width: 1100px;
+  /* Force minimum width to trigger window scrollbar */
 }
 
 /* =========================================
@@ -384,7 +389,7 @@ textarea {
 .vendor-table-container {
   background: transparent;
   border-radius: var(--radius-lg);
-  overflow-x: auto;
+  /* overflow-x: auto; - Removed internal scrollbar */
   max-width: 100%;
 }
 

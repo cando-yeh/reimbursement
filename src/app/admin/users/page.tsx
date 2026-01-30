@@ -83,7 +83,7 @@ export default function UserManagementPage() {
                 </div>
             </div>
 
-            <div className="card vendor-table-container" style={{ marginTop: '2rem' }}>
+            <div className="card" style={{ marginTop: '2rem' }}>
                 <table className="vendor-table">
                     <thead>
                         <tr>
