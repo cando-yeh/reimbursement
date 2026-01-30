@@ -7,15 +7,14 @@ interface PaymentRecordTableProps {
 }
 
 const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecordTableProps) => (
-    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1280px', marginBottom: '1rem' }}>
+    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '980px', marginBottom: '1rem' }}>
         <thead>
             <tr>
-                <th style={{ width: '250px' }}>付款編號</th>
-                <th style={{ width: '150px' }}>付款日期</th>
-                <th style={{ width: '400px' }}>付款對象</th>
-                <th style={{ width: '200px', textAlign: 'center' }}>付款金額</th>
-                <th style={{ width: '150px', textAlign: 'center' }}>申請單數</th>
-                <th style={{ width: 'auto' }}></th>
+                <th style={{ width: '120px' }}>付款編號</th>
+                <th style={{ width: '100px' }}>付款日期</th>
+                <th style={{ width: '180px' }}>付款對象</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>付款金額</th>
+                <th style={{ width: '80px', textAlign: 'center' }}>申請單數</th>
             </tr>
         </thead>
         <tbody>
@@ -30,19 +29,19 @@ const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecor
                     >
                         <td style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>#{payment.id}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{payment.paymentDate}</td>
-                        <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{payment.payee}</td>
+                        <td style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{payment.payee}</td>
                         <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', minWidth: '70px' }}>
                                 <span>$</span>
                                 <span>{payment.amount.toLocaleString()}</span>
                             </div>
                         </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{payment.claimIds.length} 筆</td>
+                        <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>{payment.claimIds.length} 筆</td>
                     </tr>
                 ))
             )}
         </tbody>
-    </table >
+    </table>
 );
 
 export default PaymentRecordTable;

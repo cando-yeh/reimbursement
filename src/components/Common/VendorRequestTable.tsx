@@ -6,15 +6,14 @@ interface VendorRequestTableProps {
 }
 
 const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) => (
-    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1280px', marginBottom: '1rem' }}>
+    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '980px', marginBottom: '1rem' }}>
         <thead>
             <tr>
-                <th style={{ width: '120px', textAlign: 'center' }}>申請類型</th>
-                <th style={{ width: '400px' }}>廠商名稱</th>
-                <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
-                <th style={{ width: '250px', textAlign: 'center' }}>申請人</th>
-                <th style={{ width: '150px', textAlign: 'center' }}>申請日期</th>
-                <th style={{ width: 'auto' }}></th>
+                <th style={{ width: '80px', textAlign: 'center' }}>申請類型</th>
+                <th style={{ width: '200px' }}>廠商名稱</th>
+                <th style={{ width: '80px', textAlign: 'center' }}>狀態</th>
+                <th style={{ width: '100px', textAlign: 'center' }}>申請人</th>
+                <th style={{ width: '100px', textAlign: 'center' }}>申請日期</th>
             </tr>
         </thead>
         <tbody>
@@ -32,7 +31,7 @@ const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) =
                                 {req.type === 'add' ? '新增' : req.type === 'update' ? '修改' : '刪除'}
                             </span>
                         </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{req.data?.name || req.originalData?.name}</td>
+                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.data?.name || req.originalData?.name}</td>
                         <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <span className={`status-badge ${req.status === 'approved' ? 'approved' : req.status === 'rejected' ? 'rejected' : 'pending'}`}>
                                 {req.status === 'approved' ? '已核准' : req.status === 'rejected' ? '已拒絕' : '待核准'}

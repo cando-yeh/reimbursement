@@ -247,7 +247,7 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                         })}
                         {!isLoading && displayVendors.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="empty-state">
+                                <td colSpan={5} className="empty-state" style={{ textAlign: 'center' }}>
                                     {query ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}
                                 </td>
                             </tr>

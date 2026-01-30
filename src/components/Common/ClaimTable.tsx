@@ -148,7 +148,7 @@ const ClaimTable = ({
                                     </div>
                                 </td>
                                 <td>
-                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 600, gap: '0.25rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600, minWidth: '70px' }}>
                                         <span>$</span>
                                         <span>{claim.amount.toLocaleString()}</span>
                                     </div>
