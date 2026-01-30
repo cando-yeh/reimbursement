@@ -115,8 +115,10 @@ textarea {
    ========================================= */
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: fit-content;
+  min-width: 100%;
+  margin: 0;
+  /* Align to the start of the main area */
   padding: 0 2rem;
 }
 
@@ -128,6 +130,8 @@ textarea {
   border: 1px solid var(--color-border);
   padding: 2rem;
   transition: transform 0.2s, box-shadow 0.2s;
+  width: fit-content;
+  min-width: 100%;
 }
 
 .card:hover {
@@ -339,8 +343,8 @@ textarea {
   flex: 1;
   /* margin-left: var(--sidebar-width); - No longer needed with sticky sidebar */
   padding: 3rem;
-  min-width: 1100px;
-  /* Force minimum width to trigger window scrollbar */
+  width: fit-content;
+  min-width: 1000px;
 }
 
 /* =========================================
