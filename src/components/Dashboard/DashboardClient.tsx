@@ -97,7 +97,7 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
             {isLoading ? (
                 <PageSkeleton />
             ) : (
-                <div className="card vendor-table-container">
+                <div className="card card-flush vendor-table-container">
                     <ClaimTable
                         claims={filterClaims(data)}
                         emptyMessage={searchQuery ? "找不到相符的項目" : "目前沒有相關項目"}

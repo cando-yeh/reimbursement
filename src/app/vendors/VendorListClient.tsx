@@ -72,7 +72,7 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                 action={headerAction || undefined}
             />
 
-            <div className="card vendor-table-container">
+            <div className="card card-flush vendor-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid var(--color-border)' }}>
                     <div className="search-field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, maxWidth: '300px' }}>
                         <Search size={18} color="var(--color-text-muted)" />
@@ -91,14 +91,14 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                         onPageChange={handlePageChange}
                     />
                 </div>
-                <table className="vendor-table">
+                <table className="vendor-table" style={{ tableLayout: 'fixed', minWidth: '1000px', width: '100%' }}>
                     <thead>
                         <tr>
-                            <th>狀態</th>
-                            <th>廠商名稱</th>
-                            <th>服務內容</th>
-                            <th>銀行資訊</th>
-                            <th>操作</th>
+                            <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
+                            <th style={{ width: '250px' }}>廠商名稱</th>
+                            <th style={{ width: '300px' }}>服務內容</th>
+                            <th style={{ width: '250px' }}>銀行資訊</th>
+                            <th style={{ width: '120px', textAlign: 'center' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -114,7 +114,7 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
 
                             return (
                                 <tr key={vendor.id}>
-                                    <td>
+                                    <td style={{ textAlign: 'center', width: '120px', whiteSpace: 'nowrap' }}>
                                         {vendor.isPendingAdd ? (
                                             <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>
                                                 待新增
@@ -129,28 +129,28 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                                             </span>
                                         )}
                                     </td>
-                                    <td>
+                                    <td style={{ width: '250px', whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.75rem' }}>
-                                            <Building size={16} className="text-secondary" />
-                                            {vendor.name}
+                                            <Building size={16} className="text-secondary" style={{ flexShrink: 0 }} />
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{vendor.name}</div>
                                         </div>
                                     </td>
-                                    <td>
-                                        {vendor.serviceContent || '-'}
+                                    <td style={{ width: '300px', whiteSpace: 'nowrap' }}>
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{vendor.serviceContent || '-'}</div>
                                     </td>
-                                    <td>
+                                    <td style={{ width: '250px', whiteSpace: 'nowrap' }}>
                                         {vendor.bankCode ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', whiteSpace: 'nowrap' }}>
-                                                <span style={{ fontWeight: 500 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                                <span style={{ fontWeight: 500, flexShrink: 0 }}>
                                                     ({vendor.bankCode} {BANK_LIST.find(b => b.code === vendor.bankCode)?.name})
                                                 </span>
-                                                <span>{vendor.bankAccount}</span>
+                                                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>{vendor.bankAccount}</span>
                                             </div>
                                         ) : (
                                             <span style={{ color: '#ccc' }}>-</span>
                                         )}
                                     </td>
-                                    <td>
+                                    <td style={{ width: '120px', whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
                                             {canManageVendors && !vendor.isPendingAdd && !pendingRequest ? (
                                                 <>

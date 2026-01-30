@@ -58,21 +58,21 @@ const ClaimTable = ({
     };
 
     return (
-        <table className="vendor-table">
+        <table className="vendor-table" style={{ tableLayout: 'fixed', minWidth: '1200px', width: '100%' }}>
             <thead>
                 <tr>
                     {selectable && <th style={{ width: '40px' }}></th>}
-                    <th>申請編號</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>申請日期</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>狀態</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>類型</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>申請人</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>付款對象</th>
-                    {showApprover && <th style={{ minWidth: '100px' }}>審核者</th>}
-                    <th>說明</th>
-                    <th style={{ minWidth: '100px', textAlign: 'center' }}>金額</th>
-                    {payments && <th style={{ whiteSpace: 'nowrap', minWidth: '100px' }}>付款日期</th>}
-                    {renderActions && <th style={{ minWidth: '80px', textAlign: 'right' }}>操作</th>}
+                    <th style={{ width: '100px' }}>申請編號</th>
+                    <th style={{ width: '110px' }}>申請日期</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
+                    <th style={{ width: '100px', textAlign: 'center' }}>類型</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>申請人</th>
+                    <th style={{ width: '150px', textAlign: 'center' }}>付款對象</th>
+                    {showApprover && <th style={{ width: '150px', textAlign: 'center' }}>審核者</th>}
+                    <th style={{ width: 'auto', minWidth: '200px' }}>說明</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>金額</th>
+                    {payments && <th style={{ width: '120px' }}>付款日期</th>}
+                    {renderActions && <th style={{ width: '100px', textAlign: 'right' }}>操作</th>}
                 </tr>
             </thead>
             <tbody>
@@ -131,19 +131,21 @@ const ClaimTable = ({
                                         {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
                                     </span>
                                 </td>
-                                <td style={{ whiteSpace: 'nowrap' }}>
+                                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                                     {getApplicantName(claim)}
                                 </td>
-                                <td style={{ minWidth: '150px' }}>
-                                    <div>{claim.payee}</div>
+                                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{claim.payee}</div>
                                 </td>
                                 {showApprover && (
-                                    <td style={{ fontWeight: 500 }}>
+                                    <td style={{ fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         {getApproverName(claim)}
                                     </td>
                                 )}
-                                <td style={{ minWidth: '200px', padding: '1.25rem 1rem' }}>
-                                    {claim.description}
+                                <td style={{ padding: '1.25rem 1rem' }}>
+                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {claim.description}
+                                    </div>
                                 </td>
                                 <td>
                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 600, gap: '0.25rem' }}>
