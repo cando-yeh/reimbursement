@@ -7,14 +7,14 @@ interface PaymentRecordTableProps {
 }
 
 const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecordTableProps) => (
-    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '980px', marginBottom: '1rem' }}>
+    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '850px', marginBottom: '1rem' }}>
         <thead>
             <tr>
-                <th style={{ width: '120px' }}>付款編號</th>
-                <th style={{ width: '100px' }}>付款日期</th>
-                <th style={{ width: '180px' }}>付款對象</th>
-                <th style={{ width: '120px', textAlign: 'center' }}>付款金額</th>
-                <th style={{ width: '80px', textAlign: 'center' }}>申請單數</th>
+                <th style={{ width: '100px' }}>付款編號</th>
+                <th style={{ width: '90px' }}>付款日期</th>
+                <th style={{ width: '160px' }}>付款對象</th>
+                <th style={{ width: '100px', textAlign: 'center' }}>付款金額</th>
+                <th style={{ width: '70px', textAlign: 'center' }}>申請單數</th>
             </tr>
         </thead>
         <tbody>
