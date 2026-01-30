@@ -9,10 +9,10 @@ import TabButton from '@/components/Common/TabButton'; // Ensure this component 
 import PageHeader from '@/components/Common/PageHeader';
 import TabContainer from '@/components/Common/TabContainer';
 import { Claim, User, Payment } from '@/types';
-import { useApp } from '@/context/AppContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import Pagination from '@/components/Common/Pagination';
-import PageSkeleton from '@/components/Common/PageSkeleton';
+import DashboardSkeleton from '@/components/Dashboard/DashboardSkeleton';
+import { deleteClaim as deleteClaimAction } from '@/app/actions/claims';
 
 interface DashboardClientProps {
     activeTab: 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed';
@@ -26,7 +26,6 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ activeTab, data, pagination, counts, payments, availableUsers, isLoading }: DashboardClientProps) {
     const router = useRouter();
-    const { deleteClaim } = useApp();
     const [searchQuery, setSearchQuery] = React.useState('');
     const [idToDelete, setIdToDelete] = React.useState<string | null>(null);
 
@@ -50,7 +49,12 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
 
     const handleDeleteDraft = async () => {
         if (idToDelete) {
-            await deleteClaim(idToDelete);
+            const result = await deleteClaimAction(idToDelete);
+            if (result?.success) {
+                router.refresh();
+            } else {
+                alert('刪除失敗，請稍後再試');
+            }
             setIdToDelete(null);
         }
     };
@@ -95,7 +99,7 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
 
             {/* Content Areas */}
             {isLoading ? (
-                <PageSkeleton />
+                <DashboardSkeleton />
             ) : (
                 <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
                     <ClaimTable

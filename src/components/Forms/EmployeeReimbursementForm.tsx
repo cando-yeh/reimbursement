@@ -4,12 +4,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Claim } from '@/types';
-import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image, X, Loader2 } from 'lucide-react';
+import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image as ImageIcon, X, Loader2 } from 'lucide-react';
+import NextImage from 'next/image';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
 import { uploadFile, deleteFile } from '@/utils/storage';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
+import { todayISO } from '@/utils/date';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -32,7 +34,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const router = useRouter();
 
     const [items, setItems] = useState<ExpenseItemWithAttachment[]>([
-        { id: '1', amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
+        { id: '1', amount: 0, date: todayISO(), description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
     ]);
     const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
     const [noReceiptReason, setNoReceiptReason] = useState('');
@@ -58,9 +60,10 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
     // Cleanup object URLs on unmount
     useEffect(() => {
+        const urls = objectUrlsRef.current;
         return () => {
-            objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-            objectUrlsRef.current.clear();
+            urls.forEach(url => URL.revokeObjectURL(url));
+            urls.clear();
         };
     }, []);
 
@@ -109,7 +112,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const addItem = () => {
         setItems(prev => [
             ...prev,
-            { id: Date.now().toString(), amount: 0, date: new Date().toISOString().split('T')[0], description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
+            { id: Date.now().toString(), amount: 0, date: todayISO(), description: '', category: '', invoiceNumber: '', noReceipt: false, receiptFile: null }
         ]);
     };
 
@@ -196,7 +199,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
             const claimData = {
                 description: generatedDescription,
-                date: new Date().toISOString().split('T')[0],
+                date: todayISO(),
                 type: 'employee' as const, // literal type
                 payee: currentUser!.name,
                 // payeeId: currentUser.id, // Optional, depending on schema
@@ -381,10 +384,13 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                                 }}
                                                 onClick={() => window.open(getObjectUrl(item.id, item.receiptFile!), '_blank')}
                                             >
-                                                <img
+                                                <NextImage
                                                     src={getObjectUrl(item.id, item.receiptFile)}
                                                     alt="preview"
+                                                    width={40}
+                                                    height={40}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    unoptimized
                                                 />
                                             </div>
                                             <button
@@ -415,15 +421,18 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                                                 onClick={() => window.open(item.fileUrl || '#', '_blank')}
                                             >
                                                 {item.fileUrl ? (
-                                                    <img
+                                                    <NextImage
                                                         src={item.fileUrl}
                                                         alt="preview"
+                                                        width={40}
+                                                        height={40}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                         onError={(e) => {
-                                                            (e.target as any).src = "https://placehold.co/40x40?text=File";
+                                                            (e.target as HTMLImageElement).src = "https://placehold.co/40x40?text=File";
                                                         }}
+                                                        unoptimized
                                                     />
-                                                ) : <Image size={24} style={{ color: 'var(--color-primary)' }} />}
+                                                ) : <ImageIcon size={24} style={{ color: 'var(--color-primary)' }} />}
                                             </div>
                                             <button
                                                 onClick={() => {

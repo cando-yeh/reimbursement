@@ -1,37 +1,55 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useApp } from '@/context/AppContext';
-import { Claim, Payment, VendorRequest } from '@/types';
-import { Search, Filter, AlertCircle, Clock, CheckCircle, FileText, Send } from 'lucide-react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { useClaims } from '@/context/ClaimsContext';
+import { Claim, VendorRequest } from '@/types';
+import { todayISO } from '@/utils/date';
+import { getClaims, getReviewBadgeCounts } from '@/app/actions/claims';
+import { approveVendorRequest as approveVendorRequestAction, getPendingVendorRequestCount, getVendorRequests } from '@/app/actions/vendors';
+import { formatVendorRequests } from '@/utils/vendorHelpers';
 import Pagination from '@/components/Common/Pagination';
 import TabButton from '@/components/Common/TabButton';
 import PageHeader from '@/components/Common/PageHeader';
 import TabContainer from '@/components/Common/TabContainer';
+import ClaimTable from '@/components/Common/ClaimTable';
 
-// Dynamic imports for heavy components
-const ClaimTable = dynamic(() => import('@/components/Common/ClaimTable'), { ssr: false });
-const VendorRequestTable = dynamic(() => import('@/components/Common/VendorRequestTable'), { ssr: false });
-const PaymentRecordTable = dynamic(() => import('@/components/Common/PaymentRecordTable'), { ssr: false });
-const VendorRequestDetailModal = dynamic(() => import('@/components/Common/VendorRequestDetailModal'), { ssr: false });
+const VendorRequestTable = dynamic(() => import('@/components/Common/VendorRequestTable'), {
+    loading: () => <div style={{ padding: '1rem' }}>載入中...</div>,
+});
+const PaymentRecordTable = dynamic(() => import('@/components/Common/PaymentRecordTable'), {
+    loading: () => <div style={{ padding: '1rem' }}>載入中...</div>,
+});
+const VendorRequestDetailModal = dynamic(() => import('@/components/Common/VendorRequestDetailModal'));
+
+function useDebouncedValue<T>(value: T, delay: number) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const timeoutId = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(timeoutId);
+    }, [value, delay]);
+    return debounced;
+}
 
 function PendingItemsInner() {
-    const app = useApp();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { currentUser, availableUsers } = useAuth();
+    const { payments, addPayment } = useClaims();
 
     // Filters
     const [filterApplicant, setFilterApplicant] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterPayee, setFilterPayee] = useState('');
     const [filterType, setFilterType] = useState('');
+    const debouncedPayee = useDebouncedValue(filterPayee, 300);
 
     // Payment selection state
     const [selectedClaimIds, setSelectedClaimIds] = useState<string[]>([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [paymentDate, setPaymentDate] = useState(todayISO());
     const [selectionError, setSelectionError] = useState<string | null>(null);
 
     // Vendor Request Modal State
@@ -40,32 +58,73 @@ function PendingItemsInner() {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
+    const [allApplications, setAllApplications] = useState<Claim[]>([]);
+    const [allApplicationsPagination, setAllApplicationsPagination] = useState<any>(null);
+    const [isAllApplicationsLoading, setIsAllApplicationsLoading] = useState(false);
 
-    const { claims, vendorRequests, currentUser, availableUsers, payments, addPayment, approveVendorRequest, rejectVendorRequest, fetchClaims, fetchVendorRequests } = app;
+    const [claims, setClaims] = useState<Claim[]>([]);
+    const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
+    const [isClaimsLoading, setIsClaimsLoading] = useState(false);
 
-    // Stabilize function references to prevent useEffect re-triggers
-    const fetchClaimsRef = useRef(fetchClaims);
-    const fetchVendorRequestsRef = useRef(fetchVendorRequests);
-    useEffect(() => {
-        fetchClaimsRef.current = fetchClaims;
-        fetchVendorRequestsRef.current = fetchVendorRequests;
+    const [badgeCounts, setBadgeCounts] = useState({
+        managerApprovals: 0,
+        financeReview: 0,
+        financePayment: 0,
     });
+    const [vendorPendingCount, setVendorPendingCount] = useState(0);
 
-    // Fetch data on mount
+    const [claimOverrides, setClaimOverrides] = useState<Record<string, { status: Claim['status']; datePaid?: string }>>({});
+
+    const currentUserId = currentUser?.id;
     const isFinance = currentUser?.permissions?.includes('finance_audit') || currentUser?.roleName?.includes('財務');
+    const isManager = currentUserId ? availableUsers.some(u => u.approverId === currentUserId) : false;
+
+    const reviewStatuses: Claim['status'][] = ['pending_approval', 'pending_finance', 'pending_finance_review', 'approved'];
+
+    // Initial claims + vendor requests load
     useEffect(() => {
-        if (currentUser) {
-            // Fetch all claims for review (no specific applicant filter)
-            fetchClaimsRef.current({ pageSize: 100 });
-            if (isFinance) {
-                fetchVendorRequestsRef.current({ page: 1, pageSize: 50 });
-            }
+        if (!currentUserId) return;
+        setIsClaimsLoading(true);
+        getClaims({ status: reviewStatuses, pageSize: 200, cache: true, compact: true })
+            .then(res => {
+                if (res.success && res.data) {
+                    setClaims(res.data);
+                } else {
+                    setClaims([]);
+                }
+            })
+            .finally(() => setIsClaimsLoading(false));
+
+        if (isFinance) {
+            getVendorRequests({ page: 1, pageSize: 50 })
+                .then(res => {
+                    if (res.success && res.data) {
+                        setVendorRequests(formatVendorRequests(res.data));
+                    } else {
+                        setVendorRequests([]);
+                    }
+                });
         }
-    }, [currentUser?.id, isFinance]);
+    }, [currentUserId, isFinance]);
 
-    if (!currentUser) return null;
+    useEffect(() => {
+        if (!currentUserId) return;
+        getReviewBadgeCounts({ userId: currentUserId, includeFinance: isFinance })
+            .then(res => {
+                if (res.success && res.data) {
+                    setBadgeCounts(res.data);
+                }
+            });
 
-    const isManager = availableUsers.some(u => u.approverId === currentUser.id);
+        if (isFinance) {
+            getPendingVendorRequestCount()
+                .then(res => {
+                    if (res.success && res.data) {
+                        setVendorPendingCount(res.data.count);
+                    }
+                });
+        }
+    }, [currentUserId, isFinance]);
 
     // Derived values from searchParams
     const currentTab = searchParams.get('tab') || (isManager ? 'manager_approvals' : isFinance ? 'finance_review' : 'all_applications');
@@ -78,57 +137,68 @@ function PendingItemsInner() {
         setCurrentPage(1);
     }, [activeTab]);
 
+    useEffect(() => {
+        if (activeTab !== 'all_applications') return;
+        setCurrentPage(1);
+    }, [activeTab, filterApplicant, filterStatus, filterType, filterPayee]);
+
+    useEffect(() => {
+        if (!currentUserId || activeTab !== 'all_applications') return;
+        setIsAllApplicationsLoading(true);
+        getClaims({
+            page: currentPage,
+            pageSize: ITEMS_PER_PAGE,
+            applicantId: filterApplicant || undefined,
+            status: filterStatus || undefined,
+            type: filterType || undefined,
+            payee: debouncedPayee || undefined,
+            cache: true,
+            compact: true,
+            excludeDraft: !filterStatus,
+        }).then(res => {
+            if (res.success && res.data) {
+                const merged = res.data.map(claim => {
+                    const override = claimOverrides[claim.id];
+                    return override ? { ...claim, ...override } : claim;
+                });
+                setAllApplications(merged);
+                setAllApplicationsPagination(res.pagination);
+            } else {
+                setAllApplications([]);
+                setAllApplicationsPagination(null);
+            }
+        }).finally(() => {
+            setIsAllApplicationsLoading(false);
+        });
+    }, [activeTab, currentUserId, currentPage, filterApplicant, filterStatus, filterType, debouncedPayee, ITEMS_PER_PAGE, claimOverrides]);
+
+    if (!currentUser) return null;
+
     const handleTabChange = (tab: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('tab', tab);
         router.push(`/reviews?${params.toString()}`);
     };
 
-    // --- Logic for different categories ---
+    const managerApprovals = useMemo(() => (
+        claims.filter(c => {
+            if (c.status !== 'pending_approval') return false;
+            const applicant = availableUsers.find(u => u.id === c.applicantId);
+            return applicant?.approverId === currentUser.id;
+        })
+    ), [claims, availableUsers, currentUser.id]);
 
-    // 1. My Pending (Drafts, Returned, Pending Evidence)
-    const myPendingClaims = claims.filter(c =>
-        c.applicantId === currentUser.id &&
-        (['draft', 'rejected', 'pending_evidence'].includes(c.status))
-    );
+    const financeReviewClaims = useMemo(() => (
+        isFinance ? claims.filter(c => ['pending_finance', 'pending_finance_review'].includes(c.status)) : []
+    ), [claims, isFinance]);
 
-    // 2. Approvals (Manager)
-    const managerApprovals = claims.filter(c => {
-        if (c.status !== 'pending_approval') return false;
-        const applicant = availableUsers.find(u => u.id === c.applicantId);
-        return applicant?.approverId === currentUser.id;
-    });
+    const financePaymentClaims = useMemo(() => (
+        isFinance ? claims.filter(c => c.status === 'approved') : []
+    ), [claims, isFinance]);
 
-    // 3. Finance Review
-    const financeReviewClaims = isFinance ? claims.filter(c =>
-        ['pending_finance', 'pending_finance_review'].includes(c.status)
-    ) : [];
-
-    // 4. Finance Payment
-    const financePaymentClaims = isFinance ? claims.filter(c => c.status === 'approved') : [];
-
-    // 5. My Applications (All applications by current user)
-    const myApplications = claims.filter(c => {
-        if (c.applicantId !== currentUser.id) return false;
-        if (filterStatus && c.status !== filterStatus) return false;
-        if (filterPayee && !c.payee.toLowerCase().includes(filterPayee.toLowerCase())) return false;
-        if (filterType && c.type !== filterType) return false;
-        return true;
-    });
-
-    // 6. Vendor Requests (Finance)
-    const vendorApprovals = isFinance ? vendorRequests.filter(r => r.status === 'pending') : [];
-
-    // 7. All Applications (Finance/Admin)
-    const allApplications = claims.filter(c => {
-        if (!isFinance && !currentUser.permissions.includes('user_management')) return false;
-        if (c.status === 'draft') return false;
-        if (filterApplicant && c.applicantId !== filterApplicant) return false;
-        if (filterStatus && c.status !== filterStatus) return false;
-        if (filterPayee && !c.payee.toLowerCase().includes(filterPayee.toLowerCase())) return false;
-        if (filterType && c.type !== filterType) return false;
-        return true;
-    });
+    const vendorApprovals = useMemo(() => (
+        isFinance ? vendorRequests.filter(r => r.status === 'pending') : []
+    ), [vendorRequests, isFinance]);
 
     const handleSelectClaim = (id: string) => {
         setSelectedClaimIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -157,10 +227,69 @@ function PendingItemsInner() {
 
         addPayment(firstPayee, selectedClaimIds, paymentDate);
 
+        setClaims(prev => prev.map(c => {
+            if (!selectedClaimIds.includes(c.id)) return c;
+            const needsEvidence = c.paymentDetails?.invoiceStatus === 'not_yet';
+            const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
+            return { ...c, status: nextStatus, datePaid: paymentDate };
+        }));
+
+        setClaimOverrides(prev => {
+            const updated = { ...prev };
+            selectedClaimIds.forEach(id => {
+                const claim = claims.find(c => c.id === id);
+                const needsEvidence = claim?.paymentDetails?.invoiceStatus === 'not_yet';
+                const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
+                updated[id] = { status: nextStatus, datePaid: paymentDate } as any;
+            });
+            return updated;
+        });
+
         setShowPaymentModal(false);
         setSelectedClaimIds([]);
         handleTabChange('payment_records');
     };
+
+    const handleApproveVendorRequest = async (requestId: string) => {
+        setVendorRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'approved' } : r));
+        const result = await approveVendorRequestAction(requestId, 'approve');
+        if (!result?.success) {
+            alert('審核失敗');
+        }
+        if (isFinance) {
+            const res = await getVendorRequests({ page: 1, pageSize: 50 });
+            if (res.success && res.data) {
+                setVendorRequests(formatVendorRequests(res.data));
+            }
+            const countRes = await getPendingVendorRequestCount();
+            if (countRes.success && countRes.data) {
+                setVendorPendingCount(countRes.data.count);
+            }
+        }
+    };
+
+    const handleRejectVendorRequest = async (requestId: string) => {
+        setVendorRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
+        const result = await approveVendorRequestAction(requestId, 'reject');
+        if (!result?.success) {
+            alert('審核失敗');
+        }
+        if (isFinance) {
+            const res = await getVendorRequests({ page: 1, pageSize: 50 });
+            if (res.success && res.data) {
+                setVendorRequests(formatVendorRequests(res.data));
+            }
+            const countRes = await getPendingVendorRequestCount();
+            if (countRes.success && countRes.data) {
+                setVendorPendingCount(countRes.data.count);
+            }
+        }
+    };
+
+    const managerApprovalsCount = badgeCounts.managerApprovals || managerApprovals.length;
+    const financeReviewCount = badgeCounts.financeReview || financeReviewClaims.length;
+    const financePaymentCount = badgeCounts.financePayment || financePaymentClaims.length;
+    const vendorApprovalsCount = vendorPendingCount || vendorApprovals.length;
 
     return (
         <div className="container">
@@ -175,8 +304,8 @@ function PendingItemsInner() {
                         active={activeTab === 'manager_approvals'}
                         onClick={() => handleTabChange('manager_approvals')}
                         label="主管審核"
-                        count={managerApprovals.length}
-                        badge={managerApprovals.length}
+                        count={managerApprovalsCount}
+                        badge={managerApprovalsCount}
                     />
                 )}
 
@@ -186,22 +315,22 @@ function PendingItemsInner() {
                             active={activeTab === 'finance_review'}
                             onClick={() => handleTabChange('finance_review')}
                             label="財務審核"
-                            count={financeReviewClaims.length}
-                            badge={financeReviewClaims.length}
+                            count={financeReviewCount}
+                            badge={financeReviewCount}
                         />
                         <TabButton
                             active={activeTab === 'finance_payment'}
                             onClick={() => handleTabChange('finance_payment')}
                             label="待付款"
-                            count={financePaymentClaims.length}
-                            badge={financePaymentClaims.length}
+                            count={financePaymentCount}
+                            badge={financePaymentCount}
                         />
                         <TabButton
                             active={activeTab === 'vendor_requests'}
                             onClick={() => handleTabChange('vendor_requests')}
                             label="廠商審核"
-                            count={vendorApprovals.length}
-                            badge={vendorApprovals.length}
+                            count={vendorApprovalsCount}
+                            badge={vendorApprovalsCount}
                         />
                     </>
                 )}
@@ -211,7 +340,7 @@ function PendingItemsInner() {
                         active={activeTab === 'all_applications'}
                         onClick={() => handleTabChange('all_applications')}
                         label="所有申請單"
-                        count={allApplications.length}
+                        count={allApplicationsPagination?.totalCount || 0}
                     />
                 )}
 
@@ -286,6 +415,7 @@ function PendingItemsInner() {
                         emptyMessage="無待審核項目"
                         onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
                         availableUsers={availableUsers}
+                        loading={isClaimsLoading}
                     />
                 )}
 
@@ -295,6 +425,7 @@ function PendingItemsInner() {
                         emptyMessage="無待財務核核項目"
                         onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
                         availableUsers={availableUsers}
+                        loading={isClaimsLoading}
                     />
                 )}
 
@@ -313,6 +444,7 @@ function PendingItemsInner() {
                             onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
                             availableUsers={availableUsers}
                             emptyMessage="無待付款項目"
+                            loading={isClaimsLoading}
                         />
                     </div>
                 )}
@@ -329,13 +461,14 @@ function PendingItemsInner() {
                     <>
                         <Pagination
                             currentPage={currentPage}
-                            totalPages={Math.ceil(allApplications.length / ITEMS_PER_PAGE)}
+                            totalPages={allApplicationsPagination?.totalPages || 1}
                             onPageChange={setCurrentPage}
                         />
                         <ClaimTable
-                            claims={allApplications.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
+                            claims={allApplications}
                             onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
                             availableUsers={availableUsers}
+                            loading={isAllApplicationsLoading}
                             emptyMessage="無符合條件的申請單"
                         />
                     </>
@@ -353,21 +486,26 @@ function PendingItemsInner() {
             <VendorRequestDetailModal
                 request={selectedVendorRequest}
                 onClose={() => setSelectedVendorRequest(null)}
-                onApprove={approveVendorRequest}
-                onReject={rejectVendorRequest}
+                onApprove={handleApproveVendorRequest}
+                onReject={handleRejectVendorRequest}
             />
 
+            {/* Payment Modal */}
             {showPaymentModal && (
                 <div className="modal-overlay">
-                    <div className="card modal-content" style={{ maxWidth: '400px' }}>
-                        <h3 className="heading-md">確認付款</h3>
-                        <div className="form-group" style={{ marginTop: '1rem' }}>
-                            <label>付款日期</label>
-                            <input type="date" className="form-input" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
-                        </div>
-                        <div className="modal-actions" style={{ marginTop: '2rem' }}>
-                            <button className="btn btn-ghost" onClick={() => setShowPaymentModal(false)}>取消</button>
-                            <button className="btn btn-primary" onClick={handleConfirmPayment}>確認</button>
+                    <div className="card modal-content" style={{ maxWidth: '440px' }}>
+                        <h3 className="heading-md" style={{ marginBottom: '1rem' }}>確認付款</h3>
+                        <p style={{ marginBottom: '1rem' }}>付款日期</p>
+                        <input
+                            type="date"
+                            className="form-input"
+                            value={paymentDate}
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                            style={{ marginBottom: '1.5rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowPaymentModal(false)}>取消</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmPayment}>確認付款</button>
                         </div>
                     </div>
                 </div>
@@ -378,7 +516,7 @@ function PendingItemsInner() {
 
 export default function PendingItemsPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div />}> 
             <PendingItemsInner />
         </Suspense>
     );

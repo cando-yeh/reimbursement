@@ -24,7 +24,7 @@ interface AppContextType {
   vendors: Vendor[];
   vendorRequests: VendorRequest[];
   isVendorsLoading: boolean;
-  fetchVendors: (params?: { page?: number; pageSize?: number }) => Promise<{ data: Vendor[], pagination: any } | null>;
+  fetchVendors: (params?: { page?: number; pageSize?: number; query?: string }) => Promise<{ data: Vendor[], pagination: any } | null>;
   fetchVendorRequests: (params?: { page?: number; pageSize?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => Promise<boolean>;
   requestUpdateVendor: (id: string, data: Partial<Vendor>) => Promise<boolean>;
@@ -36,7 +36,8 @@ interface AppContextType {
   claims: Claim[];
   payments: Payment[];
   isDataLoading: boolean;
-  fetchClaims: (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => Promise<{ data: Claim[], pagination: any } | null>;
+  fetchClaims: (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => Promise<{ data: Claim[], pagination: any } | null>;
+  fetchDashboardData: (filters: { applicantId: string; status?: string | string[]; page?: number; pageSize?: number }) => Promise<{ counts: { drafts: number, evidence: number, returned: number, inReview: number, pendingPayment: number, closed: number }; claims: Claim[]; pagination: any } | null>;
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
   updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
   updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
@@ -96,6 +97,7 @@ function AppContextCombiner({ children }: { children: ReactNode }) {
     payments: claims.payments,
     isDataLoading: claims.isDataLoading,
     fetchClaims: claims.fetchClaims,
+    fetchDashboardData: claims.fetchDashboardData,
     addClaim: claims.addClaim,
     updateClaim: claims.updateClaim,
     updateClaimStatus: claims.updateClaimStatus,

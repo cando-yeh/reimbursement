@@ -1,16 +1,25 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send, Loader2, CreditCard } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '@/utils/constants';
 import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
-import SearchableVendorSelect from '@/components/Common/SearchableVendorSelect';
 import { uploadFile } from '@/utils/storage';
 import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
 import Field from '@/components/Common/Field';
+import { todayISO } from '@/utils/date';
+
+const SearchableVendorSelect = dynamic(() => import('@/components/Common/SearchableVendorSelect'), {
+    loading: () => (
+        <div className="form-input" style={{ display: 'flex', alignItems: 'center', height: '44px' }}>
+            載入中...
+        </div>
+    ),
+});
 
 export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const router = useRouter();
@@ -103,7 +112,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             if (attachments.length > 0) {
                 finalInvoiceUrl = await uploadFile(
                     attachments[0],
-                    invoiceDate || new Date().toISOString().split('T')[0],
+                    invoiceDate || todayISO(),
                     selectedVendor?.name || '未知廠商',
                     expenseCategory || '未分類',
                     amount || 0,
@@ -120,7 +129,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 payeeId: vendorId || '',
                 payee: selectedVendor?.name || '',
                 items: [],
-                date: new Date().toISOString().split('T')[0],
+                date: todayISO(),
                 status: 'draft' as const,
                 paymentDetails: {
                     transactionContent: description.trim(),
@@ -160,7 +169,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             if (attachments.length > 0) {
                 finalInvoiceUrl = await uploadFile(
                     attachments[0],
-                    invoiceDate || new Date().toISOString().split('T')[0],
+                    invoiceDate || todayISO(),
                     selectedVendor?.name || '未知廠商',
                     expenseCategory,
                     amount,
@@ -177,7 +186,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 payeeId: vendorId,
                 payee: selectedVendor?.name || '',
                 items: [],
-                date: new Date().toISOString().split('T')[0],
+                date: todayISO(),
                 status: (currentUser.approverId ? 'pending_approval' : 'pending_finance') as any,
                 paymentDetails: {
                     transactionContent: description.trim(),

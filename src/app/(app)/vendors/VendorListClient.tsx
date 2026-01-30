@@ -1,32 +1,68 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Search, Building, Trash2, Edit2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BANK_LIST } from '@/utils/constants';
 import Pagination from '@/components/Common/Pagination';
 import PageHeader from '@/components/Common/PageHeader';
-import { useApp } from '@/context/AppContext';
+import { createVendorRequest } from '@/app/actions/vendors';
+import { Vendor, VendorRequest, User } from '@/types';
+import { todayISO } from '@/utils/date';
 
 interface VendorListClientProps {
-    currentUser: any;
+    currentUser: User;
+    vendors: Vendor[];
+    vendorRequests: VendorRequest[];
     pagination: any;
     isLoading: boolean;
 }
 
-export default function VendorListClient({ currentUser, pagination, isLoading }: VendorListClientProps) {
-    const { vendors, vendorRequests, requestDeleteVendor } = useApp();
-    const [searchTerm, setSearchTerm] = useState('');
+function useDebouncedValue<T>(value: T, delay: number) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const timeoutId = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(timeoutId);
+    }, [value, delay]);
+    return debounced;
+}
+
+export default function VendorListClient({ currentUser, vendors, vendorRequests, pagination, isLoading }: VendorListClientProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const query = searchParams.get('q') || '';
+    const [searchInput, setSearchInput] = useState(query);
+    const debouncedSearch = useDebouncedValue(searchInput, 300);
+    const [localRequests, setLocalRequests] = useState<VendorRequest[]>(vendorRequests);
+
+    useEffect(() => {
+        setSearchInput(query);
+    }, [query]);
+
+    useEffect(() => {
+        setLocalRequests(vendorRequests);
+    }, [vendorRequests]);
+
+    useEffect(() => {
+        if (debouncedSearch === query) return;
+        const params = new URLSearchParams(searchParams.toString());
+        if (debouncedSearch.trim()) {
+            params.set('q', debouncedSearch.trim());
+        } else {
+            params.delete('q');
+        }
+        params.set('page', '1');
+        router.push(`/vendors?${params.toString()}`);
+    }, [debouncedSearch, query, router, searchParams]);
 
     const canManageVendors = currentUser && (currentUser.permissions.includes('general') || currentUser.permissions.includes('finance_audit'));
 
     const getPendingAction = (vendorId: string) => {
-        return vendorRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId));
+        return localRequests.find(r => r.status === 'pending' && (r.vendorId === vendorId));
     };
 
-    const pendingAddRequests = vendorRequests.filter(r => r.status === 'pending' && r.type === 'add' && r.data);
+    const pendingAddRequests = localRequests.filter(r => r.status === 'pending' && r.type === 'add' && r.data);
 
     // Merge actual vendors and pending additions
     let displayVendors = [
@@ -34,22 +70,50 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
         ...pendingAddRequests.map(r => ({ ...(r.data as any), id: (r.data as any)?.id || `temp-${Math.random()}`, isPendingAdd: true }))
     ];
 
-    if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
+    if (debouncedSearch.trim()) {
+        const normalized = debouncedSearch.toLowerCase();
         displayVendors = displayVendors.filter(v =>
-            (v.name || '').toLowerCase().includes(query) ||
-            (v.serviceContent && v.serviceContent.toLowerCase().includes(query)) ||
-            (v.bankAccount && v.bankAccount.includes(query))
+            (v.name || '').toLowerCase().includes(normalized) ||
+            (v.serviceContent && v.serviceContent.toLowerCase().includes(normalized)) ||
+            (v.bankAccount && v.bankAccount.includes(normalized))
         );
     }
 
     const handlePageChange = (page: number) => {
-        router.push(`/vendors?page=${page}`);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        router.push(`/vendors?${params.toString()}`);
     };
 
     const handleDeleteRequest = async (vendorId: string) => {
         if (window.confirm('確定要申請刪除此廠商嗎？')) {
-            await requestDeleteVendor(vendorId);
+            const tempId = `temp-${Date.now()}`;
+            const optimisticRequest: VendorRequest = {
+                id: tempId,
+                type: 'delete',
+                status: 'pending',
+                vendorId,
+                timestamp: todayISO(),
+                data: {},
+                originalData: vendors.find(v => v.id === vendorId),
+                applicantName: currentUser.name,
+            } as VendorRequest;
+
+            setLocalRequests(prev => [optimisticRequest, ...prev]);
+
+            const result = await createVendorRequest({
+                type: 'delete',
+                vendorId,
+                originalData: optimisticRequest.originalData,
+                data: {}
+            });
+
+            if (result.success) {
+                router.refresh();
+            } else {
+                setLocalRequests(prev => prev.filter(r => r.id !== tempId));
+                alert('申請失敗: ' + result.error);
+            }
         }
     };
 
@@ -80,8 +144,8 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                             type="text"
                             placeholder="搜尋廠商..."
                             className="search-input"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
                             style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem' }}
                         />
                     </div>
@@ -184,7 +248,7 @@ export default function VendorListClient({ currentUser, pagination, isLoading }:
                         {!isLoading && displayVendors.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="empty-state">
-                                    {searchTerm ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}
+                                    {query ? '找不到符合關鍵字的廠商。' : '找不到廠商。請新增一筆資料。'}
                                 </td>
                             </tr>
                         )}

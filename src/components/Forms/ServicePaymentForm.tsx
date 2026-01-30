@@ -9,6 +9,7 @@ import { BANK_LIST } from '@/utils/constants';
 import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
 import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
+import { todayISO } from '@/utils/date';
 
 export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const router = useRouter();
@@ -23,8 +24,8 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
         email: '',
         registeredAddress: '',
         description: '',
-        servicePeriodStart: new Date().toISOString().split('T')[0],
-        servicePeriodEnd: new Date().toISOString().split('T')[0],
+        servicePeriodStart: todayISO(),
+        servicePeriodEnd: todayISO(),
         amount: '' as string | number,
         bankCode: '',
         bankAccount: '',
@@ -49,8 +50,8 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                     email: claim.serviceDetails?.email || '',
                     registeredAddress: claim.serviceDetails?.registeredAddress || '',
                     description: claim.description || '',
-                    servicePeriodStart: claim.serviceDetails?.servicePeriodStart || new Date().toISOString().split('T')[0],
-                    servicePeriodEnd: claim.serviceDetails?.servicePeriodEnd || new Date().toISOString().split('T')[0],
+                    servicePeriodStart: claim.serviceDetails?.servicePeriodStart || todayISO(),
+                    servicePeriodEnd: claim.serviceDetails?.servicePeriodEnd || todayISO(),
                     amount: claim.amount || '',
                     bankCode: claim.serviceDetails?.bankCode || '',
                     bankAccount: claim.serviceDetails?.bankAccount || '',
@@ -91,7 +92,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
 
         const claimData = {
             description: formData.description || '勞務報酬申請',
-            date: new Date().toISOString().split('T')[0],
+            date: todayISO(),
             type: 'service',
             payee: formData.payeeName,
             status: status,

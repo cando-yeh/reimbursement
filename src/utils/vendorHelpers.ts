@@ -1,4 +1,5 @@
 import { VendorRequest } from '@/types';
+import { formatDateOnly } from '@/utils/date';
 
 /**
  * Format raw vendor request data from server action to VendorRequest type.
@@ -7,7 +8,7 @@ import { VendorRequest } from '@/types';
 export function formatVendorRequest(r: any): VendorRequest {
     return {
         ...r,
-        timestamp: new Date(r.timestamp).toISOString().split('T')[0],
+        timestamp: formatDateOnly(r.timestamp),
         data: r.data,
         originalData: r.originalData
     };

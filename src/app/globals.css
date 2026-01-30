@@ -1,6 +1,14 @@
+@import "tailwindcss";
+@import "../styles/base.css";
+@import "../styles/components.css";
+@import "../styles/layout.css";
+@import "../styles/forms.css";
+@import "../styles/tables.css";
+@import "../styles/utilities.css";
+
 /**
  * Global Styles Entry Point
- * 
+ *
  * This file imports all domain-specific CSS modules:
  * - base.css: Variables, reset, typography
  * - components.css: Cards, buttons, badges, popups
@@ -9,11 +17,3 @@
  * - tables.css: Data tables
  * - utilities.css: Helper classes
  */
-
-@import "tailwindcss";
-@import "../styles/base.css";
-@import "../styles/components.css";
-@import "../styles/layout.css";
-@import "../styles/forms.css";
-@import "../styles/tables.css";
-@import "../styles/utilities.css";

@@ -5,13 +5,14 @@ import { Vendor, VendorRequest } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
 import { formatVendorRequests } from '@/utils/vendorHelpers';
 import { useAuth } from './AuthContext';
+import { todayISO } from '@/utils/date';
 
 // --- Types ---
 interface VendorsContextType {
     vendors: Vendor[];
     vendorRequests: VendorRequest[];
     isVendorsLoading: boolean;
-    fetchVendors: (params?: { page?: number; pageSize?: number }) => Promise<{ data: Vendor[], pagination: any } | null>;
+    fetchVendors: (params?: { page?: number; pageSize?: number; query?: string }) => Promise<{ data: Vendor[], pagination: any } | null>;
     fetchVendorRequests: (params?: { page?: number; pageSize?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
     requestAddVendor: (vendor: Omit<Vendor, 'id'>) => Promise<boolean>;
     requestUpdateVendor: (id: string, data: Partial<Vendor>) => Promise<boolean>;
@@ -31,7 +32,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
     const [isVendorsLoading, setIsVendorsLoading] = useState(false);
 
     // --- Fetch Functions ---
-    const fetchVendors = useCallback(async (params?: { page?: number; pageSize?: number }) => {
+    const fetchVendors = useCallback(async (params?: { page?: number; pageSize?: number; query?: string }) => {
         setIsVendorsLoading(true);
         try {
             const result = await getVendors(params);
@@ -78,7 +79,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
             id: tempId,
             type: 'add',
             status: 'pending',
-            timestamp: new Date().toISOString().split('T')[0],
+            timestamp: todayISO(),
             data: vendor,
             applicantId: currentUser?.id,
             applicantName: currentUser?.name
@@ -106,7 +107,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
             type: 'update',
             status: 'pending',
             vendorId: id,
-            timestamp: new Date().toISOString().split('T')[0],
+            timestamp: todayISO(),
             data: data,
             originalData: existingVendor,
             applicantId: currentUser?.id,
@@ -140,7 +141,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
             type: 'delete',
             status: 'pending',
             vendorId: id,
-            timestamp: new Date().toISOString().split('T')[0],
+            timestamp: todayISO(),
             data: {},
             originalData: vendor,
             applicantId: currentUser?.id,

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './claims';   // Re-use helper if possible, or re-implement
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 
 // Re-implement getCurrentUser to avoid circular deps if claims.ts imports vendors
 // Actually claims.ts imports nothing from vendors usually. 
@@ -10,37 +10,67 @@ import { revalidatePath } from 'next/cache';
 
 // Local helper removed in favor of imported getCurrentUser
 
+function vendorsCacheTag() {
+    return 'vendors:list';
+}
 
-export async function getVendors(params?: { page?: number; pageSize?: number }) {
+function vendorRequestsCacheTag() {
+    return 'vendors:requests';
+}
+
+function revalidateVendorsCache() {
+    revalidateTag(vendorsCacheTag(), 'default');
+}
+
+function revalidateVendorRequestsCache() {
+    revalidateTag(vendorRequestsCacheTag(), 'default');
+}
+
+export async function getVendors(params?: { page?: number; pageSize?: number; query?: string }) {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
     const skip = (page - 1) * pageSize;
+    const query = params?.query?.trim() || '';
+    const cacheKey = ['vendors', query || 'all', String(page), String(pageSize), 'v1'];
 
-    try {
-        const [totalCount, vendors] = await Promise.all([
-            prisma.vendor.count({ where: { status: { not: 'deleted' } } }),
-            prisma.vendor.findMany({
-                where: { status: { not: 'deleted' } },
-                orderBy: { name: 'asc' },
-                skip,
-                take: pageSize,
-            })
-        ]);
-
-        return {
-            success: true,
-            data: vendors,
-            pagination: {
-                totalCount,
-                totalPages: Math.ceil(totalCount / pageSize),
-                currentPage: page,
-                pageSize
+    const cachedFetch = unstable_cache(async () => {
+        try {
+            const whereClause: any = { status: { not: 'deleted' } };
+            if (query) {
+                whereClause.OR = [
+                    { name: { contains: query, mode: 'insensitive' } },
+                    { serviceContent: { contains: query, mode: 'insensitive' } },
+                    { bankAccount: { contains: query, mode: 'insensitive' } }
+                ];
             }
-        };
-    } catch (error) {
-        console.error('Error fetching vendors:', error);
-        return { success: false, error: 'Failed to fetch vendors' };
-    }
+
+            const [totalCount, vendors] = await Promise.all([
+                prisma.vendor.count({ where: whereClause }),
+                prisma.vendor.findMany({
+                    where: whereClause,
+                    orderBy: { name: 'asc' },
+                    skip,
+                    take: pageSize,
+                })
+            ]);
+
+            return {
+                success: true,
+                data: vendors,
+                pagination: {
+                    totalCount,
+                    totalPages: Math.ceil(totalCount / pageSize),
+                    currentPage: page,
+                    pageSize
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching vendors:', error);
+            return { success: false, error: 'Failed to fetch vendors' };
+        }
+    }, cacheKey, { revalidate: 30, tags: [vendorsCacheTag()] });
+
+    return cachedFetch();
 }
 
 export async function createVendorRequest(data: any) { // data: Partial<Vendor> & { type: 'add' | 'update' | 'delete', vendorId?: string }
@@ -68,6 +98,7 @@ export async function createVendorRequest(data: any) { // data: Partial<Vendor> 
 
         revalidatePath('/vendors');
         revalidatePath('/'); // Dashboard might show pending requests
+        revalidateVendorRequestsCache();
         return { success: true };
     } catch (error) {
         console.error('Error creating vendor request:', error);
@@ -79,31 +110,51 @@ export async function getVendorRequests(params?: { page?: number; pageSize?: num
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
     const skip = (page - 1) * pageSize;
+    const cacheKey = ['vendor-requests', String(page), String(pageSize), 'v1'];
 
-    try {
-        const [totalCount, requests] = await Promise.all([
-            prisma.vendorRequest.count(),
-            prisma.vendorRequest.findMany({
-                orderBy: { timestamp: 'desc' },
-                skip,
-                take: pageSize,
-            })
-        ]);
+    const cachedFetch = unstable_cache(async () => {
+        try {
+            const [totalCount, requests] = await Promise.all([
+                prisma.vendorRequest.count(),
+                prisma.vendorRequest.findMany({
+                    orderBy: { timestamp: 'desc' },
+                    skip,
+                    take: pageSize,
+                })
+            ]);
 
-        return {
-            success: true,
-            data: requests,
-            pagination: {
-                totalCount,
-                totalPages: Math.ceil(totalCount / pageSize),
-                currentPage: page,
-                pageSize
-            }
-        };
-    } catch (error) {
-        console.error('Error fetching vendor requests:', error);
-        return { success: false, error: 'Failed to fetch requests' };
-    }
+            return {
+                success: true,
+                data: requests,
+                pagination: {
+                    totalCount,
+                    totalPages: Math.ceil(totalCount / pageSize),
+                    currentPage: page,
+                    pageSize
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching vendor requests:', error);
+            return { success: false, error: 'Failed to fetch requests' };
+        }
+    }, cacheKey, { revalidate: 30, tags: [vendorRequestsCacheTag()] });
+
+    return cachedFetch();
+}
+
+export async function getPendingVendorRequestCount() {
+    const cacheKey = ['vendor-requests-count', 'v1'];
+    const cachedFetch = unstable_cache(async () => {
+        try {
+            const count = await prisma.vendorRequest.count({ where: { status: 'pending' } });
+            return { success: true, data: { count } };
+        } catch (error) {
+            console.error('Error fetching vendor request count:', error);
+            return { success: false, error: 'Failed to fetch request count' };
+        }
+    }, cacheKey, { revalidate: 30, tags: [vendorRequestsCacheTag()] });
+
+    return cachedFetch();
 }
 
 export async function approveVendorRequest(requestId: string, action: 'approve' | 'reject') {
@@ -122,6 +173,7 @@ export async function approveVendorRequest(requestId: string, action: 'approve' 
                 data: { status: 'rejected' }
             });
             revalidatePath('/vendors');
+            revalidateVendorRequestsCache();
             return { success: true };
         }
 
@@ -163,6 +215,8 @@ export async function approveVendorRequest(requestId: string, action: 'approve' 
         });
 
         revalidatePath('/vendors');
+        revalidateVendorsCache();
+        revalidateVendorRequestsCache();
         return { success: true };
 
     } catch (error) {

@@ -3,8 +3,9 @@
 import { prisma } from '@/lib/prisma';
 import { ClaimStatus, ClaimType } from '@/types/prisma';
 import { Claim, ClaimHistory, ClaimItem } from '@/types';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
+import { formatDateOnly, formatOptionalDate } from '@/utils/date';
 
 // --- Helpers ---
 export async function getCurrentUser() {
@@ -13,75 +14,177 @@ export async function getCurrentUser() {
     return user;
 }
 
+function normalizeClaimForClient(claim: any): Claim {
+    return {
+        ...claim,
+        lineItems: (claim.lineItems || []).map((li: any) => ({
+            ...li,
+            date: formatDateOnly(li.date)
+        })),
+        history: (claim.history || []).map((h: any) => ({
+            ...h,
+            timestamp: h.timestamp.toISOString()
+        })),
+        paymentDetails: claim.paymentDetails ? (claim.paymentDetails as any) : undefined,
+        serviceDetails: claim.serviceDetails ? (claim.serviceDetails as any) : undefined,
+        date: formatDateOnly(claim.date),
+        datePaid: formatOptionalDate(claim.datePaid),
+    };
+}
+
+function dashboardCacheTag(applicantId?: string | null) {
+    return applicantId ? `dashboard:${applicantId}` : 'dashboard:unknown';
+}
+
+function claimsCacheTag(applicantId?: string | null) {
+    return applicantId ? `claims:list:${applicantId}` : 'claims:list:all';
+}
+
+function reviewCountsCacheTag() {
+    return 'claims:review-counts';
+}
+
+function normalizeStatusKey(status?: string | string[]) {
+    if (!status) return 'all';
+    if (Array.isArray(status)) {
+        return status.slice().sort().join(',');
+    }
+    return status;
+}
+
+function revalidateDashboardTag(applicantId?: string | null) {
+    revalidateTag(dashboardCacheTag(applicantId), 'default');
+}
+
+function revalidateClaimsTag(applicantId?: string | null) {
+    revalidateTag(claimsCacheTag(applicantId), 'default');
+}
+
+function revalidateReviewCountsTag() {
+    revalidateTag(reviewCountsCacheTag(), 'default');
+}
+
 export async function getClaims(filters?: {
-    status?: string;
+    status?: string | string[];
     applicantId?: string;
     page?: number;
     pageSize?: number;
+    compact?: boolean;
+    cache?: boolean;
+    type?: string;
+    payee?: string;
+    excludeDraft?: boolean;
 }) {
     const page = filters?.page || 1;
     const pageSize = filters?.pageSize || 10;
     const skip = (page - 1) * pageSize;
+    const compact = filters?.compact ?? false;
+    const shouldCache = filters?.cache ?? false;
+    const payeeQuery = filters?.payee?.trim();
 
     const whereClause: any = {};
     if (filters?.status) {
-        whereClause.status = filters.status as ClaimStatus;
+        if (Array.isArray(filters.status)) {
+            whereClause.status = { in: filters.status as ClaimStatus[] };
+        } else {
+            whereClause.status = filters.status as ClaimStatus;
+        }
+    } else if (filters?.excludeDraft) {
+        whereClause.status = { not: 'draft' as ClaimStatus };
     }
     if (filters?.applicantId) {
         whereClause.applicantId = filters.applicantId;
     }
-
-    try {
-        // Fetch count and data in parallel
-        const [totalCount, rawClaims] = await Promise.all([
-            (prisma.claim as any).count({ where: whereClause }),
-            (prisma.claim as any).findMany({
-                where: whereClause,
-                orderBy: { date: 'desc' },
-                skip: skip,
-                take: pageSize,
-                include: {
-                    applicant: {
-                        select: { name: true, email: true, roleName: true }
-                    },
-                    lineItems: true,
-                    history: true
-                }
-            })
-        ]);
-
-        // Safe Cast JSON fields
-        const claims: Claim[] = rawClaims.map((c: any) => ({
-            ...c,
-            // Map lineItems from DB table
-            lineItems: (c.lineItems || []).map((li: any) => ({
-                ...li,
-                date: li.date.toISOString().split('T')[0]
-            })),
-            history: (c.history || []).map((h: any) => ({
-                ...h,
-                timestamp: h.timestamp.toISOString()
-            })),
-            paymentDetails: c.paymentDetails ? (c.paymentDetails as any) : undefined,
-            serviceDetails: c.serviceDetails ? (c.serviceDetails as any) : undefined,
-            date: c.date.toISOString().split('T')[0],
-            datePaid: c.datePaid?.toISOString().split('T')[0],
-        }));
-
-        return {
-            success: true,
-            data: claims,
-            pagination: {
-                totalCount,
-                totalPages: Math.ceil(totalCount / pageSize),
-                currentPage: page,
-                pageSize
-            }
-        };
-    } catch (error: any) {
-        console.error('Error fetching claims:', error);
-        return { success: false, error: '無法取得申請單資料' };
+    if (filters?.type) {
+        whereClause.type = filters.type as ClaimType;
     }
+    if (payeeQuery) {
+        whereClause.payee = { contains: payeeQuery, mode: 'insensitive' };
+    }
+
+    const fetchClaims = async () => {
+        try {
+            // Fetch count and data in parallel
+            const [totalCount, rawClaims] = await Promise.all([
+                (prisma.claim as any).count({ where: whereClause }),
+                (prisma.claim as any).findMany({
+                    where: whereClause,
+                    orderBy: { date: 'desc' },
+                    skip: skip,
+                    take: pageSize,
+                    ...(compact
+                        ? {
+                            select: {
+                                id: true,
+                                type: true,
+                                payee: true,
+                                payeeId: true,
+                                applicantId: true,
+                                date: true,
+                                status: true,
+                                description: true,
+                            amount: true,
+                            noReceiptReason: true,
+                            paymentDetails: true,
+                            applicant: {
+                                select: { name: true, email: true, roleName: true }
+                            }
+                        }
+                        }
+                        : {
+                            include: {
+                                applicant: {
+                                    select: { name: true, email: true, roleName: true }
+                                },
+                                lineItems: true,
+                                history: true
+                            }
+                        })
+                })
+            ]);
+
+            // Safe Cast JSON fields
+            const claims: Claim[] = rawClaims.map(normalizeClaimForClient);
+
+            return {
+                success: true,
+                data: claims,
+                pagination: {
+                    totalCount,
+                    totalPages: Math.ceil(totalCount / pageSize),
+                    currentPage: page,
+                    pageSize
+                }
+            };
+        } catch (error: any) {
+            console.error('Error fetching claims:', error);
+            return { success: false, error: '無法取得申請單資料' };
+        }
+    };
+
+    if (!shouldCache) {
+        return fetchClaims();
+    }
+
+    const statusKey = normalizeStatusKey(filters?.status);
+    const cacheKey = [
+        'claims',
+        filters?.applicantId ?? 'all',
+        statusKey,
+        filters?.type ?? 'all',
+        payeeQuery ?? 'all',
+        filters?.excludeDraft ? 'exclude-draft' : 'include-draft',
+        String(page),
+        String(pageSize),
+        compact ? 'compact' : 'full',
+        'v1'
+    ];
+    const cachedFetch = unstable_cache(fetchClaims, cacheKey, {
+        revalidate: 30,
+        tags: [claimsCacheTag(filters?.applicantId)]
+    });
+
+    return cachedFetch();
 }
 
 export async function createClaim(data: any) {
@@ -145,14 +248,12 @@ export async function createClaim(data: any) {
         });
 
         revalidatePath('/');
+        revalidateDashboardTag(dbUser.id);
+        revalidateClaimsTag(dbUser.id);
+        revalidateReviewCountsTag();
         return {
             success: true,
-            data: {
-                ...newClaim,
-                lineItems: newClaim.lineItems.map((li: any) => ({ ...li, date: li.date.toISOString().split('T')[0] })),
-                date: newClaim.date.toISOString().split('T')[0],
-                datePaid: newClaim.datePaid?.toISOString().split('T')[0],
-            }
+            data: normalizeClaimForClient(newClaim)
         };
     } catch (error: any) {
         console.error('Create Claim Error:', error);
@@ -192,18 +293,12 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
         });
 
         revalidatePath('/');
+        revalidateDashboardTag(currentClaim.applicantId);
+        revalidateClaimsTag(currentClaim.applicantId);
+        revalidateReviewCountsTag();
         return {
             success: true,
-            data: {
-                ...(updatedClaim as any),
-                history: (updatedClaim as any).history.map((h: any) => ({ ...h, timestamp: h.timestamp.toISOString() })),
-                lineItems: (updatedClaim as any).lineItems.map((li: any) => ({ // Added (updatedClaim as any)
-                    ...li,
-                    date: li.date.toISOString().split('T')[0]
-                })),
-                date: updatedClaim.date.toISOString().split('T')[0],
-                datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
-            }
+            data: normalizeClaimForClient(updatedClaim)
         };
     } catch (error: any) {
         console.error('Update Status Error:', error);
@@ -239,9 +334,6 @@ export async function updateClaim(id: string, data: any) {
         if (itemsToUpdate) {
             amount = itemsToUpdate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
         }
-
-        const currentHistory = (currentClaim.history as unknown as ClaimHistory[]) || [];
-        let newHistory = [...currentHistory];
 
         if (data.status && (data.status === 'pending_approval' || data.status === 'pending_finance') && currentClaim.status !== data.status) {
             await (prisma as any).claimHistory.create({
@@ -322,15 +414,12 @@ export async function updateClaim(id: string, data: any) {
         });
 
         revalidatePath('/');
+        revalidateDashboardTag(updatedClaim.applicantId);
+        revalidateClaimsTag(updatedClaim.applicantId);
+        revalidateReviewCountsTag();
         return {
             success: true,
-            data: {
-                ...(updatedClaim as any),
-                history: (updatedClaim as any).history.map((h: any) => ({ ...h, timestamp: h.timestamp.toISOString() })),
-                lineItems: (updatedClaim as any).lineItems.map((li: any) => ({ ...li, date: li.date.toISOString().split('T')[0] })),
-                date: updatedClaim.date.toISOString().split('T')[0],
-                datePaid: updatedClaim.datePaid?.toISOString().split('T')[0],
-            }
+            data: normalizeClaimForClient(updatedClaim)
         };
     } catch (error: any) {
         console.error('Update Claim Error:', error);
@@ -372,6 +461,9 @@ export async function deleteClaim(id: string) {
 
         await prisma.claim.delete({ where: { id } });
         revalidatePath('/');
+        revalidateDashboardTag(claim?.applicantId);
+        revalidateClaimsTag(claim?.applicantId);
+        revalidateReviewCountsTag();
         return { success: true };
     } catch (error: any) {
         console.error('Delete Claim Error:', error);
@@ -403,4 +495,94 @@ export async function getMyClaimCounts(applicantId: string) {
         console.error('Error fetching claim counts:', error);
         return { success: false, error: '無法取得統計數據' };
     }
+}
+
+export async function getReviewBadgeCounts(params: { userId: string; includeFinance?: boolean }) {
+    const includeFinance = params.includeFinance ?? false;
+    const cacheKey = ['review-counts', params.userId, includeFinance ? 'finance' : 'nofinance', 'v1'];
+    const cachedFetch = unstable_cache(async () => {
+        try {
+            const managerApprovalsPromise = (prisma.claim as any).count({
+                where: {
+                    status: 'pending_approval',
+                    applicant: { approverId: params.userId }
+                }
+            });
+
+            const financeReviewPromise = includeFinance
+                ? (prisma.claim as any).count({ where: { status: { in: ['pending_finance', 'pending_finance_review'] } } })
+                : Promise.resolve(0);
+
+            const financePaymentPromise = includeFinance
+                ? (prisma.claim as any).count({ where: { status: 'approved' } })
+                : Promise.resolve(0);
+
+            const [managerApprovals, financeReview, financePayment] = await Promise.all([
+                managerApprovalsPromise,
+                financeReviewPromise,
+                financePaymentPromise
+            ]);
+
+            return {
+                success: true,
+                data: {
+                    managerApprovals,
+                    financeReview,
+                    financePayment
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching review badge counts:', error);
+            return { success: false, error: 'Failed to fetch review badge counts' };
+        }
+    }, cacheKey, { revalidate: 30, tags: [reviewCountsCacheTag()] });
+
+    return cachedFetch();
+}
+
+export async function getDashboardData(filters: {
+    applicantId: string;
+    status?: string | string[];
+    page?: number;
+    pageSize?: number;
+}) {
+    const page = filters.page ?? 1;
+    const pageSize = filters.pageSize ?? 10;
+    const statusKey = normalizeStatusKey(filters.status);
+    const cacheKey = ['dashboard', filters.applicantId, statusKey, String(page), String(pageSize), 'v1'];
+    const cachedFetch = unstable_cache(async () => {
+        const [countsResult, claimsResult] = await Promise.all([
+            getMyClaimCounts(filters.applicantId),
+            getClaims({
+                applicantId: filters.applicantId,
+                status: filters.status,
+                page,
+                pageSize,
+                compact: true
+            })
+        ]);
+
+        if (!countsResult.success) {
+            return { success: false, error: countsResult.error };
+        }
+
+        if (!claimsResult.success) {
+            return { success: false, error: claimsResult.error };
+        }
+
+        if (!countsResult.data || !claimsResult.data || !claimsResult.pagination) {
+            return { success: false, error: 'Failed to load dashboard data' };
+        }
+
+        return {
+            success: true,
+            data: {
+                counts: countsResult.data,
+                claims: claimsResult.data,
+                pagination: claimsResult.pagination
+            }
+        };
+    }, cacheKey, { revalidate: 30, tags: [dashboardCacheTag(filters.applicantId)] });
+
+    return cachedFetch();
 }

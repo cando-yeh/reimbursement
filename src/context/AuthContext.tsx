@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { User } from '../types';
 import { updateUser as updateUserAction, deleteUser as deleteUserAction, getDBUsers } from '@/app/actions/users';
 
@@ -22,9 +21,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Static supabase client to prevent re-creation
-const supabase = createClient();
-
 // --- Provider ---
 export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
@@ -35,6 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
     const availableUsersRef = useRef<User[]>([]);
+    const didFetchUsersOnAuthChange = useRef(false);
+    const supabaseRef = useRef<any>(null);
+    const supabasePromiseRef = useRef<Promise<any> | null>(null);
+
+    const getSupabase = useCallback(async () => {
+        if (supabaseRef.current) return supabaseRef.current;
+        if (!supabasePromiseRef.current) {
+            supabasePromiseRef.current = import('@/utils/supabase/client').then(m => m.createClient());
+        }
+        supabaseRef.current = await supabasePromiseRef.current;
+        return supabaseRef.current;
+    }, []);
 
     // Sync ref with state
     useEffect(() => {
@@ -75,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 let currentEmail = authEmail;
                 if (!currentEmail) {
+                    const supabase = await getSupabase();
                     const authData = await supabase.auth.getUser();
                     currentEmail = authData.data.user?.email;
                 }
@@ -103,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error('Failed to fetch users from DB:', err);
         }
-    }, []);
+    }, [getSupabase]);
 
     // Supabase Auth Integration
     useEffect(() => {
@@ -129,38 +138,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setCurrentUser(minimalUser);
             }
 
+            didFetchUsersOnAuthChange.current = true;
             fetchDBUsers(sessionUser.email);
         };
 
-        supabase.auth.getUser().then(async ({ data: { user } }) => {
+        let subscription: any;
+        let isActive = true;
+
+        (async () => {
+            const supabase = await getSupabase();
+            if (!isActive) return;
+            const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 await handleAuthChange(user);
             }
             setIsAuthLoading(false);
-        });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-                handleAuthChange(session.user);
-                if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+            const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+                if (event === 'SIGNED_IN' && session?.user) {
+                    handleAuthChange(session.user);
+                    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                        router.refresh();
+                        router.push('/');
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    setCurrentUser(null);
                     router.refresh();
-                    router.push('/');
+                    router.push('/login');
                 }
-            } else if (event === 'SIGNED_OUT') {
-                setCurrentUser(null);
-                router.refresh();
-                router.push('/login');
-            }
-        });
+            });
+            subscription = sub;
+        })();
 
         return () => {
-            subscription.unsubscribe();
+            isActive = false;
+            if (subscription) subscription.unsubscribe();
         };
-    }, [router, fetchDBUsers]);
+    }, [router, fetchDBUsers, getSupabase]);
 
     // Fetch users on auth change (but not on login page)
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            if (didFetchUsersOnAuthChange.current) {
+                didFetchUsersOnAuthChange.current = false;
+                return;
+            }
             fetchDBUsers();
         }
     }, [isAuthenticated, fetchDBUsers]);
@@ -176,11 +198,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [availableUsers, router]);
 
     const logout = useCallback(async () => {
+        const supabase = await getSupabase();
         await supabase.auth.signOut();
         setCurrentUser(null);
         setIsAuthenticated(false);
         router.push('/login');
-    }, [router]);
+    }, [router, getSupabase]);
 
     const switchUser = useCallback((userId: string) => {
         const user = availableUsers.find(u => u.id === userId);

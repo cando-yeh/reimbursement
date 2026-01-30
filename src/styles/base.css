@@ -3,8 +3,6 @@
  * CSS variables, reset, and typography
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 :root {
     /* Modern Indigo/Slate Palette */
     --primary-hue: 245;

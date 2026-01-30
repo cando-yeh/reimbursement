@@ -1,6 +1,5 @@
-
 import PageSkeleton from '@/components/Common/PageSkeleton';
 
-export default function VendorLoading() {
+export default function Loading() {
     return <PageSkeleton />;
 }

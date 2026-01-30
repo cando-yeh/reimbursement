@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Chrome, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -8,12 +8,22 @@ import { createClient } from '@/utils/supabase/client';
 export default function LoginPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    useEffect(() => {
+        let isActive = true;
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (isActive && user) router.push('/');
+        });
+        return () => {
+            isActive = false;
+        };
+    }, [router, supabase]);
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);

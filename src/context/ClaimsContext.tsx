@@ -2,15 +2,17 @@
 
 import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { Claim, Payment } from '../types';
-import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims, getMyClaimCounts as getMyClaimCountsAction } from '@/app/actions/claims';
+import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims, getMyClaimCounts as getMyClaimCountsAction, getDashboardData as getDashboardDataAction } from '@/app/actions/claims';
 import { useAuth } from './AuthContext';
+import { todayISO } from '@/utils/date';
 
 // --- Types ---
 interface ClaimsContextType {
     claims: Claim[];
     payments: Payment[];
     isDataLoading: boolean;
-    fetchClaims: (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => Promise<{ data: Claim[], pagination: any } | null>;
+    fetchClaims: (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => Promise<{ data: Claim[], pagination: any } | null>;
+    fetchDashboardData: (filters: { applicantId: string; status?: string | string[]; page?: number; pageSize?: number }) => Promise<{ counts: { drafts: number; evidence: number; returned: number; inReview: number; pendingPayment: number; closed: number }; claims: Claim[]; pagination: any } | null>;
     addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
     updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
     updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
@@ -31,7 +33,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
     const [isDataLoading, setIsDataLoading] = useState(false);
 
     // --- Fetch Functions ---
-    const fetchClaims = useCallback(async (filters?: { status?: string, applicantId?: string, page?: number, pageSize?: number }) => {
+    const fetchClaims = useCallback(async (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => {
         setIsDataLoading(true);
         try {
             const result = await getClaims(filters);
@@ -42,6 +44,23 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
             return null;
         } catch (error) {
             console.error('Error fetching claims:', error);
+            return null;
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, []);
+
+    const fetchDashboardData = useCallback(async (filters: { applicantId: string; status?: string | string[]; page?: number; pageSize?: number }) => {
+        setIsDataLoading(true);
+        try {
+            const result = await getDashboardDataAction(filters);
+            if (result.success && result.data) {
+                setClaims(result.data.claims);
+                return result.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
             return null;
         } finally {
             setIsDataLoading(false);
@@ -61,8 +80,8 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
             id: tempId,
             amount: calculatedAmount,
             status: claimData.status || 'draft',
-            lineItems: itemsForOptimistic.map(i => ({ ...i, date: i.date || new Date().toISOString().split('T')[0] })),
-            date: claimData.date || new Date().toISOString().split('T')[0],
+            lineItems: itemsForOptimistic.map(i => ({ ...i, date: i.date || todayISO() })),
+            date: claimData.date || todayISO(),
             applicantId: currentUser?.id || 'unknown',
             history: []
         } as any;
@@ -183,6 +202,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
         payments,
         isDataLoading,
         fetchClaims,
+        fetchDashboardData,
         addClaim,
         updateClaim,
         updateClaimStatus,
@@ -192,7 +212,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
         cancelPayment,
     }), [
         claims, payments, isDataLoading,
-        fetchClaims, addClaim, updateClaim, updateClaimStatus, deleteClaim,
+        fetchClaims, fetchDashboardData, addClaim, updateClaim, updateClaimStatus, deleteClaim,
         getMyClaimCounts, addPayment, cancelPayment
     ]);
 
