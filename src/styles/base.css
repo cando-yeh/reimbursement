@@ -1,0 +1,124 @@
+/**
+ * Base Styles
+ * CSS variables, reset, and typography
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Modern Indigo/Slate Palette */
+    --primary-hue: 245;
+    /* Indigo */
+    --primary-sat: 80%;
+    --primary-light: 60%;
+
+    --color-primary: hsl(var(--primary-hue), var(--primary-sat), var(--primary-light));
+    --color-primary-hover: hsl(var(--primary-hue), var(--primary-sat), 50%);
+    --color-primary-foreground: white;
+
+    /* Backgrounds - Cool/Slate tone */
+    --bg-hue: 210;
+    --color-background: hsl(var(--bg-hue), 30%, 98%);
+
+    /* Glass/Surface effects */
+    --color-surface: rgba(255, 255, 255, 0.85);
+    /* Glass effect base */
+    --color-surface-hover: rgba(255, 255, 255, 0.95);
+
+    /* Text */
+    --color-text-main: hsl(222, 47%, 18%);
+    /* Slate 900 */
+    --color-text-secondary: hsl(215, 20%, 45%);
+    /* Slate 500 */
+    --color-text-muted: hsl(215, 16%, 65%);
+    /* Slate 400 */
+
+    /* Borders */
+    --color-border: rgba(148, 163, 184, 0.2);
+    /* Subtle slate border */
+
+    /* Status Colors (Refined) */
+    --color-success: hsl(150, 80%, 35%);
+    --color-success-bg: hsl(150, 60%, 94%);
+    --color-warning: hsl(35, 95%, 50%);
+    --color-warning-bg: hsl(35, 100%, 96%);
+    --color-danger: hsl(350, 80%, 55%);
+    --color-danger-bg: hsl(350, 90%, 97%);
+    --color-info: hsl(210, 90%, 50%);
+    --color-info-bg: hsl(210, 90%, 96%);
+
+    /* Spacing */
+    --sidebar-width: 280px;
+    --header-height: 70px;
+
+    /* Radius - Softer corners */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 32px;
+
+    /* Modern Shadows */
+    --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 30px -6px rgba(0, 0, 0, 0.1);
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
+    /* Typography */
+    --font-sans: var(--font-inter), var(--font-noto-sans-tc), system-ui, -apple-system, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    background-image:
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 20%);
+    color: var(--color-text-main);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+}
+
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+/* Typography */
+.heading-lg {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--color-text-main);
+    background: linear-gradient(to right, var(--color-text-main), hsl(222, 47%, 40%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.heading-md {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-text-main);
+}

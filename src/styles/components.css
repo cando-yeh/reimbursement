@@ -1,0 +1,145 @@
+/**
+ * Component Styles
+ * Cards, buttons, badges, and reusable UI components
+ */
+
+/* Glassmorphism Utilities */
+.glass-panel {
+    background: var(--color-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Container */
+.container {
+    width: fit-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0 2rem;
+}
+
+/* Card */
+.card {
+    background: var(--color-surface);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    padding: 2rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    width: fit-content;
+    min-width: 100%;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.01em;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    color: var(--color-primary-foreground);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+}
+
+.btn-ghost {
+    color: var(--color-text-secondary);
+    background-color: transparent;
+}
+
+.btn-ghost:hover {
+    background-color: rgba(99, 102, 241, 0.08);
+    color: var(--color-primary);
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.status-badge.approved {
+    background-color: hsl(150, 90%, 96%);
+    color: hsl(150, 80%, 35%);
+    border: 1px solid hsl(150, 80%, 90%);
+}
+
+.status-badge.paid {
+    background-color: hsl(245, 90%, 96%);
+    color: hsl(245, 80%, 45%);
+    border: 1px solid hsl(245, 80%, 90%);
+}
+
+.status-badge.pending {
+    background-color: hsl(35, 90%, 96%);
+    color: hsl(35, 90%, 45%);
+    border: 1px solid hsl(35, 90%, 85%);
+}
+
+.status-badge.rejected {
+    background-color: hsl(350, 90%, 97%);
+    color: hsl(350, 80%, 55%);
+    border: 1px solid hsl(350, 80%, 90%);
+}
+
+.status-badge.draft {
+    background-color: hsl(210, 20%, 96%);
+    color: hsl(210, 20%, 50%);
+    border: 1px solid hsl(210, 20%, 90%);
+}
+
+/* Profile Popup */
+.profile-popup {
+    position: absolute;
+    bottom: 110%;
+    left: 0;
+    width: 280px;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass);
+    padding: 1.25rem;
+    z-index: 100;
+    animation: slideUpFade 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

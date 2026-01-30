@@ -1,0 +1,54 @@
+/**
+ * Table Styles
+ * Activity tables, vendor tables, and data grids
+ */
+
+.activity-table-container,
+.vendor-table-container {
+    background: transparent;
+    border-radius: var(--radius-lg);
+    width: fit-content;
+    min-width: 100%;
+}
+
+.activity-table,
+.vendor-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.activity-table thead,
+.vendor-table thead {
+    background-color: transparent;
+}
+
+.activity-table th,
+.vendor-table th {
+    padding: 1.25rem 1rem;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+    background-color: rgba(241, 245, 249, 0.5);
+}
+
+.activity-table td,
+.vendor-table td {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.activity-table tr:last-child td,
+.vendor-table tr:last-child td {
+    border-bottom: none;
+}
+
+.activity-table tr:hover td,
+.vendor-table tr:hover td {
+    background: rgba(255, 255, 255, 0.9);
+}
