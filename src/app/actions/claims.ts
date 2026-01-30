@@ -123,13 +123,13 @@ export async function getClaims(filters?: {
                                 date: true,
                                 status: true,
                                 description: true,
-                            amount: true,
-                            noReceiptReason: true,
-                            paymentDetails: true,
-                            applicant: {
-                                select: { name: true, email: true, roleName: true }
+                                amount: true,
+                                noReceiptReason: true,
+                                paymentDetails: true,
+                                applicant: {
+                                    select: { name: true, email: true, roleName: true }
+                                }
                             }
-                        }
                         }
                         : {
                             include: {
@@ -535,7 +535,7 @@ export async function getReviewBadgeCounts(params: { userId: string; includeFina
             console.error('Error fetching review badge counts:', error);
             return { success: false, error: 'Failed to fetch review badge counts' };
         }
-    }, cacheKey, { revalidate: 30, tags: [reviewCountsCacheTag()] });
+    }, cacheKey, { revalidate: 60, tags: [reviewCountsCacheTag()] });
 
     return cachedFetch();
 }
@@ -583,6 +583,77 @@ export async function getDashboardData(filters: {
             }
         };
     }, cacheKey, { revalidate: 30, tags: [dashboardCacheTag(filters.applicantId)] });
+
+    return cachedFetch();
+}
+
+/**
+ * Get sidebar badge counts for a specific user.
+ * Returns counts for "my claims" and "reviews" badges.
+ * Cached for 60s to reduce DB hits on navigation.
+ */
+export async function getSidebarBadgeCounts(params: {
+    userId: string;
+    isFinance: boolean;
+    isManager: boolean;
+}) {
+    const { userId, isFinance, isManager } = params;
+    const cacheKey = ['sidebar-badges', userId, isFinance ? 'f' : '', isManager ? 'm' : '', 'v1'];
+
+    const cachedFetch = unstable_cache(async () => {
+        try {
+            // My claims counts
+            const [drafts, pendingEvidence, returned] = await Promise.all([
+                prisma.claim.count({ where: { applicantId: userId, status: 'draft' } }),
+                prisma.claim.count({ where: { applicantId: userId, status: 'pending_evidence' } }),
+                prisma.claim.count({ where: { applicantId: userId, status: 'rejected' } }),
+            ]);
+
+            // Manager approvals (pending_approval where user is the approver)
+            const managerApprovals = isManager
+                ? await prisma.claim.count({
+                    where: {
+                        status: 'pending_approval',
+                        applicant: { approverId: userId }
+                    }
+                })
+                : 0;
+
+            // Finance counts
+            let financeReview = 0;
+            let pendingPayment = 0;
+            let vendorApprovals = 0;
+            if (isFinance) {
+                const [fr, pp, va] = await Promise.all([
+                    prisma.claim.count({ where: { status: { in: ['pending_finance', 'pending_finance_review'] } } }),
+                    prisma.claim.count({ where: { status: 'approved' } }),
+                    prisma.vendorRequest.count({ where: { status: 'pending' } }),
+                ]);
+                financeReview = fr;
+                pendingPayment = pp;
+                vendorApprovals = va;
+            }
+
+            return {
+                success: true,
+                data: {
+                    myClaimsBadge: drafts + pendingEvidence + returned,
+                    reviewBadge: managerApprovals + financeReview + pendingPayment + vendorApprovals,
+                    // Individual counts if needed later
+                    drafts,
+                    pendingEvidence,
+                    returned,
+                    managerApprovals,
+                    financeReview,
+                    pendingPayment,
+                    vendorApprovals,
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching sidebar badge counts:', error);
+            return { success: false, error: 'Failed to fetch sidebar badge counts' };
+        }
+    }, cacheKey, { revalidate: 60, tags: [dashboardCacheTag(userId), reviewCountsCacheTag()] });
 
     return cachedFetch();
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { getSidebarBadgeCounts } from '@/app/actions/claims';
 import { ClipboardList, ShieldCheck, Building2, Users, Edit2 } from 'lucide-react';
 
 interface NavItemProps {
@@ -53,7 +54,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const [isEditingName, setIsEditingName] = React.useState(false);
     const [tempName, setTempName] = React.useState('');
     const profileRef = useRef<HTMLDivElement>(null);
-    const { currentUser, switchUser, logout, isAuthenticated, availableUsers, claims, vendorRequests, updateUser, isAuthLoading } = useApp();
+    const { currentUser, logout, isAuthenticated, availableUsers, updateUser, isAuthLoading } = useAuth();
+    const [badgeCounts, setBadgeCounts] = useState({ myClaimsBadge: 0, reviewBadge: 0 });
     const router = useRouter();
     const pathname = usePathname();
 
@@ -120,26 +122,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const isFinance = hasPermission('finance_audit') || currentUser.roleName.includes('財務');
     const isManager = hasPermission('user_management') || currentUser.roleName.includes('管理者') || availableUsers.some(u => u.approverId === currentUser.id);
 
-    const pendingEvidenceCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'pending_evidence').length;
-    const returnedCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'rejected').length;
-    const draftCount = claims.filter(c => c.applicantId === currentUser.id && c.status === 'draft').length;
+    // Fetch badge counts from server (cached)
+    useEffect(() => {
+        if (!currentUser) return;
+        getSidebarBadgeCounts({
+            userId: currentUser.id,
+            isFinance,
+            isManager,
+        }).then(result => {
+            if (result.success && result.data) {
+                setBadgeCounts({
+                    myClaimsBadge: result.data.myClaimsBadge,
+                    reviewBadge: result.data.reviewBadge,
+                });
+            }
+        });
+    }, [currentUser?.id, isFinance, isManager]);
 
-    const claimApprovalsCount = claims.filter(c => {
-        if (c.status === 'pending_approval' && isManager) {
-            const applicant = availableUsers.find(u => u.id === c.applicantId);
-            if (applicant?.approverId === currentUser.id) return true;
-        }
-        if (isFinance && (c.status === 'pending_finance' || c.status === 'pending_finance_review')) {
-            return true;
-        }
-        return false;
-    }).length;
-
-    const pendingPaymentCount = isFinance ? claims.filter(c => c.status === 'approved').length : 0;
-    const vendorApprovalsCount = isFinance ? vendorRequests.filter(r => r.status === 'pending').length : 0;
-
-    const myClaimsBadgeCount = draftCount + returnedCount + pendingEvidenceCount;
-    const reviewBadgeCount = claimApprovalsCount + pendingPaymentCount + vendorApprovalsCount;
+    const myClaimsBadgeCount = badgeCounts.myClaimsBadge;
+    const reviewBadgeCount = badgeCounts.reviewBadge;
 
     return (
         <div className="app-container">
