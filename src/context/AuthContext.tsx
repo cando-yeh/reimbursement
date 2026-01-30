@@ -148,23 +148,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (async () => {
             const supabase = await getSupabase();
             if (!isActive) return;
+
+            // Get initial user
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // Wait for DB sync before hiding loading state
                 await handleAuthChange(user);
             }
+
+            // Initial check complete
             setIsAuthLoading(false);
 
-            const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+            // Listen for changes
+            const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
                 if (event === 'SIGNED_IN' && session?.user) {
-                    handleAuthChange(session.user);
+                    await handleAuthChange(session.user);
                     if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                        // Use replace to avoid back-button loops
                         router.refresh();
-                        router.push('/');
+                        router.replace('/');
                     }
-                } else if (event === 'SIGNED_OUT') {
+                } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                     setCurrentUser(null);
-                    router.refresh();
-                    router.push('/login');
+                    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                        router.refresh();
+                        router.replace('/login');
+                    }
                 }
             });
             subscription = sub;

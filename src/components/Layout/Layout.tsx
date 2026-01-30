@@ -57,15 +57,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    React.useEffect(() => {
-        if (!isAuthLoading) {
-            if (!isAuthenticated && pathname !== '/login') {
-                router.push('/login');
-            } else if (isAuthenticated && pathname === '/login') {
-                router.push('/');
-            }
-        }
-    }, [isAuthLoading, isAuthenticated, router, pathname]);
+    // Authenticated state is handled by server-side layout redirect
+    // and specific login page redirect logic to avoid flickering and loops.
 
     React.useEffect(() => {
         if (currentUser) {
@@ -97,7 +90,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         return <>{children}</>;
     }
 
-    if (isAuthLoading || !currentUser) return null;
+    // If we are at this point, we are not on the login page.
+    // We wait for initial auth loading to complete.
+    if (isAuthLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    // After loading, if we still don't have a user, it means the server-side redirect 
+    // hasn't kicked in or we are in a transition. We guard against null here.
+    if (!currentUser) {
+        return null;
+    }
 
     const handleSaveName = () => {
         if (tempName.trim()) {
