@@ -239,6 +239,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
             subtitle="適用於交通費、差旅費、交際費等代墊款項報銷。"
             cardStyle={{ padding: '2rem' }}
         >
+            <div className="space-y-8">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                     <div style={{ flex: 1 }}>
                         <FormSection title="費用明細">
