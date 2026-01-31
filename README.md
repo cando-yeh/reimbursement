@@ -34,19 +34,19 @@ A full-stack reimbursement management system migrated to Next.js App Router, usi
 1. **Clone the repository**
 2. **Install dependencies**:
    ```bash
-   npm install
+   yarn install
    ```
 3. **Configure environment variables**:
    Copy `.env.example` to `.env` and fill in your database and Supabase credentials.
 4. **Initialize database**:
    ```bash
-   npx prisma generate
-   npx prisma db push
-   npm run prisma:seed # If available in package.json
+   yarn prisma generate
+   yarn prisma db push
+   yarn prisma:seed # If available in package.json
    ```
 5. **Run the development server**:
    ```bash
-   npm run dev
+   yarn dev
    ```
 
 ## Project Structure
@@ -61,4 +61,4 @@ A full-stack reimbursement management system migrated to Next.js App Router, usi
 
 ## Contributing
 
-Please follow the directory structure and use Server Actions for data mutations. Ensure type safety by running `npx tsc --noEmit` before submitting changes.
+Please follow the directory structure and use Server Actions for data mutations. Ensure type safety by running `yarn tsc --noEmit` before submitting changes.

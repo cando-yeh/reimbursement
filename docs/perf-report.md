@@ -3,7 +3,7 @@
 Date: 2026-01-30
 
 ## Measurement Notes
-- Attempted `npm run build` to capture Next.js route/bundle sizes.
+- Attempted `yarn build` to capture Next.js route/bundle sizes.
 - Build failed because `next/font/google` could not download fonts (no network access in this environment).
 - Result: no route size table or JS chunk sizes available yet.
 
@@ -37,7 +37,7 @@ Date: 2026-01-30
 
 ## Recommendations (No Code Changes Yet)
 1. **Enable proper bundle metrics**
-   - Run `npm run build` with network access (or set up a local font cache) and capture the route size table.
+   - Run `yarn build` with network access (or set up a local font cache) and capture the route size table.
    - Consider using `@next/bundle-analyzer` to identify oversized chunks.
 2. **Reduce global client boundary**
    - Move `ClientProviders` lower in the tree; keep `RootLayout` and `Layout` as server components where possible.
@@ -89,7 +89,7 @@ Impact
 
 ## Bundle Audit (2026-01-30)
 Measurement notes
-- Ran `npm run build` with a temporary font-import removal to avoid offline Google Fonts fetch (then reverted the change).
+- Ran `yarn build` with a temporary font-import removal to avoid offline Google Fonts fetch (then reverted the change).
 - Build required elevated permissions due to Turbopack/PostCSS process spawn.
 
 Build output (Turbopack)
@@ -107,4 +107,4 @@ Recommendations
 
 ## Bundle Analyzer Setup (2026-01-30)
 - Installed `@next/bundle-analyzer` and wired it in `next.config.mjs`.
-- Run: `ANALYZE=true npm run build` to generate the report.
+- Run: `ANALYZE=true yarn build` to generate the report.

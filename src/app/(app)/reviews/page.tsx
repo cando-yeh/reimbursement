@@ -24,6 +24,13 @@ const PaymentRecordTable = dynamic(() => import('@/components/Common/PaymentReco
 });
 const VendorRequestDetailModal = dynamic(() => import('@/components/Common/VendorRequestDetailModal'));
 
+const REVIEW_STATUSES: Claim['status'][] = [
+    'pending_approval',
+    'pending_finance',
+    'pending_finance_review',
+    'approved'
+];
+
 function useDebouncedValue<T>(value: T, delay: number) {
     const [debounced, setDebounced] = useState(value);
     useEffect(() => {
@@ -76,7 +83,7 @@ function PendingItemsInner() {
     const isFinance = currentUser?.permissions?.includes('finance_audit') || currentUser?.roleName?.includes('財務');
     const isManager = currentUserId ? availableUsers.some(u => u.approverId === currentUserId) : false;
 
-    const reviewStatuses: Claim['status'][] = ['pending_approval', 'pending_finance', 'pending_finance_review', 'approved'];
+    const reviewStatuses = REVIEW_STATUSES;
     const canSeeAllApplications = isFinance || currentUser?.permissions?.includes('user_management') || false;
 
     // Initial claims + vendor requests load
@@ -105,7 +112,7 @@ function PendingItemsInner() {
         } finally {
             setIsClaimsLoading(false);
         }
-    }, [currentUserId, canSeeAllApplications, isManager, reviewStatuses]);
+    }, [currentUserId, canSeeAllApplications, isManager]);
 
     useEffect(() => {
         fetchReviewClaims();
