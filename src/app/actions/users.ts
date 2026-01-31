@@ -77,34 +77,26 @@ export async function deleteUser(userId: string) {
 
 export async function getDBUsers() {
     unstable_noStore();
-    console.log('[getDBUsers] Querying User table...');
     try {
         const users = await prisma.user.findMany({
             orderBy: { name: 'asc' }
         });
-        console.log(`[getDBUsers] Found ${users.length} users in DB.`);
         return { success: true, data: users };
     } catch (error: any) {
-        console.error('[getDBUsers] Error:', error.message);
-        return { success: false, error: 'Failed to fetch users: ' + error.message };
+        console.error('DB fetch failed:', error.message);
+        return { success: false, error: 'Database connection failed' };
     }
 }
 
 export async function getDBUserByEmail(email: string) {
     unstable_noStore();
-    console.log(`[getDBUserByEmail] Searching for: ${email}`);
     try {
         const user = await prisma.user.findUnique({
             where: { email: email.toLowerCase().trim() }
         });
-        if (user) {
-            console.log(`[getDBUserByEmail] Found ${user.name}`);
-        } else {
-            console.log(`[getDBUserByEmail] No user found for ${email}`);
-        }
         return { success: true, data: user };
     } catch (error: any) {
-        console.error('[getDBUserByEmail] Error:', error.message);
-        return { success: false, error: 'Failed: ' + error.message };
+        console.error('DB query error:', error.message);
+        return { success: false, error: 'DB Error' };
     }
 }

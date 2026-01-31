@@ -58,17 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Fetch Users from DB
     const fetchDBUsers = useCallback(async (authEmail?: string) => {
-        console.log('[AuthContext] fetchDBUsers started. Email hint:', authEmail);
         setSyncError(null);
         try {
             const { data, success, error } = await getDBUsers();
             if (!success) {
-                console.error('[AuthContext] getDBUsers failed:', error);
-                setSyncError(error || 'Unknown DB error');
+                setSyncError(error || 'DB error');
                 return;
             }
             if (success && data && data.length > 0) {
-                console.log(`[AuthContext] DB returned ${data.length} users.`);
                 setAvailableUsers(prev => {
                     const dbUsers = data as User[];
                     const userMap = new Map();
@@ -100,38 +97,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 if (currentEmail) {
                     const normalizedEmail = currentEmail.toLowerCase().trim();
-                    console.log('[AuthContext] Attempting to match email:', normalizedEmail);
                     const dbUser = (data as User[]).find(u => u.email?.toLowerCase().trim() === normalizedEmail);
 
                     if (dbUser) {
-                        console.log('[AuthContext] MATCH FOUND:', dbUser.name, 'Role:', dbUser.roleName);
                         setCurrentUser(prevUser => {
-                            if (!prevUser) {
-                                console.log('[AuthContext] Setting initial currentUser with DB data.');
-                                return dbUser;
-                            }
+                            if (!prevUser) return dbUser;
                             const hasChanges =
                                 dbUser.id !== prevUser.id ||
                                 dbUser.roleName !== prevUser.roleName ||
-                                JSON.stringify(dbUser.permissions) !== JSON.stringify(prevUser.permissions) ||
-                                dbUser.name !== prevUser.name ||
-                                dbUser.approverId !== prevUser.approverId;
+                                JSON.stringify(dbUser.permissions) !== JSON.stringify(prevUser.permissions);
 
-                            if (hasChanges) {
-                                return dbUser;
-                            }
-                            return prevUser;
+                            return hasChanges ? dbUser : prevUser;
                         });
-                    } else {
-                        console.warn('[AuthContext] NO MATCH for email:', normalizedEmail);
-                        console.log('[AuthContext] Available emails in DB:', (data as User[]).map(u => u.email).join(', '));
                     }
                 }
-            } else {
-                console.warn('[AuthContext] DB returned empty user list.');
             }
         } catch (err: any) {
-            console.error('[AuthContext] Sync Error:', err);
+            console.error('Auth sync error:', err);
             setSyncError(err.message || String(err));
         }
     }, [getSupabase]);
