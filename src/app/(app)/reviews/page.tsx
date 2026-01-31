@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -58,9 +58,6 @@ function PendingItemsInner() {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
-    const [allApplications, setAllApplications] = useState<Claim[]>([]);
-    const [allApplicationsPagination, setAllApplicationsPagination] = useState<any>(null);
-    const [isAllApplicationsLoading, setIsAllApplicationsLoading] = useState(false);
 
     const [claims, setClaims] = useState<Claim[]>([]);
     const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
@@ -80,20 +77,38 @@ function PendingItemsInner() {
     const isManager = currentUserId ? availableUsers.some(u => u.approverId === currentUserId) : false;
 
     const reviewStatuses: Claim['status'][] = ['pending_approval', 'pending_finance', 'pending_finance_review', 'approved'];
+    const canSeeAllApplications = isFinance || currentUser?.permissions?.includes('user_management') || false;
 
     // Initial claims + vendor requests load
-    useEffect(() => {
+    const fetchReviewClaims = useCallback(async () => {
         if (!currentUserId) return;
         setIsClaimsLoading(true);
-        getClaims({ status: reviewStatuses, pageSize: 200, cache: true, compact: true })
-            .then(res => {
-                if (res.success && res.data) {
-                    setClaims(res.data);
-                } else {
-                    setClaims([]);
-                }
-            })
-            .finally(() => setIsClaimsLoading(false));
+        try {
+            const statusFilter = canSeeAllApplications
+                ? undefined
+                : (isManager ? ['pending_approval'] : reviewStatuses);
+
+            const res = await getClaims({
+                status: statusFilter,
+                page: 1,
+                pageSize: 500,
+                cache: true,
+                compact: true,
+                excludeDraft: canSeeAllApplications
+            });
+
+            if (res.success && res.data) {
+                setClaims(res.data);
+            } else {
+                setClaims([]);
+            }
+        } finally {
+            setIsClaimsLoading(false);
+        }
+    }, [currentUserId, canSeeAllApplications, isManager, reviewStatuses]);
+
+    useEffect(() => {
+        fetchReviewClaims();
 
         if (isFinance) {
             getVendorRequests({ page: 1, pageSize: 50 })
@@ -105,7 +120,23 @@ function PendingItemsInner() {
                     }
                 });
         }
-    }, [currentUserId, isFinance]);
+    }, [fetchReviewClaims, isFinance]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const handleRefresh = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                fetchReviewClaims();
+            }, 800);
+        };
+        window.addEventListener('claims:refresh', handleRefresh as EventListener);
+        return () => {
+            if (timer) clearTimeout(timer);
+            window.removeEventListener('claims:refresh', handleRefresh as EventListener);
+        };
+    }, [fetchReviewClaims]);
 
     useEffect(() => {
         if (!currentUserId) return;
@@ -142,36 +173,6 @@ function PendingItemsInner() {
         setCurrentPage(1);
     }, [activeTab, filterApplicant, filterStatus, filterType, filterPayee]);
 
-    useEffect(() => {
-        if (!currentUserId || activeTab !== 'all_applications') return;
-        setIsAllApplicationsLoading(true);
-        getClaims({
-            page: currentPage,
-            pageSize: ITEMS_PER_PAGE,
-            applicantId: filterApplicant || undefined,
-            status: filterStatus || undefined,
-            type: filterType || undefined,
-            payee: debouncedPayee || undefined,
-            cache: true,
-            compact: true,
-            excludeDraft: !filterStatus,
-        }).then(res => {
-            if (res.success && res.data) {
-                const merged = res.data.map(claim => {
-                    const override = claimOverrides[claim.id];
-                    return override ? { ...claim, ...override } : claim;
-                });
-                setAllApplications(merged);
-                setAllApplicationsPagination(res.pagination);
-            } else {
-                setAllApplications([]);
-                setAllApplicationsPagination(null);
-            }
-        }).finally(() => {
-            setIsAllApplicationsLoading(false);
-        });
-    }, [activeTab, currentUserId, currentPage, filterApplicant, filterStatus, filterType, debouncedPayee, ITEMS_PER_PAGE, claimOverrides]);
-
     if (!currentUser) return null;
 
     const handleTabChange = (tab: string) => {
@@ -180,21 +181,28 @@ function PendingItemsInner() {
         router.push(`/reviews?${params.toString()}`);
     };
 
+    const mergedClaims = useMemo(() => (
+        claims.map(claim => {
+            const override = claimOverrides[claim.id];
+            return override ? { ...claim, ...override } : claim;
+        })
+    ), [claims, claimOverrides]);
+
     const managerApprovals = useMemo(() => (
-        claims.filter(c => {
+        mergedClaims.filter(c => {
             if (c.status !== 'pending_approval') return false;
             const applicant = availableUsers.find(u => u.id === c.applicantId);
             return applicant?.approverId === currentUser.id;
         })
-    ), [claims, availableUsers, currentUser.id]);
+    ), [mergedClaims, availableUsers, currentUser.id]);
 
     const financeReviewClaims = useMemo(() => (
-        isFinance ? claims.filter(c => ['pending_finance', 'pending_finance_review'].includes(c.status)) : []
-    ), [claims, isFinance]);
+        isFinance ? mergedClaims.filter(c => ['pending_finance', 'pending_finance_review'].includes(c.status)) : []
+    ), [mergedClaims, isFinance]);
 
     const financePaymentClaims = useMemo(() => (
-        isFinance ? claims.filter(c => c.status === 'approved') : []
-    ), [claims, isFinance]);
+        isFinance ? mergedClaims.filter(c => c.status === 'approved') : []
+    ), [mergedClaims, isFinance]);
 
     const vendorApprovals = useMemo(() => (
         isFinance ? vendorRequests.filter(r => r.status === 'pending') : []
@@ -207,7 +215,7 @@ function PendingItemsInner() {
 
     const handlePreparePayment = () => {
         if (selectedClaimIds.length === 0) return;
-        const selectedClaims = claims.filter(c => selectedClaimIds.includes(c.id));
+        const selectedClaims = mergedClaims.filter(c => selectedClaimIds.includes(c.id));
         const firstPayee = selectedClaims[0].payee;
         const allSamePayee = selectedClaims.every(c => c.payee === firstPayee);
 
@@ -222,7 +230,7 @@ function PendingItemsInner() {
 
     const handleConfirmPayment = () => {
         if (selectedClaimIds.length === 0) return;
-        const selectedClaims = claims.filter(c => selectedClaimIds.includes(c.id));
+        const selectedClaims = mergedClaims.filter(c => selectedClaimIds.includes(c.id));
         const firstPayee = selectedClaims[0].payee;
 
         addPayment(firstPayee, selectedClaimIds, paymentDate);
@@ -237,7 +245,7 @@ function PendingItemsInner() {
         setClaimOverrides(prev => {
             const updated = { ...prev };
             selectedClaimIds.forEach(id => {
-                const claim = claims.find(c => c.id === id);
+                const claim = mergedClaims.find(c => c.id === id);
                 const needsEvidence = claim?.paymentDetails?.invoiceStatus === 'not_yet';
                 const nextStatus = needsEvidence ? 'pending_evidence' : 'completed';
                 updated[id] = { status: nextStatus, datePaid: paymentDate } as any;
@@ -291,6 +299,35 @@ function PendingItemsInner() {
     const financePaymentCount = badgeCounts.financePayment || financePaymentClaims.length;
     const vendorApprovalsCount = vendorPendingCount || vendorApprovals.length;
 
+    const filteredAllApplications = useMemo(() => {
+        if (!canSeeAllApplications) return [];
+        let filtered = mergedClaims;
+        if (!filterStatus) {
+            filtered = filtered.filter(c => c.status !== 'draft');
+        }
+        if (filterApplicant) {
+            filtered = filtered.filter(c => c.applicantId === filterApplicant);
+        }
+        if (filterStatus) {
+            filtered = filtered.filter(c => c.status === filterStatus);
+        }
+        if (filterType) {
+            filtered = filtered.filter(c => c.type === filterType);
+        }
+        if (debouncedPayee.trim()) {
+            const query = debouncedPayee.trim().toLowerCase();
+            filtered = filtered.filter(c => c.payee.toLowerCase().includes(query));
+        }
+        return filtered;
+    }, [canSeeAllApplications, mergedClaims, filterApplicant, filterStatus, filterType, debouncedPayee]);
+
+    const allApplicationsTotalPages = Math.max(1, Math.ceil(filteredAllApplications.length / ITEMS_PER_PAGE));
+    const allApplicationsPage = Math.min(Math.max(currentPage, 1), allApplicationsTotalPages);
+    const allApplicationsPageItems = useMemo(() => {
+        const start = (allApplicationsPage - 1) * ITEMS_PER_PAGE;
+        return filteredAllApplications.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredAllApplications, allApplicationsPage, ITEMS_PER_PAGE]);
+
     return (
         <div className="container">
             <PageHeader
@@ -340,7 +377,7 @@ function PendingItemsInner() {
                         active={activeTab === 'all_applications'}
                         onClick={() => handleTabChange('all_applications')}
                         label="所有申請單"
-                        count={allApplicationsPagination?.totalCount || 0}
+                        count={filteredAllApplications.length}
                     />
                 )}
 
@@ -460,15 +497,15 @@ function PendingItemsInner() {
                 {activeTab === 'all_applications' && (
                     <>
                         <Pagination
-                            currentPage={currentPage}
-                            totalPages={allApplicationsPagination?.totalPages || 1}
+                            currentPage={allApplicationsPage}
+                            totalPages={allApplicationsTotalPages}
                             onPageChange={setCurrentPage}
                         />
                         <ClaimTable
-                            claims={allApplications}
+                            claims={allApplicationsPageItems}
                             onRowClick={(claim) => router.push(`/claims/${claim.id}`)}
                             availableUsers={availableUsers}
-                            loading={isAllApplicationsLoading}
+                            loading={isClaimsLoading}
                             emptyMessage="無符合條件的申請單"
                         />
                     </>

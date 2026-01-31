@@ -31,6 +31,17 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
     const [claims, setClaims] = useState<Claim[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(false);
+    const claimsRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const scheduleClaimsRefresh = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (claimsRefreshTimerRef.current) {
+            clearTimeout(claimsRefreshTimerRef.current);
+        }
+        claimsRefreshTimerRef.current = setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('claims:refresh'));
+        }, 800);
+    }, []);
 
     // --- Fetch Functions ---
     const fetchClaims = useCallback(async (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => {
@@ -97,13 +108,14 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === tempId ? (result.data as Claim) : c));
+            scheduleClaimsRefresh();
             return result.data as Claim;
         } else {
             setClaims(prev => prev.filter(c => c.id !== tempId));
             alert('建立申請單失敗: ' + result.error);
             return null;
         }
-    }, [currentUser?.id]);
+    }, [currentUser?.id, scheduleClaimsRefresh]);
 
     const updateClaim = useCallback(async (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => {
         const { items: _, ...restData } = data;
@@ -120,10 +132,11 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
+            scheduleClaimsRefresh();
         } else if (!result.success) {
             console.error('Update Claim Failed:', result.error);
         }
-    }, []);
+    }, [scheduleClaimsRefresh]);
 
     const updateClaimStatus = useCallback(async (id: string, newStatus: Claim['status'], note?: string) => {
         setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
@@ -132,8 +145,9 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
+            scheduleClaimsRefresh();
         }
-    }, []);
+    }, [scheduleClaimsRefresh]);
 
     const deleteClaim = useCallback(async (id: string) => {
         setClaims(prev => prev.filter(c => c.id !== id));

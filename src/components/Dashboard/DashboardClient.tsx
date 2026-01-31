@@ -8,7 +8,7 @@ import ClaimTable from '@/components/Common/ClaimTable';
 import TabButton from '@/components/Common/TabButton'; // Ensure this component handles onClick/Link properly
 import PageHeader from '@/components/Common/PageHeader';
 import TabContainer from '@/components/Common/TabContainer';
-import { Claim, User, Payment } from '@/types';
+import { Claim, User } from '@/types';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import Pagination from '@/components/Common/Pagination';
 import DashboardSkeleton from '@/components/Dashboard/DashboardSkeleton';
@@ -16,28 +16,83 @@ import { deleteClaim as deleteClaimAction } from '@/app/actions/claims';
 
 interface DashboardClientProps {
     activeTab: 'drafts' | 'evidence' | 'returned' | 'in_review' | 'pending_payment' | 'closed';
-    data: Claim[];
-    pagination: any;
-    counts: any;
-    payments: Payment[];
+    currentPage: number;
+    claims: Claim[];
     availableUsers: User[];
     isLoading?: boolean;
+    onClaimsChange?: (claims: Claim[]) => void;
 }
 
-export default function DashboardClient({ activeTab, data, pagination, counts, payments, availableUsers, isLoading }: DashboardClientProps) {
+const ITEMS_PER_PAGE = 10;
+
+export default function DashboardClient({
+    activeTab,
+    currentPage,
+    claims,
+    availableUsers,
+    isLoading,
+    onClaimsChange
+}: DashboardClientProps) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = React.useState('');
     const [idToDelete, setIdToDelete] = React.useState<string | null>(null);
 
-    const filterClaims = (claims: Claim[]) => {
-        if (!searchQuery.trim()) return claims;
+    const filterClaims = (input: Claim[]) => {
+        if (!searchQuery.trim()) return input;
         const query = searchQuery.toLowerCase();
-        return claims.filter(c =>
+        return input.filter(c =>
             c.description.toLowerCase().includes(query) ||
             c.payee.toLowerCase().includes(query) ||
             c.id.toLowerCase().includes(query)
         );
     };
+
+    const counts = React.useMemo(() => {
+        const result = {
+            drafts: 0,
+            evidence: 0,
+            returned: 0,
+            inReview: 0,
+            pendingPayment: 0,
+            closed: 0
+        };
+        claims.forEach(c => {
+            if (c.status === 'draft') result.drafts += 1;
+            else if (c.status === 'pending_evidence') result.evidence += 1;
+            else if (c.status === 'rejected') result.returned += 1;
+            else if (['pending_approval', 'pending_finance', 'pending_finance_review'].includes(c.status)) result.inReview += 1;
+            else if (c.status === 'approved') result.pendingPayment += 1;
+            else if (['completed', 'cancelled'].includes(c.status)) result.closed += 1;
+        });
+        return result;
+    }, [claims]);
+
+    const tabClaims = React.useMemo(() => {
+        switch (activeTab) {
+            case 'drafts':
+                return claims.filter(c => c.status === 'draft');
+            case 'evidence':
+                return claims.filter(c => c.status === 'pending_evidence');
+            case 'returned':
+                return claims.filter(c => c.status === 'rejected');
+            case 'in_review':
+                return claims.filter(c => ['pending_approval', 'pending_finance', 'pending_finance_review'].includes(c.status));
+            case 'pending_payment':
+                return claims.filter(c => c.status === 'approved');
+            case 'closed':
+                return claims.filter(c => ['completed', 'cancelled'].includes(c.status));
+            default:
+                return claims;
+        }
+    }, [claims, activeTab]);
+
+    const filteredClaims = React.useMemo(() => filterClaims(tabClaims), [tabClaims, searchQuery]);
+    const totalPages = Math.max(1, Math.ceil(filteredClaims.length / ITEMS_PER_PAGE));
+    const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const pagedClaims = React.useMemo(() => {
+        const start = (safePage - 1) * ITEMS_PER_PAGE;
+        return filteredClaims.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredClaims, safePage]);
 
     const handleTabChange = (tab: string) => {
         router.push(`/?tab=${tab}&page=1`);
@@ -51,7 +106,7 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
         if (idToDelete) {
             const result = await deleteClaimAction(idToDelete);
             if (result?.success) {
-                router.refresh();
+                onClaimsChange?.(claims.filter(c => c.id !== idToDelete));
             } else {
                 alert('刪除失敗，請稍後再試');
             }
@@ -103,7 +158,7 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
             ) : (
                 <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
                     <ClaimTable
-                        claims={filterClaims(data)}
+                        claims={pagedClaims}
                         emptyMessage={searchQuery ? "找不到相符的項目" : "目前沒有相關項目"}
                         onRowClick={(claim: Claim) => {
                             if (activeTab === 'drafts') {
@@ -131,13 +186,11 @@ export default function DashboardClient({ activeTab, data, pagination, counts, p
                         availableUsers={availableUsers}
                     />
 
-                    {pagination && (
-                        <Pagination
-                            currentPage={pagination.currentPage}
-                            totalPages={pagination.totalPages}
-                            onPageChange={handlePageChange}
-                        />
-                    )}
+                    <Pagination
+                        currentPage={safePage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                    />
                 </div>
             )}
 
