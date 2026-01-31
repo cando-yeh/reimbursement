@@ -438,6 +438,7 @@ function PendingItemsInner() {
                             <option value="">所有類型</option>
                             <option value="employee">員工報銷</option>
                             <option value="vendor">廠商請款</option>
+                            <option value="payment">廠商請款(付款)</option>
                             <option value="service">個人勞務</option>
                         </select>
                         <input

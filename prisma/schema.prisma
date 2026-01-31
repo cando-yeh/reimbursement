@@ -33,10 +33,22 @@ model Vendor {
   bankCode          String?
   bankAccount       String?
   isFloatingAccount Boolean   @default(false)
-  status            String    @default("active") // 'active', 'pending_add', 'pending_update', 'pending_delete'
+  status            VendorStatus    @default(active)
   isBlacklisted     Boolean   @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  claims            Claim[]
+
+  @@index([status])
+  @@index([name])
+}
+
+enum VendorStatus {
+  active
+  pending_add
+  pending_update
+  pending_delete
+  deleted
 }
 
 enum ClaimStatus {
@@ -56,22 +68,24 @@ enum ClaimType {
   employee
   vendor
   service
+  payment
 }
 
 model Claim {
   id              String      @id @default(uuid())
-  type            String   // changed back to String to match DB
+  type            ClaimType
   payee           String
-  payeeId         String?
+  vendorId        String?
+  vendor          Vendor?     @relation(fields: [vendorId], references: [id])
   applicantId     String
   applicant       User        @relation(fields: [applicantId], references: [id])
   date            DateTime    @default(now())
-  status          String // changed back to String to match DB
+  status          ClaimStatus
   description     String
   amount          Float
-  paymentDetails  Json?       // transactionContent, payerNotes, invoiceStatus, etc.
+  paymentDetails  PaymentDetails?
   lineItems       ClaimItem[]
-  serviceDetails  Json?       // idNumber, email, bankName, etc.
+  serviceDetails  ServiceDetails?
   datePaid        DateTime?
   evidenceFiles   String[]
   noReceiptReason String?
@@ -85,6 +99,9 @@ model Claim {
   @@index([status])
   @@index([applicantId])
   @@index([applicantId, status])
+  @@index([status, type])
+  @@index([vendorId])
+  @@index([paymentId])
   @@index([payee])
 }
 
@@ -116,15 +133,30 @@ model ClaimHistory {
   updatedAt DateTime @updatedAt
 }
 
+enum VendorRequestType {
+  add
+  update
+  delete
+}
+
+enum RequestStatus {
+  pending
+  approved
+  rejected
+}
+
 model VendorRequest {
   id            String    @id @default(uuid())
-  type          String    // 'add', 'update', 'delete'
+  type          VendorRequestType
   vendorId      String?
   data          Json?     // Partial<Vendor>
-  status        String    @default("pending") // 'pending', 'approved', 'rejected'
+  status        RequestStatus    @default(pending)
   timestamp     DateTime  @default(now())
   applicantName String?
   originalData  Json?     // Snapshot
+
+  @@index([status])
+  @@index([timestamp])
 }
 
 model Payment {
@@ -135,4 +167,52 @@ model Payment {
   claims      Claim[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+enum InvoiceStatus {
+  obtained
+  not_yet
+  unable
+}
+
+model PaymentDetails {
+  id                 String        @id @default(uuid())
+  claimId            String        @unique
+  claim              Claim         @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  transactionContent String
+  payerNotes         String?
+  invoiceStatus      InvoiceStatus
+  invoiceNumber      String?
+  invoiceDate        DateTime?
+  invoiceFile        String?
+  invoiceUrl         String?
+  bankCode           String?
+  bankAccount        String?
+  expenseCategory    String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([invoiceStatus])
+}
+
+model ServiceDetails {
+  id                  String   @id @default(uuid())
+  claimId             String   @unique
+  claim               Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  idNumber            String?
+  email               String?
+  registeredAddress   String?
+  servicePeriodStart  DateTime?
+  servicePeriodEnd    DateTime?
+  bankName            String?
+  bankCode            String?
+  bankAccount         String?
+  idFrontImage        String?
+  idBackImage         String?
+  bankBookImage       String?
+  idFrontUrl          String?
+  idBackUrl           String?
+  bankBookUrl         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

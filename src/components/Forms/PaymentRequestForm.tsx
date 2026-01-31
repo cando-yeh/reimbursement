@@ -57,10 +57,10 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         const initFromClaim = (claim: any) => {
             if (!claim || claim.type !== 'payment') return;
             formInitializedRef.current = true;
-            setVendorId(claim.payeeId || "");
+            setVendorId(claim.vendorId || "");
             setAmountInput(formatNumberWithCommas(String(claim.amount)));
             setDescription(claim.paymentDetails?.transactionContent || claim.description || "");
-            setExpenseCategory((claim as any).expenseCategory || "");
+                setExpenseCategory(claim.paymentDetails?.expenseCategory || "");
             setMemo(claim.paymentDetails?.payerNotes || "");
             const status = claim.paymentDetails?.invoiceStatus;
             if (status === 'not_yet') setReceiptStatus('pending');
@@ -146,8 +146,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 type: 'payment',
                 amount: amount || 0,
                 description: description.trim() || '未命名廠商付款',
-                expenseCategory: expenseCategory || '',
-                payeeId: vendorId || '',
+                vendorId: vendorId || '',
                 payee: selectedVendor?.name || '',
                 items: [],
                 date: todayISO(),
@@ -162,6 +161,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     invoiceUrl: finalInvoiceUrl,
                     bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
+                    expenseCategory: expenseCategory || '',
                 }
             };
             if (editId) {
@@ -218,8 +218,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 type: 'payment',
                 amount: amount,
                 description: description.trim(),
-                expenseCategory,
-                payeeId: vendorId,
+                vendorId: vendorId,
                 payee: selectedVendor?.name || '',
                 items: [],
                 date: todayISO(),
@@ -234,6 +233,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     invoiceUrl: finalInvoiceUrl,
                     bankCode: selectedVendor?.isFloatingAccount ? manualBankCode : undefined,
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
+                    expenseCategory: expenseCategory || '',
                 }
             };
             if (editId) {

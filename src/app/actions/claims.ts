@@ -26,8 +26,15 @@ function normalizeClaimForClient(claim: any): Claim {
             ...h,
             timestamp: h.timestamp.toISOString()
         })),
-        paymentDetails: claim.paymentDetails ? (claim.paymentDetails as any) : undefined,
-        serviceDetails: claim.serviceDetails ? (claim.serviceDetails as any) : undefined,
+        paymentDetails: claim.paymentDetails ? {
+            ...claim.paymentDetails,
+            invoiceDate: formatOptionalDate(claim.paymentDetails.invoiceDate)
+        } : undefined,
+        serviceDetails: claim.serviceDetails ? {
+            ...claim.serviceDetails,
+            servicePeriodStart: formatOptionalDate(claim.serviceDetails.servicePeriodStart),
+            servicePeriodEnd: formatOptionalDate(claim.serviceDetails.servicePeriodEnd)
+        } : undefined,
         date: formatDateOnly(claim.date),
         datePaid: formatOptionalDate(claim.datePaid),
     };
@@ -119,14 +126,27 @@ export async function getClaims(filters?: {
                                 id: true,
                                 type: true,
                                 payee: true,
-                                payeeId: true,
+                                vendorId: true,
                                 applicantId: true,
                                 date: true,
                                 status: true,
                                 description: true,
                                 amount: true,
                                 noReceiptReason: true,
-                                paymentDetails: true,
+                                paymentDetails: {
+                                    select: {
+                                        transactionContent: true,
+                                        payerNotes: true,
+                                        invoiceStatus: true,
+                                        invoiceNumber: true,
+                                        invoiceDate: true,
+                                        invoiceFile: true,
+                                        invoiceUrl: true,
+                                        bankCode: true,
+                                        bankAccount: true,
+                                        expenseCategory: true,
+                                    }
+                                },
                                 applicant: {
                                     select: { name: true, email: true, roleName: true }
                                 }
@@ -138,7 +158,9 @@ export async function getClaims(filters?: {
                                     select: { name: true, email: true, roleName: true }
                                 },
                                 lineItems: true,
-                                history: true
+                                history: true,
+                                paymentDetails: true,
+                                serviceDetails: true
                             }
                         })
                 })
@@ -197,7 +219,9 @@ export async function getClaimById(id: string) {
                     select: { name: true, email: true, roleName: true }
                 },
                 lineItems: true,
-                history: true
+                history: true,
+                paymentDetails: true,
+                serviceDetails: true
             }
         });
 
@@ -233,12 +257,13 @@ export async function createClaim(data: any) {
         }
         const id = Math.random().toString(36).substring(2, 10);
 
+        const vendorId = typeof data.vendorId === 'string' && data.vendorId.trim() !== '' ? data.vendorId : undefined;
         const newClaim = await (prisma.claim as any).create({
             data: {
                 id: id,
                 type: data.type as ClaimType,
                 payee: data.payee,
-                payeeId: data.payeeId,
+                vendorId,
                 applicantId: dbUser.id,
                 date: new Date(data.date),
                 status: requestedStatus as ClaimStatus,
@@ -255,8 +280,19 @@ export async function createClaim(data: any) {
                         fileUrl: item.fileUrl
                     }))
                 },
-                paymentDetails: data.paymentDetails ? (data.paymentDetails as any) : undefined,
-                serviceDetails: data.serviceDetails ? (data.serviceDetails as any) : undefined,
+                paymentDetails: data.paymentDetails ? {
+                    create: {
+                        ...data.paymentDetails,
+                        invoiceDate: data.paymentDetails.invoiceDate ? new Date(data.paymentDetails.invoiceDate) : undefined,
+                    }
+                } : undefined,
+                serviceDetails: data.serviceDetails ? {
+                    create: {
+                        ...data.serviceDetails,
+                        servicePeriodStart: data.serviceDetails.servicePeriodStart ? new Date(data.serviceDetails.servicePeriodStart) : undefined,
+                        servicePeriodEnd: data.serviceDetails.servicePeriodEnd ? new Date(data.serviceDetails.servicePeriodEnd) : undefined,
+                    }
+                } : undefined,
                 evidenceFiles: data.evidenceFiles || [],
                 noReceiptReason: data.noReceiptReason,
                 history: {
@@ -272,7 +308,9 @@ export async function createClaim(data: any) {
             },
             include: {
                 lineItems: true,
-                history: true
+                history: true,
+                paymentDetails: true,
+                serviceDetails: true
             }
         });
 
@@ -318,7 +356,7 @@ export async function updateClaimStatus(id: string, newStatus: string, note?: st
                     create: newHistoryItem
                 }
             },
-            include: { lineItems: true, history: true }
+            include: { lineItems: true, history: true, paymentDetails: true, serviceDetails: true }
         });
 
         revalidatePath('/');
@@ -363,6 +401,35 @@ export async function updateClaim(id: string, data: any) {
         if (itemsToUpdate) {
             amount = itemsToUpdate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
         }
+
+        const paymentDetails = data.paymentDetails;
+        const serviceDetails = data.serviceDetails;
+        const paymentDetailsData = paymentDetails ? {
+            ...paymentDetails,
+            invoiceDate: paymentDetails.invoiceDate ? new Date(paymentDetails.invoiceDate) : undefined,
+        } : undefined;
+        const serviceDetailsData = serviceDetails ? {
+            ...serviceDetails,
+            servicePeriodStart: serviceDetails.servicePeriodStart ? new Date(serviceDetails.servicePeriodStart) : undefined,
+            servicePeriodEnd: serviceDetails.servicePeriodEnd ? new Date(serviceDetails.servicePeriodEnd) : undefined,
+        } : undefined;
+
+        const vendorId = typeof data.vendorId === 'string'
+            ? (data.vendorId.trim() === '' ? null : data.vendorId)
+            : undefined;
+
+        const cleanedData: any = {
+            type: data.type,
+            payee: data.payee,
+            vendorId,
+            status: data.status,
+            description: data.description,
+            amount: amount,
+            date: data.date ? new Date(data.date) : undefined,
+            evidenceFiles: data.evidenceFiles,
+            noReceiptReason: data.noReceiptReason,
+            updatedAt: new Date(),
+        };
 
         if (data.status === 'pending_approval' && !dbUser.approverId && currentClaim.applicantId === dbUser.id) {
             return { success: false, error: APPROVER_REQUIRED_MESSAGE };
@@ -435,15 +502,24 @@ export async function updateClaim(id: string, data: any) {
         const updatedClaim = await (prisma.claim as any).update({
             where: { id },
             data: {
-                ...data,
-                amount: amount,
-                type: data.type as ClaimType | undefined,
-                status: data.status as ClaimStatus | undefined,
-                date: data.date ? new Date(data.date) : undefined,
-                updatedAt: new Date(),
-                items: undefined
+                ...cleanedData,
+                type: cleanedData.type as ClaimType | undefined,
+                status: cleanedData.status as ClaimStatus | undefined,
+                items: undefined,
+                paymentDetails: paymentDetailsData ? {
+                    upsert: {
+                        create: paymentDetailsData,
+                        update: paymentDetailsData
+                    }
+                } : undefined,
+                serviceDetails: serviceDetailsData ? {
+                    upsert: {
+                        create: serviceDetailsData,
+                        update: serviceDetailsData
+                    }
+                } : undefined
             } as any,
-            include: { lineItems: true, history: true }
+            include: { lineItems: true, history: true, paymentDetails: true, serviceDetails: true }
         });
 
         revalidatePath('/');

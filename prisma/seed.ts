@@ -32,16 +32,21 @@ const INITIAL_CLAIMS = [
     },
     {
         id: 'c2',
-        type: 'vendor',
+        type: 'payment',
         payee: 'TechSolutions Inc.',
-        payeeId: 'v1',
+        vendorId: 'v1',
         description: 'Q4 伺服器維護',
         amount: 5000.00,
         date: '2023-10-26',
         status: 'approved',
-        items: [
-            { id: 'i1', date: '2023-10-26', amount: 5000.00, description: 'Q4 伺服器維護費' }
-        ],
+        paymentDetails: {
+            transactionContent: 'Q4 伺服器維護費',
+            invoiceStatus: 'obtained',
+            invoiceNumber: 'AA12345678',
+            invoiceDate: '2023-10-26',
+            expenseCategory: '系統維護'
+        },
+        items: [],
         applicantId: 'u2'
     },
     {
@@ -114,7 +119,7 @@ async function main() {
                 id: c.id,
                 type: c.type as any,
                 payee: c.payee,
-                payeeId: c.payeeId,
+                vendorId: (c as any).vendorId,
                 description: c.description,
                 amount: c.amount,
                 date: new Date(c.date),
@@ -126,6 +131,12 @@ async function main() {
                         description: item.description,
                     }))
                 },
+                paymentDetails: (c as any).paymentDetails ? {
+                    create: {
+                        ...(c as any).paymentDetails,
+                        invoiceDate: (c as any).paymentDetails.invoiceDate ? new Date((c as any).paymentDetails.invoiceDate) : undefined
+                    }
+                } : undefined,
                 applicantId: c.applicantId,
                 history: {
                     create: [

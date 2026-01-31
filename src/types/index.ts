@@ -31,9 +31,9 @@ export interface ClaimItem {
 
 export interface Claim {
     id: string;
-    type: string; // 'employee' | 'vendor' | 'service'
+    type: 'employee' | 'vendor' | 'service' | 'payment';
     payee: string; // User Name or Vendor Name
-    payeeId?: string; // Optional ID for linking
+    vendorId?: string; // Optional Vendor ID
     applicantId?: string; // ID of the user who submitted the claim
 
     // Header Info
@@ -41,13 +41,13 @@ export interface Claim {
     status: 'draft' | 'pending_approval' | 'pending_finance' | 'approved' | 'paid' | 'pending_evidence' | 'pending_finance_review' | 'completed' | 'rejected' | 'cancelled';
     description: string; // Main title/summary of the claim
     amount: number; // Total amount
-    paymentDetails?: any;
+    paymentDetails?: PaymentDetails;
 
     // Items
     lineItems: ClaimItem[];
 
     // Service Payment Specific Details (勞務報酬單)
-    serviceDetails?: any;
+    serviceDetails?: ServiceDetails;
 
     applicant?: {
         name: string;
@@ -58,6 +58,36 @@ export interface Claim {
     evidenceFiles?: string[]; // Array of file paths/base64 for post-payment evidence
     noReceiptReason?: string; // Reason for any "no receipt" claim items
     history?: any;
+}
+
+export interface PaymentDetails {
+    transactionContent: string;
+    payerNotes?: string;
+    invoiceStatus: 'obtained' | 'not_yet' | 'unable';
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    invoiceFile?: string;
+    invoiceUrl?: string;
+    bankCode?: string;
+    bankAccount?: string;
+    expenseCategory?: string;
+}
+
+export interface ServiceDetails {
+    idNumber?: string;
+    email?: string;
+    registeredAddress?: string;
+    servicePeriodStart?: string;
+    servicePeriodEnd?: string;
+    bankName?: string;
+    bankCode?: string;
+    bankAccount?: string;
+    idFrontImage?: string;
+    idBackImage?: string;
+    bankBookImage?: string;
+    idFrontUrl?: string;
+    idBackUrl?: string;
+    bankBookUrl?: string;
 }
 
 export interface ClaimHistory {

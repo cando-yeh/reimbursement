@@ -560,7 +560,7 @@ export default function ApplicationDetailPage() {
                                     {claim.type === 'payment' && claim.paymentDetails ? (
                                         <tr>
                                             <td>{(claim.paymentDetails as any).invoiceDate || (claim.paymentDetails.invoiceStatus === 'not_yet' ? '尚未取得' : '-')}</td>
-                                            <td>{(claim as any).expenseCategory && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{(claim as any).expenseCategory}</span>}</td>
+                                            <td>{claim.paymentDetails?.expenseCategory && <span className="status-badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.75rem' }}>{claim.paymentDetails.expenseCategory}</span>}</td>
                                             <td style={{ fontWeight: 500, textAlign: 'center' }}>{claim.paymentDetails.transactionContent}</td>
                                             <td style={{ fontWeight: 'bold' }}><div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}><span>$</span><span>{claim.amount.toLocaleString()}</span></div></td>
                                             <td>

@@ -16,7 +16,8 @@ export type ClaimStatus = (typeof ClaimStatus)[keyof typeof ClaimStatus];
 export const ClaimType = {
     employee: 'employee',
     vendor: 'vendor',
-    service: 'service'
+    service: 'service',
+    payment: 'payment'
 } as const;
 
 export type ClaimType = (typeof ClaimType)[keyof typeof ClaimType];
