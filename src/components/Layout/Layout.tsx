@@ -63,8 +63,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const hasPermission = (permission: string) => {
         return currentUser?.permissions?.includes(permission as any) || false;
     };
-    const isFinance = hasPermission('finance_audit') || (currentUser?.roleName?.includes('財務') ?? false);
-    const isManager = hasPermission('user_management') || (currentUser?.roleName?.includes('管理者') ?? false) || availableUsers.some(u => u.approverId === currentUser?.id);
+    const isFinance = hasPermission('finance_audit') || (currentUser?.roleName?.includes('財務') || currentUser?.roleName?.includes('核決') || false);
+    const isManager = hasPermission('user_management') || (currentUser?.roleName?.includes('管理者') || currentUser?.roleName?.includes('管理員') || false) || availableUsers.some(u => u.approverId === currentUser?.id);
 
     // Authenticated state is handled by server-side layout redirect
     // and specific login page redirect logic to avoid flickering and loops.

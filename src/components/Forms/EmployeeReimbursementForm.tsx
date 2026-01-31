@@ -7,12 +7,17 @@ import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import NextImage from 'next/image';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
-import { createClaim as createClaimAction, updateClaim as updateClaimAction, getClaimById } from '@/app/actions/claims';
-import { uploadFile, deleteFile } from '@/utils/storage';
+import { getClaimById } from '@/app/actions/claims';
+import { buildEmployeeClaimItem, deleteFilesSilently } from '@/utils/claimUpload';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import { todayISO } from '@/utils/date';
-import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
+import { APPROVER_REQUIRED_MESSAGE, CLAIM_DRAFT_SAVED_MESSAGE, CLAIM_SUBMITTED_MESSAGE } from '@/utils/messages';
+import { ensureApprover, initializeEditClaim, isResubmission } from '@/utils/claimForm';
+import { getValidExpenseItems, validateEmployeeReimbursement } from '@/utils/claimValidation';
+import { saveOrUpdateClaim } from '@/utils/claimSubmit';
+import { goHome } from '@/utils/claimNavigation';
+import FormActions from '@/components/Common/FormActions';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -28,7 +33,7 @@ interface ExpenseItemWithAttachment {
 }
 
 import FormSection from '@/components/Common/FormSection';
-import PageHeader from '@/components/Common/PageHeader';
+import FormPage from '@/components/Common/FormPage';
 
 export default function EmployeeReimbursementForm({ editId }: { editId?: string }) {
     const { claims, currentUser, addClaim, updateClaim, vendors, vendorRequests } = useApp();
@@ -79,16 +84,12 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     };
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
-    const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
+    const isResubmit = isResubmission(existingClaim?.status);
 
     const formInitializedRef = useRef(false);
 
     useEffect(() => {
-        if (formInitializedRef.current) return;
-        if (!editId) return;
-
         const initFromClaim = (claim: Claim) => {
-            formInitializedRef.current = true;
             const loadedItems = (claim.lineItems || []).map(i => ({
                 id: i.id,
                 date: i.date,
@@ -104,19 +105,14 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
             if (loadedItems.length > 0) setItems(loadedItems);
             if (claim.noReceiptReason) setNoReceiptReason(claim.noReceiptReason);
         };
-
-        const localClaim = claims.find(c => c.id === editId);
-        if (localClaim && localClaim.lineItems && localClaim.lineItems.length > 0) {
-            initFromClaim(localClaim);
-            return;
-        }
-
-        (async () => {
-            const res = await getClaimById(editId);
-            if (res.success && res.data) {
-                initFromClaim(res.data as Claim);
-            }
-        })();
+        initializeEditClaim({
+            editId,
+            claims,
+            formInitializedRef,
+            isReady: (claim) => !!claim.lineItems && claim.lineItems.length > 0,
+            initFromClaim,
+            fetcher: getClaimById
+        });
     }, [editId, claims]);
 
     const handleItemChange = (id: string, field: keyof ExpenseItemWithAttachment, value: any) => {
@@ -145,36 +141,19 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const handleSubmit = async (action: 'submit' | 'draft') => {
         if (!currentUser) return;
 
-        if (action === 'submit' && !currentUser.approverId) {
-            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
-            return;
-        }
+        if (action === 'submit' && !ensureApprover(currentUser, showToast, APPROVER_REQUIRED_MESSAGE)) return;
 
-        const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
-
-        if (validItems.length === 0) {
-            showToast('請至少新增一筆有效的費用明細', 'error');
-            return;
-        }
-
-        const invalidAmountItems = items.filter(i => (Number(i.amount) <= 0 || isNaN(Number(i.amount))));
-        if (invalidAmountItems.length > 0) {
-            showToast('金額必須大於 0', 'error');
+        const validation = validateEmployeeReimbursement({
+            items,
+            noReceiptReason,
+            action
+        });
+        if (validation.error) {
+            showToast(validation.error, 'error');
             return;
         }
 
         if (action === 'submit') {
-            const missingReceipts = validItems.filter(i => !i.noReceipt && !i.receiptFile && !i.existingReceiptName && !i.fileUrl);
-            if (missingReceipts.length > 0) {
-                showToast('請為所有項目上傳憑證，或勾選「無憑證」', 'error');
-                return;
-            }
-            const hasNoReceiptItems = validItems.some(i => i.noReceipt);
-            if (hasNoReceiptItems && noReceiptReason.trim() === '') {
-                showToast('請填寫無憑證原因', 'error');
-                return;
-            }
-
             // Show confirmation modal for submission
             setSubmitType('submit');
             setShowConfirmSubmit(true);
@@ -187,34 +166,28 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
     const executeSubmit = async (action: 'submit' | 'draft') => {
         setIsSubmitting(true);
-        const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
+        const validItems = getValidExpenseItems(items);
 
         try {
             // Process uploads
-            const processedItems = await Promise.all(validItems.map(async (item, index) => {
-                let fileUrl = item.fileUrl;
-                if (item.receiptFile) {
-                    fileUrl = await uploadFile(
-                        item.receiptFile,
-                        item.date,
-                        currentUser!.name,
-                        item.category!,
-                        item.amount,
-                        index
-                    );
-                }
-
-                return {
-                    id: item.id,
-                    date: item.date,
-                    amount: item.amount,
-                    description: item.description,
-                    category: item.category!,
-                    invoiceNumber: item.invoiceNumber,
-                    notes: item.noReceipt ? '無憑證' : (item.receiptFile?.name || item.existingReceiptName || ''),
-                    fileUrl: fileUrl
-                };
-            }));
+            const processedItems = await Promise.all(validItems.map(async (item, index) => (
+                buildEmployeeClaimItem({
+                    item: {
+                        id: item.id,
+                        date: item.date,
+                        amount: Number(item.amount),
+                        description: item.description,
+                        category: item.category || '',
+                        invoiceNumber: item.invoiceNumber,
+                        noReceipt: item.noReceipt,
+                        receiptFile: item.receiptFile,
+                        existingReceiptName: item.existingReceiptName,
+                        fileUrl: item.fileUrl
+                    },
+                    index,
+                    applicantName: currentUser!.name
+                })
+            )));
 
             const generatedDescription = `${validItems[0].category} 等費用報銷`;
             const status = action === 'draft' ? 'draft' : undefined;
@@ -231,39 +204,26 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 amount: calculateTotal()
             };
 
-            if (editId) {
-                // Update
-                const updateStatus = action === 'draft'
-                    ? 'draft'
-                    : 'pending_approval';
-
-                const result = await updateClaim(editId, {
-                    ...claimData,
-                    status: updateStatus
-                });
-                if (!result.success) {
-                    showToast(result.error || '提交失敗，請稍後再試', 'error');
-                    return;
-                }
-            } else {
-                // Create
-                const created = await addClaim({
-                    ...claimData,
-                    status: status || 'pending_approval'
-                });
-                if (!created) {
-                    showToast('提交失敗，請稍後再試', 'error');
-                    return;
-                }
-            }
+            const updateStatus = action === 'draft' ? 'draft' : 'pending_approval';
+            const ok = await saveOrUpdateClaim({
+                editId,
+                addClaim,
+                updateClaim,
+                data: editId
+                    ? { ...claimData, status: updateStatus }
+                    : { ...claimData, status: status || 'pending_approval' },
+                showToast,
+                errorMessage: '提交失敗，請稍後再試'
+            });
+            if (!ok) return;
 
             // Process file deletions
             if (filesToDelete.length > 0) {
-                await Promise.all(filesToDelete.map(url => deleteFile(url))).catch(e => console.error(e));
+                await deleteFilesSilently(filesToDelete);
             }
 
-            showToast(action === 'draft' ? '草稿已儲存' : '申請已提交', 'success');
-            router.push(action === 'draft' ? '/?tab=drafts&refresh=1' : '/?refresh=1');
+            showToast(action === 'draft' ? CLAIM_DRAFT_SAVED_MESSAGE : CLAIM_SUBMITTED_MESSAGE, 'success');
+            goHome(router, { tab: action === 'draft' ? 'drafts' : undefined, refresh: true });
         } catch (error: any) {
             console.error(error);
             showToast('提交失敗: ' + error.message, 'error');
@@ -274,13 +234,11 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     };
 
     return (
-        <div className="container">
-            <PageHeader
-                title="員工報銷"
-                subtitle="適用於交通費、差旅費、交際費等代墊款項報銷。"
-            />
-
-            <div className="card" style={{ padding: '2rem' }}>
+        <FormPage
+            title="員工報銷"
+            subtitle="適用於交通費、差旅費、交際費等代墊款項報銷。"
+            cardStyle={{ padding: '2rem' }}
+        >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                     <div style={{ flex: 1 }}>
                         <FormSection title="費用明細">
@@ -558,39 +516,39 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     </div>
                 )}
 
-                <div className="form-actions" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem' }}>
-                    <button
-                        type="button"
-                        onClick={() => router.back()}
-                        className="btn btn-ghost"
-                        style={{ marginRight: 'auto', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}
-                        disabled={isSubmitting}
-                    >
-                        取消
-                    </button>
-                    {!isResubmit && (
-                        <button
-                            type="button"
-                            onClick={() => handleSubmit('draft')}
-                            className="btn btn-ghost"
-                            style={{ border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                            <span style={{ marginLeft: '0.5rem' }}>儲存草稿</span>
-                        </button>
-                    )}
-                    <button
-                        type="button"
-                        onClick={() => handleSubmit('submit')}
-                        className="btn btn-primary"
-                        style={{ whiteSpace: 'nowrap' }}
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-                        <span style={{ marginLeft: '0.5rem' }}>{isResubmit ? '重新提交' : '提交申請'}</span>
-                    </button>
-                </div>
+                <FormActions
+                    containerClassName="form-actions"
+                    containerStyle={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem' }}
+                    buttons={[
+                        {
+                            type: 'button',
+                            variant: 'ghost',
+                            onClick: () => router.back(),
+                            disabled: isSubmitting,
+                            label: '取消',
+                            style: { marginRight: 'auto', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }
+                        },
+                        {
+                            show: !isResubmit,
+                            type: 'button',
+                            variant: 'ghost',
+                            onClick: () => handleSubmit('draft'),
+                            disabled: isSubmitting,
+                            icon: isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />,
+                            label: <span style={{ marginLeft: '0.5rem' }}>儲存草稿</span>,
+                            style: { border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }
+                        },
+                        {
+                            type: 'button',
+                            variant: 'primary',
+                            onClick: () => handleSubmit('submit'),
+                            disabled: isSubmitting,
+                            icon: isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />,
+                            label: <span style={{ marginLeft: '0.5rem' }}>{isResubmit ? '重新提交' : '提交申請'}</span>,
+                            style: { whiteSpace: 'nowrap' }
+                        }
+                    ]}
+                />
             </div>
 
             <ConfirmModal
@@ -601,6 +559,6 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 onConfirm={() => executeSubmit('submit')}
                 onCancel={() => setShowConfirmSubmit(false)}
             />
-        </div>
+        </FormPage>
     );
 }

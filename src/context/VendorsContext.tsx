@@ -6,6 +6,7 @@ import { createVendorRequest, getVendorRequests, getVendors, approveVendorReques
 import { formatVendorRequests } from '@/utils/vendorHelpers';
 import { useAuth } from './AuthContext';
 import { todayISO } from '@/utils/date';
+import { scheduleRefreshEvent } from '@/utils/refreshEvents';
 
 // --- Types ---
 interface VendorsContextType {
@@ -50,13 +51,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
     };
 
     const scheduleVendorsRefresh = useCallback(() => {
-        if (typeof window === 'undefined') return;
-        if (vendorsRefreshTimerRef.current) {
-            clearTimeout(vendorsRefreshTimerRef.current);
-        }
-        vendorsRefreshTimerRef.current = setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('vendors:refresh'));
-        }, 800);
+        scheduleRefreshEvent({ eventName: 'vendors:refresh', timerRef: vendorsRefreshTimerRef, delayMs: 800 });
     }, []);
 
     // --- Fetch Functions ---

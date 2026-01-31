@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { getClaimTypeLabel } from '@/utils/claimDisplay';
 import { ArrowLeft } from 'lucide-react';
 import StatusBadge from '@/components/Common/StatusBadge';
 import { Claim } from '@/types';
@@ -107,7 +108,7 @@ export default function PaymentDetailPage() {
                                         <td><StatusBadge status={claim.status} /></td>
                                         <td>
                                             <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                                                {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
+                                                {getClaimTypeLabel(claim.type)}
                                             </span>
                                         </td>
                                         <td>{claim.description}</td>

@@ -1,4 +1,5 @@
 import { Claim, Payment, User } from '../../types';
+import { getClaimTypeLabel } from '@/utils/claimDisplay';
 import StatusBadge from './StatusBadge';
 
 interface ClaimTableProps {
@@ -128,7 +129,7 @@ const ClaimTable = ({
                                 <td style={{ whiteSpace: 'nowrap' }}><StatusBadge status={claim.status} /></td>
                                 <td>
                                     <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                        {claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}
+                                        {getClaimTypeLabel(claim.type)}
                                     </span>
                                 </td>
                                 <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>

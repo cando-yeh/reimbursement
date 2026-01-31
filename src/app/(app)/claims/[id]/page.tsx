@@ -10,6 +10,7 @@ import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle } from 'lucide-react';
 import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
+import { getClaimTypeLabel } from '@/utils/claimDisplay';
 
 const formatAction = (action: string) => {
     switch (action) {
@@ -492,7 +493,7 @@ export default function ApplicationDetailPage() {
                 <div className="detail-meta-grid">
                     <div>
                         <label className="form-group label">申請類型</label>
-                        <div className="meta-value-caps">{claim.type === 'employee' ? '員工報銷' : (claim.type === 'vendor' || claim.type === 'payment') ? '廠商請款' : '個人勞務'}</div>
+                        <div className="meta-value-caps">{getClaimTypeLabel(claim.type)}</div>
                     </div>
                     <div>
                         <label className="form-group label">付款對象</label>

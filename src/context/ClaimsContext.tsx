@@ -5,6 +5,7 @@ import { Claim, Payment } from '../types';
 import { createClaim as createClaimAction, updateClaim as updateClaimAction, updateClaimStatus as updateClaimStatusAction, deleteClaim as deleteClaimAction, getClaims, getMyClaimCounts as getMyClaimCountsAction, getDashboardData as getDashboardDataAction } from '@/app/actions/claims';
 import { useAuth } from './AuthContext';
 import { todayISO } from '@/utils/date';
+import { scheduleRefreshEvent } from '@/utils/refreshEvents';
 
 // --- Types ---
 interface ClaimsContextType {
@@ -39,13 +40,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const scheduleClaimsRefresh = useCallback(() => {
-        if (typeof window === 'undefined') return;
-        if (claimsRefreshTimerRef.current) {
-            clearTimeout(claimsRefreshTimerRef.current);
-        }
-        claimsRefreshTimerRef.current = setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('claims:refresh'));
-        }, 800);
+        scheduleRefreshEvent({ eventName: 'claims:refresh', timerRef: claimsRefreshTimerRef, delayMs: 800 });
     }, []);
 
     // --- Fetch Functions ---

@@ -1,20 +1,25 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Upload, X, FileText, ChevronDown, Save, Send, Loader2, CreditCard } from 'lucide-react';
 import { BANK_LIST, EXPENSE_CATEGORIES } from '@/utils/constants';
 import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
-import { uploadFile } from '@/utils/storage';
-import PageHeader from '@/components/Common/PageHeader';
+import { uploadInvoiceIfNeeded } from '@/utils/claimUpload';
+import FormPage from '@/components/Common/FormPage';
 import FormSection from '@/components/Common/FormSection';
 import Field from '@/components/Common/Field';
 import { todayISO } from '@/utils/date';
 import { useToast } from '@/context/ToastContext';
 import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 import { getClaimById } from '@/app/actions/claims';
+import { ensureApprover, initializeEditClaim, isResubmission } from '@/utils/claimForm';
+import { validatePaymentRequest } from '@/utils/claimValidation';
+import { saveOrUpdateClaim } from '@/utils/claimSubmit';
+import { goHome } from '@/utils/claimNavigation';
+import FormActions from '@/components/Common/FormActions';
 
 const SearchableVendorSelect = dynamic(() => import('@/components/Common/SearchableVendorSelect'), {
     loading: () => (
@@ -30,7 +35,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const { showToast } = useToast();
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
-    const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
+    const isResubmit = isResubmission(existingClaim?.status);
 
     const [vendorId, setVendorId] = useState<string>("");
     const [amountInput, setAmountInput] = useState<string>("");
@@ -48,19 +53,15 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const formInitializedRef = React.useRef(false);
+    const formInitializedRef = useRef(false);
 
     useEffect(() => {
-        if (formInitializedRef.current) return;
-        if (!editId) return;
-
         const initFromClaim = (claim: any) => {
             if (!claim || claim.type !== 'payment') return;
-            formInitializedRef.current = true;
             setVendorId(claim.vendorId || "");
             setAmountInput(formatNumberWithCommas(String(claim.amount)));
             setDescription(claim.paymentDetails?.transactionContent || claim.description || "");
-                setExpenseCategory(claim.paymentDetails?.expenseCategory || "");
+            setExpenseCategory(claim.paymentDetails?.expenseCategory || "");
             setMemo(claim.paymentDetails?.payerNotes || "");
             const status = claim.paymentDetails?.invoiceStatus;
             if (status === 'not_yet') setReceiptStatus('pending');
@@ -73,19 +74,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             if (claim.paymentDetails?.invoiceFile) setExistingInvoiceFile(claim.paymentDetails.invoiceFile);
             if (claim.paymentDetails?.invoiceUrl) setInvoiceUrl(claim.paymentDetails.invoiceUrl);
         };
-
-        const localClaim = claims.find(c => c.id === editId);
-        if (localClaim && localClaim.type === 'payment' && localClaim.paymentDetails) {
-            initFromClaim(localClaim);
-            return;
-        }
-
-        (async () => {
-            const res = await getClaimById(editId);
-            if (res.success && res.data) {
-                initFromClaim(res.data as any);
-            }
-        })();
+        initializeEditClaim({
+            editId,
+            claims,
+            formInitializedRef,
+            isReady: (claim) => claim.type === 'payment' && !!claim.paymentDetails,
+            initFromClaim,
+            fetcher: getClaimById
+        });
     }, [editId, claims]);
 
     const selectedVendor = useMemo(() => vendors.find((v) => v.id === vendorId) || null, [vendors, vendorId]);
@@ -106,22 +102,20 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
 
     const amount = parseAmountToNumber(amountInput);
 
-    const errors = useMemo(() => {
-        const e: Record<string, string> = {};
-        if (!vendorId) e.vendorId = "請選擇廠商";
-        if (!amount || amount <= 0) e.amount = "請輸入大於 0 的金額";
-        if (!description.trim()) e.description = "請填寫交易內容";
-        if (!expenseCategory) e.expenseCategory = "請選擇費用類別";
-        if (memo.length > 10) e.memo = "備註不得超過 10 個字";
-        if (receiptStatus === "obtained" && !invoiceNumber.trim()) e.invoiceNumber = "已取得發票/收據時，請填寫號碼";
-        if (receiptStatus === "none" && !invoiceNumber.trim()) e.invoiceNumber = "請填寫無法取得的原因";
-        if (receiptStatus === "obtained" && attachments.length === 0 && !existingInvoiceFile) e.attachments = "請上傳發票或收據";
-        if (selectedVendor?.isFloatingAccount) {
-            if (!manualBankCode) e.manualBankCode = "請選擇銀行";
-            if (!manualBankAccount) e.manualBankAccount = "請填寫銀行帳號";
-        }
-        return e;
-    }, [vendorId, amount, description, expenseCategory, memo, receiptStatus, invoiceNumber, selectedVendor, manualBankCode, manualBankAccount, attachments, existingInvoiceFile]);
+    const errors = useMemo(() => validatePaymentRequest({
+        vendorId,
+        amount,
+        description,
+        expenseCategory,
+        memo,
+        receiptStatus,
+        invoiceNumber,
+        selectedVendor,
+        manualBankCode,
+        manualBankAccount,
+        attachments,
+        existingInvoiceFile
+    }), [vendorId, amount, description, expenseCategory, memo, receiptStatus, invoiceNumber, selectedVendor, manualBankCode, manualBankAccount, attachments, existingInvoiceFile]);
 
     const isValid = Object.keys(errors).length === 0;
 
@@ -129,17 +123,14 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
         if (!currentUser) return;
         setIsSubmitting(true);
         try {
-            let finalInvoiceUrl = invoiceUrl;
-            if (attachments.length > 0) {
-                finalInvoiceUrl = await uploadFile(
-                    attachments[0],
-                    invoiceDate || todayISO(),
-                    selectedVendor?.name || '未知廠商',
-                    expenseCategory || '未分類',
-                    amount || 0,
-                    0
-                );
-            }
+            const finalInvoiceUrl = await uploadInvoiceIfNeeded({
+                attachments,
+                invoiceDate: invoiceDate || todayISO(),
+                vendorName: selectedVendor?.name || '未知廠商',
+                expenseCategory: expenseCategory || '未分類',
+                amount: amount || 0,
+                existingUrl: invoiceUrl
+            });
 
             const newClaim = {
                 applicantId: currentUser.id,
@@ -164,20 +155,16 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     expenseCategory: expenseCategory || '',
                 }
             };
-            if (editId) {
-                const result = await updateClaim(editId, newClaim);
-                if (!result.success) {
-                    showToast(result.error || '儲存失敗，請稍後再試', 'error');
-                    return;
-                }
-            } else {
-                const created = await addClaim(newClaim as any);
-                if (!created) {
-                    showToast('儲存失敗，請稍後再試', 'error');
-                    return;
-                }
-            }
-            router.push('/?tab=drafts&refresh=1');
+            const ok = await saveOrUpdateClaim({
+                editId,
+                addClaim,
+                updateClaim,
+                data: newClaim,
+                showToast,
+                errorMessage: '儲存失敗，請稍後再試'
+            });
+            if (!ok) return;
+            goHome(router, { tab: 'drafts', refresh: true });
         } catch (error: any) {
             console.error(error);
             alert('儲存失敗: ' + error.message);
@@ -194,24 +181,18 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             memo: true, invoiceNumber: true, attachments: true,
         });
         if (!isValid || !currentUser) return;
-        if (!currentUser.approverId) {
-            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
-            return;
-        }
+        if (!ensureApprover(currentUser, showToast, APPROVER_REQUIRED_MESSAGE)) return;
 
         setIsSubmitting(true);
         try {
-            let finalInvoiceUrl = invoiceUrl;
-            if (attachments.length > 0) {
-                finalInvoiceUrl = await uploadFile(
-                    attachments[0],
-                    invoiceDate || todayISO(),
-                    selectedVendor?.name || '未知廠商',
-                    expenseCategory,
-                    amount,
-                    0
-                );
-            }
+            const finalInvoiceUrl = await uploadInvoiceIfNeeded({
+                attachments,
+                invoiceDate: invoiceDate || todayISO(),
+                vendorName: selectedVendor?.name || '未知廠商',
+                expenseCategory,
+                amount,
+                existingUrl: invoiceUrl
+            });
 
             const newClaim = {
                 applicantId: currentUser.id,
@@ -236,20 +217,16 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     expenseCategory: expenseCategory || '',
                 }
             };
-            if (editId) {
-                const result = await updateClaim(editId, newClaim);
-                if (!result.success) {
-                    showToast(result.error || '提交失敗，請稍後再試', 'error');
-                    return;
-                }
-            } else {
-                const created = await addClaim(newClaim as any);
-                if (!created) {
-                    showToast('提交失敗，請稍後再試', 'error');
-                    return;
-                }
-            }
-            router.push('/?refresh=1');
+            const ok = await saveOrUpdateClaim({
+                editId,
+                addClaim,
+                updateClaim,
+                data: newClaim,
+                showToast,
+                errorMessage: '提交失敗，請稍後再試'
+            });
+            if (!ok) return;
+            goHome(router, { refresh: true });
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);
@@ -261,14 +238,11 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const showErr = (key: string) => (touched[key] && errors[key]) || undefined;
 
     return (
-        <div className="container">
-            <PageHeader
-                title="廠商請款"
-                subtitle="請填寫付款對象、金額及相關憑證資料。"
-            />
-
-            <div className="card" style={{ padding: '2.5rem' }}>
-                <form onSubmit={handleSubmit} className="space-y-10">
+        <FormPage
+            title="廠商請款"
+            subtitle="請填寫付款對象、金額及相關憑證資料。"
+        >
+            <form onSubmit={handleSubmit} className="space-y-10">
                     <FormSection title="付款對象">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <Field label="廠商名稱" required error={showErr("vendorId")}>
@@ -433,21 +407,38 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                         </div>
                     </FormSection>
 
-                    <div style={{ display: 'flex', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}>
-                        <button type="button" onClick={() => router.back()} className="btn btn-ghost" style={{ marginRight: 'auto', color: 'var(--color-text-secondary)' }} disabled={isSubmitting}>取消離開</button>
-                        {!isResubmit && (
-                            <button type="button" onClick={handleSaveDraft} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', minWidth: '120px' }} disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                儲存草稿
-                            </button>
-                        )}
-                        <button type="submit" className="btn btn-primary" style={{ minWidth: '150px', fontSize: '1rem' }} disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
-                            {isResubmit ? '重新提交申請' : '提交申請並送出'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                    <FormActions
+                        containerStyle={{ display: 'flex', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)', marginTop: '2rem' }}
+                        buttons={[
+                            {
+                                type: 'button',
+                                variant: 'ghost',
+                                onClick: () => router.back(),
+                                disabled: isSubmitting,
+                                label: '取消離開',
+                                style: { marginRight: 'auto', color: 'var(--color-text-secondary)' }
+                            },
+                            {
+                                show: !isResubmit,
+                                type: 'button',
+                                variant: 'ghost',
+                                onClick: handleSaveDraft,
+                                disabled: isSubmitting,
+                                icon: isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />,
+                                label: '儲存草稿',
+                                style: { border: '1px solid var(--color-border)', minWidth: '120px' }
+                            },
+                            {
+                                type: 'submit',
+                                variant: 'primary',
+                                disabled: isSubmitting,
+                                icon: isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />,
+                                label: isResubmit ? '重新提交申請' : '提交申請並送出',
+                                style: { minWidth: '150px', fontSize: '1rem' }
+                            }
+                        ]}
+                    />
+            </form>
+        </FormPage>
     );
 }
