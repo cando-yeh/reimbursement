@@ -54,7 +54,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const [isEditingName, setIsEditingName] = React.useState(false);
     const [tempName, setTempName] = React.useState('');
     const profileRef = useRef<HTMLDivElement>(null);
-    const { currentUser, logout, isAuthenticated, availableUsers, updateUser, isAuthLoading } = useAuth();
+    const { currentUser, logout, isAuthenticated, availableUsers, updateUser, isAuthLoading, syncError } = useAuth();
     const [badgeCounts, setBadgeCounts] = useState({ myClaimsBadge: 0, reviewBadge: 0 });
     const router = useRouter();
     const pathname = usePathname();
@@ -144,6 +144,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="app-container">
+            {/* Temporary Debug UI */}
+            <div style={{ position: 'fixed', top: 0, right: 0, background: 'rgba(0,0,0,0.9)', color: 'white', padding: '10px', fontSize: '12px', zIndex: 9999, borderBottomLeftRadius: '8px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>DEBUG INFO:</div>
+                <div>ID: {currentUser.id.substring(0, 8)}...</div>
+                <div>Email: {currentUser.email}</div>
+                <div>Role: {currentUser.roleName}</div>
+                <div>Users in Context: {availableUsers.length}</div>
+                <div>Perms: {JSON.stringify(currentUser.permissions)}</div>
+                {syncError && (
+                    <div style={{ color: '#ff4d4d', marginTop: '4px', fontWeight: 'bold' }}>
+                        Sync Error: {syncError}
+                    </div>
+                )}
+            </div>
             <aside className="sidebar">
                 <div className="sidebar-header">
                     <h1 className="brand">

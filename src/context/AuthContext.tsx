@@ -17,6 +17,7 @@ interface AuthContextType {
     updateUser: (id: string, updates: Partial<User>) => Promise<{ success: boolean; error?: string }>;
     deleteUser: (id: string) => Promise<void>;
     refreshUsers: () => Promise<void>;
+    syncError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     const availableUsersRef = useRef<User[]>([]);
     const didFetchUsersOnAuthChange = useRef(false);
@@ -56,9 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Fetch Users from DB
     const fetchDBUsers = useCallback(async (authEmail?: string) => {
+        console.log('[AuthContext] fetchDBUsers started. Email hint:', authEmail);
+        setSyncError(null);
         try {
-            const { data, success } = await getDBUsers();
+            const { data, success, error } = await getDBUsers();
+            if (!success) {
+                console.error('[AuthContext] getDBUsers failed:', error);
+                setSyncError(error || 'Unknown DB error');
+                return;
+            }
             if (success && data && data.length > 0) {
+                console.log(`[AuthContext] DB returned ${data.length} users.`);
                 setAvailableUsers(prev => {
                     const dbUsers = data as User[];
                     const userMap = new Map();
@@ -89,11 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 if (currentEmail) {
-                    const dbUser = (data as User[]).find(u => u.email?.toLowerCase() === currentEmail!.toLowerCase());
+                    const normalizedEmail = currentEmail.toLowerCase().trim();
+                    console.log('[AuthContext] Attempting to match email:', normalizedEmail);
+                    const dbUser = (data as User[]).find(u => u.email?.toLowerCase().trim() === normalizedEmail);
 
                     if (dbUser) {
+                        console.log('[AuthContext] MATCH FOUND:', dbUser.name, 'Role:', dbUser.roleName);
                         setCurrentUser(prevUser => {
-                            if (!prevUser) return dbUser;
+                            if (!prevUser) {
+                                console.log('[AuthContext] Setting initial currentUser with DB data.');
+                                return dbUser;
+                            }
                             const hasChanges =
                                 dbUser.id !== prevUser.id ||
                                 dbUser.roleName !== prevUser.roleName ||
@@ -106,11 +122,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             }
                             return prevUser;
                         });
+                    } else {
+                        console.warn('[AuthContext] NO MATCH for email:', normalizedEmail);
+                        console.log('[AuthContext] Available emails in DB:', (data as User[]).map(u => u.email).join(', '));
                     }
                 }
+            } else {
+                console.warn('[AuthContext] DB returned empty user list.');
             }
-        } catch (err) {
-            console.error('Failed to fetch users from DB:', err);
+        } catch (err: any) {
+            console.error('[AuthContext] Sync Error:', err);
+            setSyncError(err.message || String(err));
         }
     }, [getSupabase]);
 
@@ -123,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             const users = availableUsersRef.current;
-            const foundUser = users.find(u => u.id === sessionUser.id || (u.email && u.email.toLowerCase() === sessionUser.email?.toLowerCase()));
+            const foundUser = users.find(u => u.id === sessionUser.id || (u.email && sessionUser.email && u.email.toLowerCase() === sessionUser.email.toLowerCase()));
 
             if (foundUser) {
                 setCurrentUser(foundUser);
@@ -247,19 +269,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [currentUser?.id, fetchDBUsers, logout]);
 
     const contextValue = useMemo(() => ({
-        currentUser,
-        isAuthenticated,
-        isAuthLoading,
-        availableUsers,
-        login,
-        logout,
-        switchUser,
-        updateUser,
-        deleteUser,
-        refreshUsers: fetchDBUsers,
+        currentUser, isAuthenticated, isAuthLoading, availableUsers,
+        login, logout, switchUser, updateUser, deleteUser, refreshUsers: fetchDBUsers,
+        syncError
     }), [
         currentUser, isAuthenticated, isAuthLoading, availableUsers,
-        login, logout, switchUser, updateUser, deleteUser, fetchDBUsers
+        login, logout, switchUser, updateUser, deleteUser, fetchDBUsers,
+        syncError
     ]);
 
     return (

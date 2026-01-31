@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './claims';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_noStore } from 'next/cache';
 import { User } from '@/types';
 
 export async function updateUser(userId: string, data: Partial<User>) {
@@ -76,24 +76,35 @@ export async function deleteUser(userId: string) {
 }
 
 export async function getDBUsers() {
+    unstable_noStore();
+    console.log('[getDBUsers] Querying User table...');
     try {
         const users = await prisma.user.findMany({
             orderBy: { name: 'asc' }
         });
+        console.log(`[getDBUsers] Found ${users.length} users in DB.`);
         return { success: true, data: users };
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        return { success: false, error: 'Failed to fetch users' };
+    } catch (error: any) {
+        console.error('[getDBUsers] Error:', error.message);
+        return { success: false, error: 'Failed to fetch users: ' + error.message };
     }
 }
 
 export async function getDBUserByEmail(email: string) {
+    unstable_noStore();
+    console.log(`[getDBUserByEmail] Searching for: ${email}`);
     try {
         const user = await prisma.user.findUnique({
-            where: { email: email.toLowerCase() }
+            where: { email: email.toLowerCase().trim() }
         });
+        if (user) {
+            console.log(`[getDBUserByEmail] Found ${user.name}`);
+        } else {
+            console.log(`[getDBUserByEmail] No user found for ${email}`);
+        }
         return { success: true, data: user };
-    } catch (error) {
-        return { success: false, error: 'Failed' };
+    } catch (error: any) {
+        console.error('[getDBUserByEmail] Error:', error.message);
+        return { success: false, error: 'Failed: ' + error.message };
     }
 }
