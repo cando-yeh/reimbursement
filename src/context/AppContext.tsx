@@ -41,7 +41,7 @@ interface AppContextType {
   fetchClaims: (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => Promise<{ data: Claim[], pagination: any } | null>;
   fetchDashboardData: (filters: { applicantId: string; status?: string | string[]; page?: number; pageSize?: number }) => Promise<{ counts: { drafts: number, evidence: number, returned: number, inReview: number, pendingPayment: number, closed: number }; claims: Claim[]; pagination: any } | null>;
   addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
-  updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
+  updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<{ success: boolean; error?: string }>;
   updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
   deleteClaim: (id: string) => Promise<void>;
   getMyClaimCounts: (applicantId: string) => Promise<{ drafts: number, evidence: number, returned: number, inReview: number, pendingPayment: number, closed: number } | null>;

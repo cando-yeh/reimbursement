@@ -7,7 +7,7 @@ import { Claim } from '@/types';
 import { Save, Send, ArrowLeft, Plus, Trash2, Upload, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import NextImage from 'next/image';
 import { EXPENSE_CATEGORIES } from '@/utils/constants';
-import { createClaim as createClaimAction, updateClaim as updateClaimAction } from '@/app/actions/claims';
+import { createClaim as createClaimAction, updateClaim as updateClaimAction, getClaimById } from '@/app/actions/claims';
 import { uploadFile, deleteFile } from '@/utils/storage';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
@@ -85,26 +85,38 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
 
     useEffect(() => {
         if (formInitializedRef.current) return;
-        if (editId) {
-            const claim = claims.find(c => c.id === editId);
-            if (claim && claim.lineItems) {
-                formInitializedRef.current = true;
-                const loadedItems = claim.lineItems.map(i => ({
-                    id: i.id,
-                    date: i.date,
-                    amount: i.amount,
-                    description: i.description,
-                    category: i.category || '',
-                    invoiceNumber: i.invoiceNumber || '',
-                    noReceipt: i.notes === '無憑證',
-                    receiptFile: null,
-                    existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined,
-                    fileUrl: i.fileUrl || undefined
-                }));
-                if (loadedItems.length > 0) setItems(loadedItems);
-                if (claim.noReceiptReason) setNoReceiptReason(claim.noReceiptReason);
-            }
+        if (!editId) return;
+
+        const initFromClaim = (claim: Claim) => {
+            formInitializedRef.current = true;
+            const loadedItems = (claim.lineItems || []).map(i => ({
+                id: i.id,
+                date: i.date,
+                amount: i.amount,
+                description: i.description,
+                category: i.category || '',
+                invoiceNumber: i.invoiceNumber || '',
+                noReceipt: i.notes === '無憑證',
+                receiptFile: null,
+                existingReceiptName: (i.notes && i.notes !== '無憑證') ? i.notes : undefined,
+                fileUrl: i.fileUrl || undefined
+            }));
+            if (loadedItems.length > 0) setItems(loadedItems);
+            if (claim.noReceiptReason) setNoReceiptReason(claim.noReceiptReason);
+        };
+
+        const localClaim = claims.find(c => c.id === editId);
+        if (localClaim && localClaim.lineItems && localClaim.lineItems.length > 0) {
+            initFromClaim(localClaim);
+            return;
         }
+
+        (async () => {
+            const res = await getClaimById(editId);
+            if (res.success && res.data) {
+                initFromClaim(res.data as Claim);
+            }
+        })();
     }, [editId, claims]);
 
     const handleItemChange = (id: string, field: keyof ExpenseItemWithAttachment, value: any) => {
@@ -225,16 +237,24 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                     ? 'draft'
                     : 'pending_approval';
 
-                updateClaim(editId, {
+                const result = await updateClaim(editId, {
                     ...claimData,
                     status: updateStatus
                 });
+                if (!result.success) {
+                    showToast(result.error || '提交失敗，請稍後再試', 'error');
+                    return;
+                }
             } else {
                 // Create
-                addClaim({
+                const created = await addClaim({
                     ...claimData,
                     status: status || 'pending_approval'
                 });
+                if (!created) {
+                    showToast('提交失敗，請稍後再試', 'error');
+                    return;
+                }
             }
 
             // Process file deletions
@@ -243,7 +263,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
             }
 
             showToast(action === 'draft' ? '草稿已儲存' : '申請已提交', 'success');
-            router.push(action === 'draft' ? '/?tab=drafts' : '/');
+            router.push(action === 'draft' ? '/?tab=drafts&refresh=1' : '/?refresh=1');
         } catch (error: any) {
             console.error(error);
             showToast('提交失敗: ' + error.message, 'error');

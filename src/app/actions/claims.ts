@@ -188,6 +188,30 @@ export async function getClaims(filters?: {
     return cachedFetch();
 }
 
+export async function getClaimById(id: string) {
+    try {
+        const claim = await (prisma.claim as any).findUnique({
+            where: { id },
+            include: {
+                applicant: {
+                    select: { name: true, email: true, roleName: true }
+                },
+                lineItems: true,
+                history: true
+            }
+        });
+
+        if (!claim) {
+            return { success: false, error: 'Claim not found' };
+        }
+
+        return { success: true, data: normalizeClaimForClient(claim) };
+    } catch (error: any) {
+        console.error('Error fetching claim by id:', error);
+        return { success: false, error: '無法取得申請單資料' };
+    }
+}
+
 export async function createClaim(data: any) {
     try {
         const user = await getCurrentUser();

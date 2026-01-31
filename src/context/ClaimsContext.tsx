@@ -14,7 +14,7 @@ interface ClaimsContextType {
     fetchClaims: (filters?: { status?: string | string[], applicantId?: string, page?: number, pageSize?: number, cache?: boolean, type?: string, payee?: string }) => Promise<{ data: Claim[], pagination: any } | null>;
     fetchDashboardData: (filters: { applicantId: string; status?: string | string[]; page?: number; pageSize?: number }) => Promise<{ counts: { drafts: number; evidence: number; returned: number; inReview: number; pendingPayment: number; closed: number }; claims: Claim[]; pagination: any } | null>;
     addClaim: (claim: Omit<Claim, 'id' | 'amount' | 'status' | 'lineItems'> & { amount?: number; status?: Claim['status']; items?: any[] }) => Promise<Claim | null>;
-    updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<void>;
+    updateClaim: (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => Promise<{ success: boolean; error?: string }>;
     updateClaimStatus: (id: string, newStatus: Claim['status'], note?: string) => Promise<void>;
     deleteClaim: (id: string) => Promise<void>;
     getMyClaimCounts: (applicantId: string) => Promise<{ drafts: number, evidence: number, returned: number, inReview: number, pendingPayment: number, closed: number } | null>;
@@ -32,6 +32,11 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(false);
     const claimsRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const emitClaimUpdate = useCallback((claim: Claim) => {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('claims:optimistic', { detail: { claim } }));
+    }, []);
 
     const scheduleClaimsRefresh = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -108,6 +113,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === tempId ? (result.data as Claim) : c));
+            emitClaimUpdate(result.data as Claim);
             scheduleClaimsRefresh();
             return result.data as Claim;
         } else {
@@ -115,7 +121,7 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
             alert('建立申請單失敗: ' + result.error);
             return null;
         }
-    }, [currentUser?.id, scheduleClaimsRefresh]);
+    }, [currentUser?.id, emitClaimUpdate, scheduleClaimsRefresh]);
 
     const updateClaim = useCallback(async (id: string, data: Partial<Claim> & { items?: any[] }, note?: string) => {
         const { items: _, ...restData } = data;
@@ -132,11 +138,15 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
+            emitClaimUpdate(result.data as Claim);
             scheduleClaimsRefresh();
+            return { success: true };
         } else if (!result.success) {
             console.error('Update Claim Failed:', result.error);
+            return { success: false, error: result.error };
         }
-    }, [scheduleClaimsRefresh]);
+        return { success: false, error: 'Update Claim Failed' };
+    }, [emitClaimUpdate, scheduleClaimsRefresh]);
 
     const updateClaimStatus = useCallback(async (id: string, newStatus: Claim['status'], note?: string) => {
         setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
@@ -145,9 +155,10 @@ export function ClaimsProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.data) {
             setClaims(prev => prev.map(c => c.id === id ? result.data as any as Claim : c));
+            emitClaimUpdate(result.data as Claim);
             scheduleClaimsRefresh();
         }
-    }, [scheduleClaimsRefresh]);
+    }, [emitClaimUpdate, scheduleClaimsRefresh]);
 
     const deleteClaim = useCallback(async (id: string) => {
         setClaims(prev => prev.filter(c => c.id !== id));

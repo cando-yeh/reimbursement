@@ -14,6 +14,7 @@ import Field from '@/components/Common/Field';
 import { todayISO } from '@/utils/date';
 import { useToast } from '@/context/ToastContext';
 import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
+import { getClaimById } from '@/app/actions/claims';
 
 const SearchableVendorSelect = dynamic(() => import('@/components/Common/SearchableVendorSelect'), {
     loading: () => (
@@ -51,27 +52,40 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
 
     useEffect(() => {
         if (formInitializedRef.current) return;
-        if (editId) {
-            const claim = claims.find(c => c.id === editId);
-            if (claim && claim.type === 'payment') {
-                formInitializedRef.current = true;
-                setVendorId(claim.payeeId || "");
-                setAmountInput(formatNumberWithCommas(String(claim.amount)));
-                setDescription(claim.paymentDetails?.transactionContent || claim.description || "");
-                setExpenseCategory((claim as any).expenseCategory || "");
-                setMemo(claim.paymentDetails?.payerNotes || "");
-                const status = claim.paymentDetails?.invoiceStatus;
-                if (status === 'not_yet') setReceiptStatus('pending');
-                else if (status === 'unable') setReceiptStatus('none');
-                else setReceiptStatus('obtained');
-                if (status === 'obtained' || status === 'unable') setInvoiceNumber(claim.paymentDetails?.invoiceNumber || "");
-                if ((claim.paymentDetails as any)?.invoiceDate) setInvoiceDate((claim.paymentDetails as any).invoiceDate);
-                if (claim.paymentDetails?.bankCode) setManualBankCode(claim.paymentDetails.bankCode);
-                if (claim.paymentDetails?.bankAccount) setManualBankAccount(claim.paymentDetails.bankAccount);
-                if (claim.paymentDetails?.invoiceFile) setExistingInvoiceFile(claim.paymentDetails.invoiceFile);
-                if (claim.paymentDetails?.invoiceUrl) setInvoiceUrl(claim.paymentDetails.invoiceUrl);
-            }
+        if (!editId) return;
+
+        const initFromClaim = (claim: any) => {
+            if (!claim || claim.type !== 'payment') return;
+            formInitializedRef.current = true;
+            setVendorId(claim.payeeId || "");
+            setAmountInput(formatNumberWithCommas(String(claim.amount)));
+            setDescription(claim.paymentDetails?.transactionContent || claim.description || "");
+            setExpenseCategory((claim as any).expenseCategory || "");
+            setMemo(claim.paymentDetails?.payerNotes || "");
+            const status = claim.paymentDetails?.invoiceStatus;
+            if (status === 'not_yet') setReceiptStatus('pending');
+            else if (status === 'unable') setReceiptStatus('none');
+            else setReceiptStatus('obtained');
+            if (status === 'obtained' || status === 'unable') setInvoiceNumber(claim.paymentDetails?.invoiceNumber || "");
+            if ((claim.paymentDetails as any)?.invoiceDate) setInvoiceDate((claim.paymentDetails as any).invoiceDate);
+            if (claim.paymentDetails?.bankCode) setManualBankCode(claim.paymentDetails.bankCode);
+            if (claim.paymentDetails?.bankAccount) setManualBankAccount(claim.paymentDetails.bankAccount);
+            if (claim.paymentDetails?.invoiceFile) setExistingInvoiceFile(claim.paymentDetails.invoiceFile);
+            if (claim.paymentDetails?.invoiceUrl) setInvoiceUrl(claim.paymentDetails.invoiceUrl);
+        };
+
+        const localClaim = claims.find(c => c.id === editId);
+        if (localClaim && localClaim.type === 'payment' && localClaim.paymentDetails) {
+            initFromClaim(localClaim);
+            return;
         }
+
+        (async () => {
+            const res = await getClaimById(editId);
+            if (res.success && res.data) {
+                initFromClaim(res.data as any);
+            }
+        })();
     }, [editId, claims]);
 
     const selectedVendor = useMemo(() => vendors.find((v) => v.id === vendorId) || null, [vendors, vendorId]);
@@ -150,9 +164,20 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
                 }
             };
-            if (editId) updateClaim(editId, newClaim);
-            else addClaim(newClaim as any);
-            router.push('/?tab=drafts');
+            if (editId) {
+                const result = await updateClaim(editId, newClaim);
+                if (!result.success) {
+                    showToast(result.error || '儲存失敗，請稍後再試', 'error');
+                    return;
+                }
+            } else {
+                const created = await addClaim(newClaim as any);
+                if (!created) {
+                    showToast('儲存失敗，請稍後再試', 'error');
+                    return;
+                }
+            }
+            router.push('/?tab=drafts&refresh=1');
         } catch (error: any) {
             console.error(error);
             alert('儲存失敗: ' + error.message);
@@ -211,9 +236,20 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                     bankAccount: selectedVendor?.isFloatingAccount ? manualBankAccount : undefined,
                 }
             };
-            if (editId) updateClaim(editId, newClaim);
-            else addClaim(newClaim as any);
-            router.push('/');
+            if (editId) {
+                const result = await updateClaim(editId, newClaim);
+                if (!result.success) {
+                    showToast(result.error || '提交失敗，請稍後再試', 'error');
+                    return;
+                }
+            } else {
+                const created = await addClaim(newClaim as any);
+                if (!created) {
+                    showToast('提交失敗，請稍後再試', 'error');
+                    return;
+                }
+            }
+            router.push('/?refresh=1');
         } catch (error: any) {
             console.error(error);
             alert('提交失敗: ' + error.message);

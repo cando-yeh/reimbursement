@@ -12,6 +12,7 @@ import FormSection from '@/components/Common/FormSection';
 import { todayISO } from '@/utils/date';
 import { useToast } from '@/context/ToastContext';
 import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
+import { getClaimById } from '@/app/actions/claims';
 
 export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const router = useRouter();
@@ -47,29 +48,41 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
 
     useEffect(() => {
         if (formInitializedRef.current) return;
-        if (editId) {
-            const claim = claims.find(c => c.id === editId);
-            if (claim) {
-                formInitializedRef.current = true;
-                setFormData({
-                    payeeName: claim.payee || '',
-                    idNumber: claim.serviceDetails?.idNumber || '',
-                    email: claim.serviceDetails?.email || '',
-                    registeredAddress: claim.serviceDetails?.registeredAddress || '',
-                    description: claim.description || '',
-                    servicePeriodStart: claim.serviceDetails?.servicePeriodStart || todayISO(),
-                    servicePeriodEnd: claim.serviceDetails?.servicePeriodEnd || todayISO(),
-                    amount: claim.amount || '',
-                    bankCode: claim.serviceDetails?.bankCode || '',
-                    bankAccount: claim.serviceDetails?.bankAccount || '',
-                });
-                setFileUrls({
-                    idFront: claim.serviceDetails?.idFrontUrl || '',
-                    idBack: claim.serviceDetails?.idBackUrl || '',
-                    bankBook: claim.serviceDetails?.bankBookUrl || ''
-                });
-            }
+        if (!editId) return;
+
+        const initFromClaim = (claim: Claim) => {
+            formInitializedRef.current = true;
+            setFormData({
+                payeeName: claim.payee || '',
+                idNumber: claim.serviceDetails?.idNumber || '',
+                email: claim.serviceDetails?.email || '',
+                registeredAddress: claim.serviceDetails?.registeredAddress || '',
+                description: claim.description || '',
+                servicePeriodStart: claim.serviceDetails?.servicePeriodStart || todayISO(),
+                servicePeriodEnd: claim.serviceDetails?.servicePeriodEnd || todayISO(),
+                amount: claim.amount || '',
+                bankCode: claim.serviceDetails?.bankCode || '',
+                bankAccount: claim.serviceDetails?.bankAccount || '',
+            });
+            setFileUrls({
+                idFront: claim.serviceDetails?.idFrontUrl || '',
+                idBack: claim.serviceDetails?.idBackUrl || '',
+                bankBook: claim.serviceDetails?.bankBookUrl || ''
+            });
+        };
+
+        const localClaim = claims.find(c => c.id === editId);
+        if (localClaim && localClaim.serviceDetails) {
+            initFromClaim(localClaim);
+            return;
         }
+
+        (async () => {
+            const res = await getClaimById(editId);
+            if (res.success && res.data) {
+                initFromClaim(res.data as Claim);
+            }
+        })();
     }, [editId, claims]);
 
     const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +92,7 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
         }
     };
 
-    const handleSubmit = (action: 'submit' | 'draft') => {
+    const handleSubmit = async (action: 'submit' | 'draft') => {
         if (action === 'submit' && !currentUser?.approverId) {
             showToast(APPROVER_REQUIRED_MESSAGE, 'error');
             return;
@@ -146,14 +159,22 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
                 bankBookUrl: fileUrls.bankBook || currentDetails?.bankBookUrl,
             };
 
-            updateClaim(editId, {
+            const result = await updateClaim(editId, {
                 ...claimData,
                 serviceDetails: mergedDetails
             });
+            if (!result.success) {
+                showToast(result.error || '提交失敗，請稍後再試', 'error');
+                return;
+            }
         } else {
-            addClaim(claimData as any);
+            const created = await addClaim(claimData as any);
+            if (!created) {
+                showToast('提交失敗，請稍後再試', 'error');
+                return;
+            }
         }
-        router.push(action === 'draft' ? '/?tab=drafts' : '/?tab=in_review');
+        router.push(action === 'draft' ? '/?tab=drafts&refresh=1' : '/?tab=in_review&refresh=1');
     };
 
     const renderFileUpload = (label: string, file: File | null, setFile: (f: File | null) => void, id: string) => {
