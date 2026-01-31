@@ -111,6 +111,7 @@ export function usePaymentRequestForm(editId?: string) {
     const getError = (key: string) => (touched[key] && errors[key]) || undefined;
 
     const handleSaveDraft = async () => {
+        if (isSubmitting) return;
         if (!currentUser) return;
         setIsSubmitting(true);
         try {
@@ -166,6 +167,7 @@ export function usePaymentRequestForm(editId?: string) {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setTouched({
             vendorId: true, manualBankCode: true, manualBankAccount: true,
             amount: true, description: true, expenseCategory: true,

@@ -56,6 +56,7 @@ function PendingItemsInner() {
     // Payment selection state
     const [selectedClaimIds, setSelectedClaimIds] = useState<string[]>([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
     const [paymentDate, setPaymentDate] = useState(todayISO());
     const [selectionError, setSelectionError] = useState<string | null>(null);
 
@@ -236,7 +237,9 @@ function PendingItemsInner() {
     };
 
     const handleConfirmPayment = () => {
+        if (isConfirmingPayment) return;
         if (selectedClaimIds.length === 0) return;
+        setIsConfirmingPayment(true);
         const selectedClaims = mergedClaims.filter(c => selectedClaimIds.includes(c.id));
         const firstPayee = selectedClaims[0].payee;
 
@@ -263,6 +266,7 @@ function PendingItemsInner() {
         setShowPaymentModal(false);
         setSelectedClaimIds([]);
         handleTabChange('payment_records');
+        setIsConfirmingPayment(false);
     };
 
     const handleApproveVendorRequest = async (requestId: string) => {
@@ -550,7 +554,9 @@ function PendingItemsInner() {
                         />
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowPaymentModal(false)}>取消</button>
-                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmPayment}>確認付款</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmPayment} disabled={isConfirmingPayment}>
+                                {isConfirmingPayment ? '處理中...' : '確認付款'}
+                            </button>
                         </div>
                     </div>
                 </div>

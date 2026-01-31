@@ -12,9 +12,9 @@ export default function NewApplicationPage() {
         <p style={{ color: 'var(--color-text-secondary)' }}>請選擇您要申請的類別</p>
       </div>
 
-      <div style={{ display: 'grid', gap: '1.5rem' }}>
-        <Link href="/reimburse/new" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: 'hsl(var(--primary-hue), 90%, 95%)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'grid', gap: '1.5rem', justifyItems: 'center' }}>
+        <Link href="/reimburse/new" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer', maxWidth: '500px' }}>
+          <div style={{ width: '64px', height: '64px', minWidth: '64px', borderRadius: '12px', backgroundColor: 'hsl(var(--primary-hue), 90%, 95%)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FileText size={32} />
           </div>
           <div>
@@ -23,8 +23,8 @@ export default function NewApplicationPage() {
           </div>
         </Link>
 
-        <Link href="/payment-request/new" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: 'hsl(142, 70%, 95%)', color: 'hsl(142, 70%, 45%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/payment-request/new" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer', maxWidth: '500px' }}>
+          <div style={{ width: '64px', height: '64px', minWidth: '64px', borderRadius: '12px', backgroundColor: 'hsl(142, 70%, 95%)', color: 'hsl(142, 70%, 45%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CreditCard size={32} />
           </div>
           <div>
@@ -34,8 +34,8 @@ export default function NewApplicationPage() {
         </Link>
 
         {/* Temporary link for testing service app since we ported it */}
-        <Link href="/applications/service" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: 'hsl(30, 90%, 95%)', color: 'hsl(30, 90%, 45%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/applications/service" className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', transition: 'transform 0.2s', cursor: 'pointer', maxWidth: '500px' }}>
+          <div style={{ width: '64px', height: '64px', minWidth: '64px', borderRadius: '12px', backgroundColor: 'hsl(30, 90%, 95%)', color: 'hsl(30, 90%, 45%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Truck size={32} />
           </div>
           <div>

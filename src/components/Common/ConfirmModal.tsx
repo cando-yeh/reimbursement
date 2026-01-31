@@ -10,6 +10,9 @@ interface ConfirmModalProps {
     onConfirm: () => void;
     onCancel: () => void;
     type?: 'danger' | 'warning' | 'info';
+    confirmDisabled?: boolean;
+    cancelDisabled?: boolean;
+    confirmLoading?: boolean;
 }
 
 const ConfirmModal = ({
@@ -20,7 +23,10 @@ const ConfirmModal = ({
     cancelText = '取消',
     onConfirm,
     onCancel,
-    type = 'warning'
+    type = 'warning',
+    confirmDisabled = false,
+    cancelDisabled = false,
+    confirmLoading = false
 }: ConfirmModalProps) => {
     if (!isOpen) return null;
 
@@ -89,6 +95,7 @@ const ConfirmModal = ({
                             className="btn btn-ghost"
                             style={{ flex: 1, border: '1px solid var(--color-border)', padding: '0.625rem 1rem' }}
                             onClick={onCancel}
+                            disabled={cancelDisabled}
                         >
                             {cancelText}
                         </button>
@@ -102,8 +109,9 @@ const ConfirmModal = ({
                                 boxShadow: type === 'danger' ? '0 4px 12px rgba(239, 68, 68, 0.3)' : undefined
                             }}
                             onClick={onConfirm}
+                            disabled={confirmDisabled}
                         >
-                            {confirmText}
+                            {confirmLoading ? '處理中...' : confirmText}
                         </button>
                     </div>
                 </div>

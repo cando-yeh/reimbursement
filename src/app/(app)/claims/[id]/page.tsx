@@ -2,15 +2,16 @@
 
 import { Claim, ClaimHistory } from '@/types';
 import { ClaimStatus, ClaimType } from '@/types/prisma';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
-import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle, Loader2 } from 'lucide-react';
 import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 import { getClaimTypeLabel } from '@/utils/claimDisplay';
+import { getClaimById } from '@/app/actions/claims';
 
 const formatAction = (action: string) => {
     switch (action) {
@@ -35,7 +36,33 @@ export default function ApplicationDetailPage() {
     const id = params?.id as string;
     const router = useRouter();
     const { claims, updateClaimStatus, deleteClaim, updateClaim, currentUser, availableUsers } = useApp();
-    const claim = claims.find(c => c.id === id);
+    const contextClaim = claims.find(c => c.id === id);
+
+    // Hybrid fetching logic
+    const [fetchedClaim, setFetchedClaim] = useState<Claim | null>(null);
+    const [isFetching, setIsFetching] = useState(false);
+
+    useEffect(() => {
+        // If we don't have the claim in context, fetch it directly
+        if (!contextClaim && id && !isFetching) {
+            const fetchSingleClaim = async () => {
+                setIsFetching(true);
+                try {
+                    const res = await getClaimById(id);
+                    if (res.success && res.data) {
+                        setFetchedClaim(res.data as Claim);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch claim:', error);
+                } finally {
+                    setIsFetching(false);
+                }
+            };
+            fetchSingleClaim();
+        }
+    }, [id, contextClaim, isFetching]);
+
+    const claim = contextClaim || fetchedClaim;
 
     const [evidenceInvoiceNumber, setEvidenceInvoiceNumber] = useState('');
     const [evidenceInvoiceDate, setEvidenceInvoiceDate] = useState('');
@@ -167,6 +194,15 @@ export default function ApplicationDetailPage() {
         showToast('申請已退回', 'warning');
         router.push(`/reviews?tab=${claim.status === 'pending_approval' ? 'manager_approvals' : 'finance_review'}`);
     };
+
+    if (isFetching) {
+        return (
+            <div style={{ textAlign: 'center', padding: '5rem' }}>
+                <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto', color: 'var(--color-primary)' }} />
+                <p style={{ marginTop: '1rem', color: 'var(--color-text-secondary)' }}>正在讀取申請單資料...</p>
+            </div>
+        );
+    }
 
     if (!claim) {
         return (

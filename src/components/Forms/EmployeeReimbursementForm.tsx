@@ -122,6 +122,9 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 confirmText="確認提交"
                 onConfirm={() => executeSubmit('submit')}
                 onCancel={() => setShowConfirmSubmit(false)}
+                confirmDisabled={isSubmitting}
+                cancelDisabled={isSubmitting}
+                confirmLoading={isSubmitting}
             />
         </FormPage>
     );

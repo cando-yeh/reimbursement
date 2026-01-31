@@ -129,6 +129,7 @@ export function useEmployeeReimbursementForm(editId?: string) {
     };
 
     const handleSubmit = async (action: 'submit' | 'draft') => {
+        if (isSubmitting) return;
         if (!currentUser) return;
         if (action === 'submit' && !ensureApprover(currentUser, showToast, APPROVER_REQUIRED_MESSAGE)) return;
 
@@ -152,6 +153,7 @@ export function useEmployeeReimbursementForm(editId?: string) {
     };
 
     const executeSubmit = async (action: 'submit' | 'draft') => {
+        if (isSubmitting) return;
         setIsSubmitting(true);
         const validItems = getValidExpenseItems(items);
 
