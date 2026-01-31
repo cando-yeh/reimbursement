@@ -25,7 +25,7 @@
 
 .activity-table th,
 .vendor-table th {
-    padding: 1rem 0.75rem;
+    padding: 0.6rem 0.75rem;
     font-size: 0.8rem;
     color: var(--color-text-secondary);
     text-transform: uppercase;
@@ -38,7 +38,7 @@
 
 .activity-table td,
 .vendor-table td {
-    padding: 1rem 0.75rem;
+    padding: 0.6rem 0.75rem;
     border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 

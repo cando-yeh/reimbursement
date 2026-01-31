@@ -194,7 +194,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </div>
 
                         {isProfileOpen && (
-                            <div className="profile-popup" onClick={(e) => e.stopPropagation()} style={{ width: '240px' }}>
+                            <div className="profile-popup" onClick={(e) => e.stopPropagation()} style={{ width: '280px' }}>
                                 <div className="profile-header">
                                     {isEditingName ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginBottom: '0.5rem' }}>
@@ -217,7 +217,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                                 <div className="profile-name" style={{ fontWeight: 'bold' }}>{currentUser.name}</div>
                                                 <div className="profile-role">{currentUser.email}</div>
                                                 {availableUsers.find(u => u.id === currentUser.approverId) && (
-                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)' }}>
+                                                    <div className="profile-role" style={{ marginTop: '0.25rem', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>
                                                         請款核准人: {availableUsers.find(u => u.id === currentUser.approverId)?.name}
                                                     </div>
                                                 )}

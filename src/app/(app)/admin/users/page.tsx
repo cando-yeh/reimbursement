@@ -84,14 +84,14 @@ export default function UserManagementPage() {
             </div>
 
             <div className="card card-flush vendor-table-container" style={{ marginTop: '2rem', overflowX: 'auto' }}>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1000px' }}>
+                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                     <thead>
                         <tr>
-                            <th style={{ width: '250px' }}>姓名</th>
-                            <th style={{ width: '120px', textAlign: 'center' }}>角色</th>
-                            <th style={{ width: '100px', textAlign: 'center' }}>管理者</th>
-                            <th style={{ width: '200px', textAlign: 'center' }}>核准人</th>
-                            <th style={{ width: '130px', textAlign: 'center' }}>操作</th>
+                            <th style={{ width: '180px' }}>姓名</th>
+                            <th style={{ width: '100px', textAlign: 'center' }}>角色</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>管理者</th>
+                            <th style={{ width: '150px', textAlign: 'center' }}>核准人</th>
+                            <th style={{ width: '100px', textAlign: 'center' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,15 +103,15 @@ export default function UserManagementPage() {
 
                             return (
                                 <tr key={user.id} style={currentUser && user.id === currentUser.id ? { backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)' } : {}}>
-                                    <td style={{ "whiteSpace": "nowrap", "width": "250px" }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '1rem', paddingLeft: '1rem' }}>
+                                    <td style={{ "whiteSpace": "nowrap", "width": "180px" }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.75rem', paddingLeft: '0.5rem' }}>
                                             <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem', flexShrink: 0 }}>
                                                 {user.name.charAt(0)}
                                             </div>
                                             <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
                                         </div>
                                     </td>
-                                    <td style={{ textAlign: 'center', width: '120px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ textAlign: 'center', width: '100px', whiteSpace: 'nowrap' }}>
                                         {isEditing ? (
                                             <select
                                                 className="form-input"
@@ -128,7 +128,7 @@ export default function UserManagementPage() {
                                             </span>
                                         )}
                                     </td>
-                                    <td style={{ width: '100px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '80px', whiteSpace: 'nowrap' }}>
                                         {isEditing ? (
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <input
@@ -144,7 +144,7 @@ export default function UserManagementPage() {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', width: '200px', textAlign: 'center' }}>
+                                    <td style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', width: '150px', textAlign: 'center' }}>
                                         {isEditing ? (
                                             <select
                                                 className="form-input"
@@ -170,7 +170,7 @@ export default function UserManagementPage() {
                                         )}
                                     </td>
 
-                                    <td style={{ width: '130px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '100px', whiteSpace: 'nowrap' }}>
                                         {isEditing ? (
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                                                 <button

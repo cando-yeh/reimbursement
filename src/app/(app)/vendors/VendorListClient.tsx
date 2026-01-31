@@ -155,14 +155,14 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                         onPageChange={handlePageChange}
                     />
                 </div>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '1080px' }}>
+                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                     <thead>
                         <tr>
-                            <th style={{ width: '120px', textAlign: 'center' }}>狀態</th>
-                            <th style={{ width: '250px' }}>廠商名稱</th>
-                            <th style={{ width: '300px' }}>服務內容</th>
-                            <th style={{ width: '250px' }}>銀行資訊</th>
-                            <th style={{ width: '120px', textAlign: 'center' }}>操作</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>狀態</th>
+                            <th style={{ width: '180px' }}>廠商名稱</th>
+                            <th style={{ width: '220px' }}>服務內容</th>
+                            <th style={{ width: '220px' }}>銀行資訊</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,7 +178,7 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
 
                             return (
                                 <tr key={vendor.id}>
-                                    <td style={{ textAlign: 'center', width: '120px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ textAlign: 'center', width: '80px', whiteSpace: 'nowrap' }}>
                                         {vendor.isPendingAdd ? (
                                             <span className="status-badge" style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>
                                                 待新增
@@ -193,16 +193,16 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                                             </span>
                                         )}
                                     </td>
-                                    <td style={{ width: '250px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '180px', whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.75rem' }}>
                                             <Building size={16} className="text-secondary" style={{ flexShrink: 0 }} />
                                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{vendor.name}</div>
                                         </div>
                                     </td>
-                                    <td style={{ width: '300px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '220px', whiteSpace: 'nowrap' }}>
                                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{vendor.serviceContent || '-'}</div>
                                     </td>
-                                    <td style={{ width: '250px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '220px', whiteSpace: 'nowrap' }}>
                                         {vendor.bankCode ? (
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                                                 <span style={{ fontWeight: 500, flexShrink: 0 }}>
@@ -214,7 +214,7 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                                             <span style={{ color: '#ccc' }}>-</span>
                                         )}
                                     </td>
-                                    <td style={{ width: '120px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ width: '80px', whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
                                             {canManageVendors && !vendor.isPendingAdd && !pendingRequest ? (
                                                 <>
