@@ -12,6 +12,7 @@ import { uploadFile, deleteFile } from '@/utils/storage';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import { todayISO } from '@/utils/date';
+import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 
 interface ExpenseItemWithAttachment {
     id: string;
@@ -132,6 +133,11 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
     const handleSubmit = async (action: 'submit' | 'draft') => {
         if (!currentUser) return;
 
+        if (action === 'submit' && !currentUser.approverId) {
+            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
+            return;
+        }
+
         const validItems = items.filter(i => (Number(i.amount) > 0) && i.description.trim() !== '' && i.category !== '');
 
         if (validItems.length === 0) {
@@ -217,7 +223,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 // Update
                 const updateStatus = action === 'draft'
                     ? 'draft'
-                    : (currentUser!.approverId ? 'pending_approval' : 'pending_finance');
+                    : 'pending_approval';
 
                 updateClaim(editId, {
                     ...claimData,
@@ -227,7 +233,7 @@ export default function EmployeeReimbursementForm({ editId }: { editId?: string 
                 // Create
                 addClaim({
                     ...claimData,
-                    status: status || 'pending_finance'
+                    status: status || 'pending_approval'
                 });
             }
 

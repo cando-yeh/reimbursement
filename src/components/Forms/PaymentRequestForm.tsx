@@ -12,6 +12,8 @@ import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
 import Field from '@/components/Common/Field';
 import { todayISO } from '@/utils/date';
+import { useToast } from '@/context/ToastContext';
+import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 
 const SearchableVendorSelect = dynamic(() => import('@/components/Common/SearchableVendorSelect'), {
     loading: () => (
@@ -24,6 +26,7 @@ const SearchableVendorSelect = dynamic(() => import('@/components/Common/Searcha
 export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const router = useRouter();
     const { vendors, addClaim, updateClaim, claims, currentUser, vendorRequests } = useApp();
+    const { showToast } = useToast();
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
@@ -166,6 +169,10 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
             memo: true, invoiceNumber: true, attachments: true,
         });
         if (!isValid || !currentUser) return;
+        if (!currentUser.approverId) {
+            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -191,7 +198,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                 payee: selectedVendor?.name || '',
                 items: [],
                 date: todayISO(),
-                status: (currentUser.approverId ? 'pending_approval' : 'pending_finance') as any,
+                status: 'pending_approval' as any,
                 paymentDetails: {
                     transactionContent: description.trim(),
                     payerNotes: memo.trim(),

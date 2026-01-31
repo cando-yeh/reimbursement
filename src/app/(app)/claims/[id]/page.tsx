@@ -9,6 +9,7 @@ import { useApp } from '@/context/AppContext';
 import { useToast } from '@/context/ToastContext';
 import ConfirmModal from '@/components/Common/ConfirmModal';
 import { ArrowLeft, CheckCircle, Send, Trash2, Edit2, Undo2, Check, X, UploadCloud, XCircle } from 'lucide-react';
+import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 
 const formatAction = (action: string) => {
     switch (action) {
@@ -176,7 +177,12 @@ export default function ApplicationDetailPage() {
     }
 
     const handleStatusChange = (newStatus: any) => {
-        if (id) updateClaimStatus(id, newStatus);
+        if (!id) return;
+        if (newStatus === 'pending_approval' && !currentUser?.approverId) {
+            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
+            return;
+        }
+        updateClaimStatus(id, newStatus);
     };
 
     const handleCancel = () => {

@@ -6,6 +6,7 @@ import { Claim, ClaimHistory, ClaimItem } from '@/types';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { formatDateOnly, formatOptionalDate } from '@/utils/date';
+import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 
 // --- Helpers ---
 export async function getCurrentUser() {
@@ -201,7 +202,11 @@ export async function createClaim(data: any) {
         // Support both 'items' (from frontend) and 'lineItems'
         const itemsToCreate = data.lineItems || data.items || [];
         const calculatedAmount = itemsToCreate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
-        const initialStatus = dbUser.approverId ? 'pending_approval' : 'pending_finance';
+        const initialStatus = 'pending_approval';
+        const requestedStatus = data.status || initialStatus;
+        if (requestedStatus !== 'draft' && !dbUser.approverId) {
+            return { success: false, error: APPROVER_REQUIRED_MESSAGE };
+        }
         const id = Math.random().toString(36).substring(2, 10);
 
         const newClaim = await (prisma.claim as any).create({
@@ -212,7 +217,7 @@ export async function createClaim(data: any) {
                 payeeId: data.payeeId,
                 applicantId: dbUser.id,
                 date: new Date(data.date),
-                status: (data.status || initialStatus) as ClaimStatus,
+                status: requestedStatus as ClaimStatus,
                 description: data.description,
                 amount: data.amount || calculatedAmount,
                 lineItems: {
@@ -333,6 +338,10 @@ export async function updateClaim(id: string, data: any) {
         let amount = data.amount;
         if (itemsToUpdate) {
             amount = itemsToUpdate.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+        }
+
+        if (data.status === 'pending_approval' && !dbUser.approverId && currentClaim.applicantId === dbUser.id) {
+            return { success: false, error: APPROVER_REQUIRED_MESSAGE };
         }
 
         if (data.status && (data.status === 'pending_approval' || data.status === 'pending_finance') && currentClaim.status !== data.status) {

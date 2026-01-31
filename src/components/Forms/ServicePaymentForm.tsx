@@ -10,10 +10,13 @@ import { formatNumberWithCommas, parseAmountToNumber } from '@/utils/format';
 import PageHeader from '@/components/Common/PageHeader';
 import FormSection from '@/components/Common/FormSection';
 import { todayISO } from '@/utils/date';
+import { useToast } from '@/context/ToastContext';
+import { APPROVER_REQUIRED_MESSAGE } from '@/utils/messages';
 
 export default function ServicePaymentForm({ editId }: { editId?: string }) {
     const router = useRouter();
-    const { addClaim, updateClaim, claims } = useApp();
+    const { addClaim, updateClaim, claims, currentUser } = useApp();
+    const { showToast } = useToast();
 
     const existingClaim = editId ? claims.find(c => c.id === editId) : null;
     const isResubmit = existingClaim?.status === 'rejected' || existingClaim?.status === 'pending_evidence';
@@ -77,6 +80,10 @@ export default function ServicePaymentForm({ editId }: { editId?: string }) {
     };
 
     const handleSubmit = (action: 'submit' | 'draft') => {
+        if (action === 'submit' && !currentUser?.approverId) {
+            showToast(APPROVER_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         const status: Claim['status'] = action === 'submit' ? 'pending_approval' : 'draft';
         const amountNum = Number(formData.amount);
 
