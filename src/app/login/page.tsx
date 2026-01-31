@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Chrome, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import AnimatedCube from '@/components/AnimatedCube';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -63,6 +64,9 @@ export default function LoginPage() {
                     <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#3B82F6] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '8s' }} />
                     <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#8B5CF6] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
                 </div>
+
+                {/* 3D Cube Animation */}
+                <AnimatedCube />
 
                 {/* Content Centered Vertically */}
                 <div className="relative z-10 max-w-md animate-fade-in-up text-center">
