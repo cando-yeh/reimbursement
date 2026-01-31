@@ -156,7 +156,7 @@ export default function DashboardClient({
             {isLoading ? (
                 <DashboardSkeleton />
             ) : (
-                <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
+                <div className="card card-flush vendor-table-container table-scroll">
                     <ClaimTable
                         claims={pagedClaims}
                         emptyMessage={searchQuery ? "找不到相符的項目" : "目前沒有相關項目"}

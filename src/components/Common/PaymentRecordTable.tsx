@@ -7,7 +7,7 @@ interface PaymentRecordTableProps {
 }
 
 const PaymentRecordTable = ({ payments, emptyMessage, onRowClick }: PaymentRecordTableProps) => (
-    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%', marginBottom: '1rem' }}>
+    <table className="vendor-table table-fixed table-full table-compact">
         <thead>
             <tr>
                 <th style={{ width: '100px' }}>付款編號</th>

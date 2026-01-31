@@ -425,7 +425,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                 onClick: handleSaveDraft,
                                 disabled: isSubmitting,
                                 icon: isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />,
-                                label: '儲存草稿',
+                                label: <span style={{ marginLeft: '0.5rem' }}>儲存草稿</span>,
                                 style: { border: '1px solid var(--color-border)', minWidth: '120px' }
                             },
                             {
@@ -433,7 +433,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
                                 variant: 'primary',
                                 disabled: isSubmitting,
                                 icon: isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />,
-                                label: isResubmit ? '重新提交申請' : '提交申請並送出',
+                                label: <span style={{ marginLeft: '0.5rem' }}>{isResubmit ? '重新提交申請' : '提交申請並送出'}</span>,
                                 style: { minWidth: '150px', fontSize: '1rem' }
                             }
                         ]}

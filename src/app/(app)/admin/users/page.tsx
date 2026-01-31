@@ -83,8 +83,8 @@ export default function UserManagementPage() {
                 </div>
             </div>
 
-            <div className="card card-flush vendor-table-container" style={{ marginTop: '2rem', overflowX: 'auto' }}>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <div className="card card-flush vendor-table-container table-scroll table-top-md">
+                <table className="vendor-table table-fixed table-full">
                     <thead>
                         <tr>
                             <th style={{ width: '180px' }}>姓名</th>

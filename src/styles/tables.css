@@ -11,6 +11,30 @@
     padding: 1rem;
 }
 
+.table-scroll {
+    overflow-x: auto;
+}
+
+.table-full {
+    width: 100%;
+}
+
+.table-fixed {
+    table-layout: fixed;
+}
+
+.table-compact {
+    margin-bottom: 1rem;
+}
+
+.table-top-sm {
+    margin-top: 0.5rem;
+}
+
+.table-top-md {
+    margin-top: 2rem;
+}
+
 .activity-table,
 .vendor-table {
     width: 100%;

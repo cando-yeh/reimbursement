@@ -547,7 +547,7 @@ export default function ApplicationDetailPage() {
                     {claim.type !== 'service' && (
                         <>
                             <h4 className="heading-md" style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>費用明細</h4>
-                            <table className="vendor-table" style={{ marginTop: '0.5rem' }}>
+                            <table className="vendor-table table-top-sm">
                                 <thead>
                                     <tr>
                                         <th>日期</th>

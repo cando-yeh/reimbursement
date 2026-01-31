@@ -59,7 +59,7 @@ const ClaimTable = ({
     };
 
     return (
-        <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%', marginBottom: '1rem' }}>
+        <table className="vendor-table table-fixed table-full table-compact">
             <thead>
                 <tr>
                     {selectable && <th style={{ width: '32px' }}></th>}

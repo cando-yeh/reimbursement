@@ -399,7 +399,7 @@ function PendingItemsInner() {
             </TabContainer>
 
             {/* Render Tab Content */}
-            <div className="card vendor-table-container" style={{ overflowX: 'auto' }}>
+            <div className="card vendor-table-container table-scroll">
                 {/* Filters for applicable tabs */}
                 {(activeTab === 'all_applications') && (
                     <div style={{ display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap' }}>

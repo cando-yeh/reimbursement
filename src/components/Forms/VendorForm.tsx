@@ -8,6 +8,7 @@ import { Vendor } from '@/types';
 import { useApp } from '@/context/AppContext';
 
 import FormSection from '@/components/Common/FormSection';
+import FormLabel from '@/components/Common/FormLabel';
 
 interface VendorFormProps {
     initialData?: Partial<Vendor>; // For edit mode
@@ -95,9 +96,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                 <FormSection title="基本資訊">
                     <div className="space-y-4">
                         <div className="form-group">
-                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
-                                廠商名稱 <span style={{ color: 'var(--color-danger)' }}>*</span>
-                            </label>
+                            <FormLabel required>廠商名稱</FormLabel>
                             <div className="input-wrapper-icon">
                                 <Building size={18} className="input-icon" />
                                 <input
@@ -113,9 +112,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
-                                服務內容/營業項目 <span style={{ color: 'var(--color-danger)' }}>*</span>
-                            </label>
+                            <FormLabel required>服務內容/營業項目</FormLabel>
                             <div className="input-wrapper-icon">
                                 <FileText size={18} className="input-icon" />
                                 <input
@@ -135,9 +132,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                 <FormSection title="匯款帳項">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="form-group md:col-span-1">
-                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
-                                銀行代碼 {!formData.isFloatingAccount && <span style={{ color: 'var(--color-danger)' }}>*</span>}
-                            </label>
+                            <FormLabel required={!formData.isFloatingAccount}>銀行代碼</FormLabel>
                             <div className="input-wrapper-icon">
                                 <Building size={18} className="input-icon" />
                                 <select
@@ -162,9 +157,7 @@ export default function VendorForm({ initialData, mode, vendorId }: VendorFormPr
                         </div>
 
                         <div className="form-group md:col-span-2">
-                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
-                                銀行帳號 {!formData.isFloatingAccount && <span style={{ color: 'var(--color-danger)' }}>*</span>}
-                            </label>
+                            <FormLabel required={!formData.isFloatingAccount}>銀行帳號</FormLabel>
                             <div className="input-wrapper-icon">
                                 <CreditCard size={18} className="input-icon" />
                                 <input

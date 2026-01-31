@@ -81,8 +81,8 @@ export default function PaymentDetailPage() {
 
             <div className="card">
                 <h2 className="heading-md" style={{ marginBottom: '1rem' }}>關聯申請單 ({relatedClaims.length} 筆)</h2>
-                <div className="vendor-table-container">
-                    <table className="vendor-table">
+                <div className="vendor-table-container table-scroll">
+                    <table className="vendor-table table-full">
                         <thead>
                             <tr>
                                 <th>申請編號</th>

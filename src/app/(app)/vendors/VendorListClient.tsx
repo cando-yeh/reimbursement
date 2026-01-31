@@ -138,7 +138,7 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                 action={headerAction || undefined}
             />
 
-            <div className="card card-flush vendor-table-container" style={{ overflowX: 'auto' }}>
+            <div className="card card-flush vendor-table-container table-scroll">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid var(--color-border)' }}>
                     <div className="search-field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, maxWidth: '300px' }}>
                         <Search size={18} color="var(--color-text-muted)" />
@@ -157,7 +157,7 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
                         onPageChange={handlePageChange}
                     />
                 </div>
-                <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <table className="vendor-table table-fixed table-full">
                     <thead>
                         <tr>
                             <th style={{ width: '80px', textAlign: 'center' }}>狀態</th>
