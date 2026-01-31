@@ -28,8 +28,8 @@
     border: 1px solid var(--color-border);
     padding: 2rem;
     transition: transform 0.2s, box-shadow 0.2s;
-    width: fit-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
     overflow: hidden;
 }
 

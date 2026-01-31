@@ -6,7 +6,7 @@ interface VendorRequestTableProps {
 }
 
 const VendorRequestTable = ({ requests, onRowClick }: VendorRequestTableProps) => (
-    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '850px', marginBottom: '1rem' }}>
+    <table className="vendor-table" style={{ tableLayout: 'fixed', width: '100%', marginBottom: '1rem' }}>
         <thead>
             <tr>
                 <th style={{ width: '70px', textAlign: 'center' }}>申請類型</th>

@@ -218,7 +218,7 @@ export default function PaymentRequestForm({ editId }: { editId?: string }) {
     const showErr = (key: string) => (touched[key] && errors[key]) || undefined;
 
     return (
-        <div className="form-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
+        <div className="container">
             <PageHeader
                 title="廠商請款"
                 subtitle="請填寫付款對象、金額及相關憑證資料。"
