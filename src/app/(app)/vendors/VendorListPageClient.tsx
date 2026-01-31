@@ -4,32 +4,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import VendorListClient from './VendorListClient';
 import { useVendors } from '@/context/VendorsContext';
-import { User, Vendor, VendorRequest } from '@/types';
-
-interface VendorListPageClientProps {
-  currentUser: User;
-  initialVendors: Vendor[];
-  initialVendorRequests: VendorRequest[];
-  initialPagination: any;
-  initialQuery: string;
-  initialPage: number;
-  isFinance: boolean;
-}
+import { useAuth } from '@/context/AuthContext';
+import { Vendor, VendorRequest } from '@/types';
 
 const PAGE_SIZE = 10;
 
-export default function VendorListPageClient({
-  currentUser,
-  initialVendors,
-  initialVendorRequests,
-  initialPagination,
-  initialQuery,
-  initialPage,
-  isFinance
-}: VendorListPageClientProps) {
+export default function VendorListPageClient() {
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || initialQuery || '';
-  const currentPage = Number.parseInt(searchParams.get('page') || String(initialPage || 1), 10) || 1;
+  const query = searchParams.get('q') || '';
+  const currentPage = Number.parseInt(searchParams.get('page') || '1', 10) || 1;
+  const { currentUser, isAuthLoading } = useAuth();
+  const isFinance = currentUser?.permissions?.includes('finance_audit') || currentUser?.roleName?.includes('財務');
 
   const {
     vendors,
@@ -41,20 +26,27 @@ export default function VendorListPageClient({
     primeVendorRequestsCache
   } = useVendors();
 
-  const [pagination, setPagination] = useState(initialPagination);
+  const [pagination, setPagination] = useState<any>(null);
   const [vendorsReady, setVendorsReady] = useState(false);
   const [vendorRequestsReady, setVendorRequestsReady] = useState(false);
 
   useEffect(() => {
-    primeVendorsCache({ page: initialPage, pageSize: PAGE_SIZE, query: initialQuery }, initialVendors, initialPagination);
-    setVendorsReady(true);
+    if (!currentUser?.id) return;
+    if (vendorsReady) return;
+    fetchVendors({ page: currentPage, pageSize: PAGE_SIZE, query, cache: true })
+      .then(res => {
+        if (res?.pagination) setPagination(res.pagination);
+        setVendorsReady(true);
+      });
     if (isFinance) {
-      primeVendorRequestsCache({ page: 1, pageSize: 50 }, initialVendorRequests, { currentPage: 1, pageSize: 50 });
-      setVendorRequestsReady(true);
+      fetchVendorRequests({ page: 1, pageSize: 50, cache: true }).then(() => {
+        setVendorRequestsReady(true);
+      });
     }
-  }, [initialPage, initialPagination, initialQuery, initialVendors, initialVendorRequests, isFinance, primeVendorsCache, primeVendorRequestsCache]);
+  }, [currentUser?.id, currentPage, query, isFinance, vendorsReady, fetchVendors, fetchVendorRequests]);
 
   useEffect(() => {
+    if (!currentUser?.id) return;
     let isActive = true;
     fetchVendors({ page: currentPage, pageSize: PAGE_SIZE, query, cache: true })
       .then(res => {
@@ -75,6 +67,7 @@ export default function VendorListPageClient({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!currentUser?.id) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handleRefresh = () => {
       if (timer) clearTimeout(timer);
@@ -94,16 +87,28 @@ export default function VendorListPageClient({
       if (timer) clearTimeout(timer);
       window.removeEventListener('vendors:refresh', handleRefresh as EventListener);
     };
-  }, [currentPage, query, isFinance, fetchVendors, fetchVendorRequests]);
+  }, [currentUser?.id, currentPage, query, isFinance, fetchVendors, fetchVendorRequests]);
 
   const mergedVendorRequests = useMemo(() => (isFinance ? vendorRequests : []), [isFinance, vendorRequests]);
+
+  if (isAuthLoading || !currentUser) {
+    return (
+      <VendorListClient
+        currentUser={{ id: '', name: '', roleName: '', permissions: [] }}
+        vendors={[]}
+        vendorRequests={[]}
+        pagination={pagination}
+        isLoading
+      />
+    );
+  }
 
   return (
     <VendorListClient
       currentUser={currentUser}
-      vendors={vendorsReady ? vendors : initialVendors}
-      vendorRequests={vendorRequestsReady ? mergedVendorRequests : initialVendorRequests}
-      pagination={pagination || initialPagination}
+      vendors={vendorsReady ? vendors : []}
+      vendorRequests={vendorRequestsReady ? mergedVendorRequests : []}
+      pagination={pagination}
       isLoading={isVendorsLoading}
     />
   );
