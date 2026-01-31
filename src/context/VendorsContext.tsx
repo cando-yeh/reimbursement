@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { Vendor, VendorRequest } from '../types';
 import { createVendorRequest, getVendorRequests, getVendors, approveVendorRequest as approveVendorRequestAction } from '@/app/actions/vendors';
 import { formatVendorRequests } from '@/utils/vendorHelpers';
@@ -12,8 +12,10 @@ interface VendorsContextType {
     vendors: Vendor[];
     vendorRequests: VendorRequest[];
     isVendorsLoading: boolean;
-    fetchVendors: (params?: { page?: number; pageSize?: number; query?: string }) => Promise<{ data: Vendor[], pagination: any } | null>;
-    fetchVendorRequests: (params?: { page?: number; pageSize?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
+    fetchVendors: (params?: { page?: number; pageSize?: number; query?: string; cache?: boolean; staleMs?: number }) => Promise<{ data: Vendor[], pagination: any } | null>;
+    fetchVendorRequests: (params?: { page?: number; pageSize?: number; cache?: boolean; staleMs?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
+    primeVendorsCache: (params: { page?: number; pageSize?: number; query?: string }, data: Vendor[], pagination: any) => void;
+    primeVendorRequestsCache: (params: { page?: number; pageSize?: number }, data: VendorRequest[], pagination: any) => void;
     requestAddVendor: (vendor: Omit<Vendor, 'id'>) => Promise<boolean>;
     requestUpdateVendor: (id: string, data: Partial<Vendor>) => Promise<boolean>;
     requestDeleteVendor: (id: string) => Promise<boolean>;
@@ -30,13 +32,50 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
     const [isVendorsLoading, setIsVendorsLoading] = useState(false);
+    const vendorsCacheRef = useRef<Map<string, { data: Vendor[]; pagination: any; timestamp: number }>>(new Map());
+    const vendorRequestsCacheRef = useRef<Map<string, { data: VendorRequest[]; pagination: any; timestamp: number }>>(new Map());
+    const vendorsRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const buildVendorsCacheKey = (params?: { page?: number; pageSize?: number; query?: string }) => {
+        const page = params?.page || 1;
+        const pageSize = params?.pageSize || 10;
+        const query = params?.query?.trim() || '';
+        return `vendors:${query || 'all'}:${page}:${pageSize}`;
+    };
+
+    const buildVendorRequestsCacheKey = (params?: { page?: number; pageSize?: number }) => {
+        const page = params?.page || 1;
+        const pageSize = params?.pageSize || 10;
+        return `vendorRequests:${page}:${pageSize}`;
+    };
+
+    const scheduleVendorsRefresh = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (vendorsRefreshTimerRef.current) {
+            clearTimeout(vendorsRefreshTimerRef.current);
+        }
+        vendorsRefreshTimerRef.current = setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('vendors:refresh'));
+        }, 800);
+    }, []);
 
     // --- Fetch Functions ---
-    const fetchVendors = useCallback(async (params?: { page?: number; pageSize?: number; query?: string }) => {
+    const fetchVendors = useCallback(async (params?: { page?: number; pageSize?: number; query?: string; cache?: boolean; staleMs?: number }) => {
+        const useCache = params?.cache ?? true;
+        const staleMs = params?.staleMs ?? 30_000;
+        const cacheKey = buildVendorsCacheKey(params);
+        if (useCache) {
+            const cached = vendorsCacheRef.current.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp) < staleMs) {
+                setVendors(cached.data);
+                return { data: cached.data, pagination: cached.pagination };
+            }
+        }
         setIsVendorsLoading(true);
         try {
             const result = await getVendors(params);
             if (result.success && result.data) {
+                vendorsCacheRef.current.set(cacheKey, { data: result.data, pagination: result.pagination, timestamp: Date.now() });
                 setVendors(result.data);
                 return { data: result.data, pagination: result.pagination };
             }
@@ -49,11 +88,22 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    const fetchVendorRequests = useCallback(async (params?: { page?: number; pageSize?: number }) => {
+    const fetchVendorRequests = useCallback(async (params?: { page?: number; pageSize?: number; cache?: boolean; staleMs?: number }) => {
+        const useCache = params?.cache ?? true;
+        const staleMs = params?.staleMs ?? 30_000;
+        const cacheKey = buildVendorRequestsCacheKey(params);
+        if (useCache) {
+            const cached = vendorRequestsCacheRef.current.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp) < staleMs) {
+                setVendorRequests(cached.data);
+                return { data: cached.data, pagination: cached.pagination };
+            }
+        }
         try {
             const result = await getVendorRequests(params);
             if (result.success && result.data) {
                 const formattedRequests = formatVendorRequests(result.data);
+                vendorRequestsCacheRef.current.set(cacheKey, { data: formattedRequests, pagination: result.pagination, timestamp: Date.now() });
                 setVendorRequests(formattedRequests);
                 return { data: formattedRequests, pagination: result.pagination };
             }
@@ -62,6 +112,18 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
             console.error('Error fetching vendor requests:', error);
             return null;
         }
+    }, []);
+
+    const primeVendorsCache = useCallback((params: { page?: number; pageSize?: number; query?: string }, data: Vendor[], pagination: any) => {
+        const cacheKey = buildVendorsCacheKey(params);
+        vendorsCacheRef.current.set(cacheKey, { data, pagination, timestamp: Date.now() });
+        setVendors(data);
+    }, []);
+
+    const primeVendorRequestsCache = useCallback((params: { page?: number; pageSize?: number }, data: VendorRequest[], pagination: any) => {
+        const cacheKey = buildVendorRequestsCacheKey(params);
+        vendorRequestsCacheRef.current.set(cacheKey, { data, pagination, timestamp: Date.now() });
+        setVendorRequests(data);
     }, []);
 
     // Helper to sync vendor requests from server
@@ -91,13 +153,14 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         if (result.success) {
             await syncVendorRequests();
             await fetchVendors();
+            scheduleVendorsRefresh();
             return true;
         } else {
             setVendorRequests(prev => prev.filter(r => r.id !== tempId));
             alert('申請失敗: ' + result.error);
             return false;
         }
-    }, [currentUser?.id, currentUser?.name, fetchVendors, syncVendorRequests]);
+    }, [currentUser?.id, currentUser?.name, fetchVendors, syncVendorRequests, scheduleVendorsRefresh]);
 
     const requestUpdateVendor = useCallback(async (id: string, data: Partial<Vendor>) => {
         const existingVendor = vendors.find(v => v.id === id);
@@ -125,13 +188,14 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
 
         if (result.success) {
             await syncVendorRequests();
+            scheduleVendorsRefresh();
             return true;
         } else {
             setVendorRequests(prev => prev.filter(r => r.id !== tempId));
             alert('申請失敗: ' + result.error);
             return false;
         }
-    }, [currentUser?.id, currentUser?.name, vendors, syncVendorRequests]);
+    }, [currentUser?.id, currentUser?.name, vendors, syncVendorRequests, scheduleVendorsRefresh]);
 
     const requestDeleteVendor = useCallback(async (id: string) => {
         const vendor = vendors.find(v => v.id === id);
@@ -159,13 +223,14 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
 
         if (result.success) {
             await syncVendorRequests();
+            scheduleVendorsRefresh();
             return true;
         } else {
             setVendorRequests(prev => prev.filter(r => r.id !== tempId));
             alert('申請失敗: ' + result.error);
             return false;
         }
-    }, [currentUser?.id, currentUser?.name, vendors, syncVendorRequests]);
+    }, [currentUser?.id, currentUser?.name, vendors, syncVendorRequests, scheduleVendorsRefresh]);
 
     const approveVendorRequest = useCallback(async (requestId: string) => {
         const request = vendorRequests.find(r => r.id === requestId);
@@ -191,12 +256,13 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         if (result?.success) {
             await syncVendorRequests();
             await fetchVendors();
+            scheduleVendorsRefresh();
         } else {
             await fetchVendors();
             await syncVendorRequests();
             alert('審核失敗');
         }
-    }, [vendorRequests, fetchVendors, syncVendorRequests]);
+    }, [vendorRequests, fetchVendors, syncVendorRequests, scheduleVendorsRefresh]);
 
     const rejectVendorRequest = useCallback(async (requestId: string) => {
         setVendorRequests(prev => prev.map(r =>
@@ -208,11 +274,12 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         if (result?.success) {
             await syncVendorRequests();
             await fetchVendors();
+            scheduleVendorsRefresh();
         } else {
             await syncVendorRequests();
             alert('審核失敗');
         }
-    }, [fetchVendors, syncVendorRequests]);
+    }, [fetchVendors, syncVendorRequests, scheduleVendorsRefresh]);
 
     const contextValue = useMemo(() => ({
         vendors,
@@ -220,6 +287,8 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         isVendorsLoading,
         fetchVendors,
         fetchVendorRequests,
+        primeVendorsCache,
+        primeVendorRequestsCache,
         requestAddVendor,
         requestUpdateVendor,
         requestDeleteVendor,
@@ -227,7 +296,7 @@ export function VendorsProvider({ children }: { children: ReactNode }) {
         rejectVendorRequest,
     }), [
         vendors, vendorRequests, isVendorsLoading,
-        fetchVendors, fetchVendorRequests,
+        fetchVendors, fetchVendorRequests, primeVendorsCache, primeVendorRequestsCache,
         requestAddVendor, requestUpdateVendor, requestDeleteVendor,
         approveVendorRequest, rejectVendorRequest
     ]);

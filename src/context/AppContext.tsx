@@ -24,8 +24,10 @@ interface AppContextType {
   vendors: Vendor[];
   vendorRequests: VendorRequest[];
   isVendorsLoading: boolean;
-  fetchVendors: (params?: { page?: number; pageSize?: number; query?: string }) => Promise<{ data: Vendor[], pagination: any } | null>;
-  fetchVendorRequests: (params?: { page?: number; pageSize?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
+  fetchVendors: (params?: { page?: number; pageSize?: number; query?: string; cache?: boolean; staleMs?: number }) => Promise<{ data: Vendor[], pagination: any } | null>;
+  fetchVendorRequests: (params?: { page?: number; pageSize?: number; cache?: boolean; staleMs?: number }) => Promise<{ data: VendorRequest[], pagination: any } | null>;
+  primeVendorsCache: (params: { page?: number; pageSize?: number; query?: string }, data: Vendor[], pagination: any) => void;
+  primeVendorRequestsCache: (params: { page?: number; pageSize?: number }, data: VendorRequest[], pagination: any) => void;
   requestAddVendor: (vendor: Omit<Vendor, 'id'>) => Promise<boolean>;
   requestUpdateVendor: (id: string, data: Partial<Vendor>) => Promise<boolean>;
   requestDeleteVendor: (id: string) => Promise<boolean>;
@@ -86,6 +88,8 @@ function AppContextCombiner({ children }: { children: ReactNode }) {
     isVendorsLoading: vendors.isVendorsLoading,
     fetchVendors: vendors.fetchVendors,
     fetchVendorRequests: vendors.fetchVendorRequests,
+    primeVendorsCache: vendors.primeVendorsCache,
+    primeVendorRequestsCache: vendors.primeVendorRequestsCache,
     requestAddVendor: vendors.requestAddVendor,
     requestUpdateVendor: vendors.requestUpdateVendor,
     requestDeleteVendor: vendors.requestDeleteVendor,

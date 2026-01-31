@@ -1,6 +1,6 @@
 import React from 'react';
 import PageSkeleton from '@/components/Common/PageSkeleton';
-import VendorListClient from './VendorListClient';
+import VendorListPageClient from './VendorListPageClient';
 import { getCurrentUser } from '@/app/actions/claims';
 import { getDBUserByEmail } from '@/app/actions/users';
 import { getVendors, getVendorRequests } from '@/app/actions/vendors';
@@ -50,12 +50,14 @@ export default async function VendorListPage({
     const vendorRequests = formatVendorRequests(vendorRequestsRaw);
 
     return (
-        <VendorListClient
+        <VendorListPageClient
             currentUser={currentUser}
-            vendors={vendors}
-            vendorRequests={vendorRequests}
-            pagination={pagination}
-            isLoading={false}
+            initialVendors={vendors}
+            initialVendorRequests={vendorRequests}
+            initialPagination={pagination}
+            initialQuery={query}
+            initialPage={currentPage}
+            isFinance={isFinance}
         />
     );
 }

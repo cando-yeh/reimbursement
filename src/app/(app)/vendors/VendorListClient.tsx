@@ -109,7 +109,9 @@ export default function VendorListClient({ currentUser, vendors, vendorRequests,
             });
 
             if (result.success) {
-                router.refresh();
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('vendors:refresh'));
+                }
             } else {
                 setLocalRequests(prev => prev.filter(r => r.id !== tempId));
                 alert('申請失敗: ' + result.error);
